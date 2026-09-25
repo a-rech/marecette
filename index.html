@@ -827,6 +827,83 @@
       background: var(--surface2); border: 1px solid var(--border);
       font-size: 13px; color: var(--text2);
     }
+  
+
+    /* ──── FORMULAIRE DE CRÉATION ──── */
+    .entry-choices {
+      display: grid; gap: 16px; margin-bottom: 24px;
+    }
+    .entry-choice-btn {
+      display: flex; align-items: flex-start; gap: 16px;
+      padding: 24px; border-radius: 14px;
+      border: 1px solid var(--border); background: var(--surface);
+      cursor: pointer; transition: all .25s;
+      font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text);
+    }
+    .entry-choice-btn:hover { border-color: var(--accent); box-shadow: 0 4px 24px rgba(196,98,45,.12); transform: translateY(-2px); }
+    .entry-choice-icon { font-size: 32px; flex-shrink: 0; }
+    .entry-choice-title { font-weight: 500; margin-bottom: 4px; font-size: 15px; }
+    .entry-choice-sub { font-size: 13px; color: var(--text2); }
+
+    .form-header { margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+    .form-badge-src { display: inline-block; padding: 4px 10px; border-radius: 6px; background: rgba(196,98,45,.15); color: var(--accent); font-size: 11px; font-weight: 500; }
+
+    .form-section { margin-bottom: 28px; }
+    .form-section-title { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text2); margin-bottom: 16px; }
+
+    .form-row { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+    .form-group { flex: 1; min-width: 120px; display: flex; flex-direction: column; }
+    .form-label { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 6px; }
+    .form-input, .form-select { padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; transition: border-color .2s; }
+    .form-input:focus, .form-select:focus { outline: none; border-color: var(--accent); }
+    .emoji-pick { width: 60px; text-align: center; font-size: 18px; }
+
+    .ing-section-hint { font-size: 11px; color: var(--text3); margin-bottom: 12px; }
+    #ing-list { margin-bottom: 16px; }
+    .ing-row { display: flex; gap: 10px; margin-bottom: 12px; align-items: flex-end; }
+    .ing-row .form-group { flex: 1; }
+    .ing-name { flex: 2; }
+    .ing-qty { flex: 0.8; }
+    .ing-unit { flex: 0.8; }
+    .ing-remove { flex: 0 0 auto; padding: 10px 12px; border-radius: 10px; border: 1px solid #d97979; background: transparent; color: #d97979; cursor: pointer; font-size: 12px; transition: all .15s; }
+    .ing-remove:hover { background: #fdf5f5; }
+    .ing-add-btn { padding: 8px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); cursor: pointer; font-size: 13px; transition: all .15s; }
+    .ing-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    #step-list { margin-bottom: 16px; }
+    .step-row { display: flex; gap: 10px; margin-bottom: 12px; align-items: flex-start; }
+    .step-row textarea { flex: 1; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; resize: vertical; min-height: 70px; transition: border-color .2s; }
+    .step-row textarea:focus { outline: none; border-color: var(--accent); }
+    .step-remove { flex: 0 0 auto; padding: 10px 12px; border-radius: 10px; border: 1px solid #d97979; background: transparent; color: #d97979; cursor: pointer; font-size: 12px; transition: all .15s; }
+    .step-remove:hover { background: #fdf5f5; }
+    .step-add-btn { padding: 8px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); cursor: pointer; font-size: 13px; transition: all .15s; }
+    .step-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .form-checkbox-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .form-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent); }
+    .form-checkbox-label { font-size: 14px; color: var(--text); cursor: pointer; }
+
+    .form-profile-sliders { display: flex; flex-direction: column; gap: 20px; }
+    .profile-slider-group { display: flex; flex-direction: column; gap: 8px; }
+    .profile-slider-header { display: flex; justify-content: space-between; }
+    .profile-slider-label { font-size: 13px; font-weight: 500; color: var(--text); }
+    .profile-slider-value { font-size: 13px; color: var(--accent); font-weight: 500; }
+    .profile-slider { width: 100%; height: 6px; border-radius: 3px; appearance: none; background: linear-gradient(to right, var(--easy), var(--medium), var(--hard)); outline: none; }
+    .profile-slider-range { display: flex; justify-content: space-between; font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+    .form-save-bar { display: flex; gap: 12px; margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border); }
+    #form-error-msg { color: var(--hard); font-size: 13px; padding: 8px 12px; background: rgba(176,85,37,.12); border-radius: 8px; margin-bottom: 16px; width: 100%; }
+
+    .cat-tab-creations { border-color: var(--accent); color: var(--accent); }
+    .cat-tab-creations:hover, .cat-tab-creations.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+    .user-recipe-badge { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; background: rgba(196,98,45,.15); border-radius: 6px; font-size: 12px; font-weight: 600; color: var(--accent); margin-bottom: 12px; }
+    .user-recipe-actions { display: flex; gap: 8px; margin-top: 20px; }
+    .user-recipe-actions button { flex: 1; padding: 10px 16px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); cursor: pointer; font-size: 13px; font-weight: 500; transition: all .2s; }
+    .user-recipe-actions button:hover { border-color: var(--accent); color: var(--accent); background: var(--surface2); }
+    .user-recipe-actions button.delete { border-color: #d97979; color: #d97979; }
+    .user-recipe-actions button.delete:hover { background: #fdf5f5; }
+
   </style>
 </head>
 <body>
@@ -898,7 +975,10 @@
     <button class="back-btn" onclick="goHome()" style="margin:0;">← Accueil</button>
     <button class="btn-lexique" onclick="openLexique()">💡 Lexique</button>
   </div>
-  <div class="section-title">Catalogue</div>
+  <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;">
+    <div class="section-title" style="margin:0;flex:1;">📖 Catalogue de recettes</div>
+    <button class="btn btn-primary" onclick="openAddRecipePage()" style="font-size:13px;padding:8px 12px;">+ Créer</button>
+  </div>
   <p class="section-sub">Toutes les recettes classées par catégorie</p>
 
   <!-- Barre de recherche texte avec bouton 🔍 -->
@@ -3037,7 +3117,473 @@ function applyUpdate() {
     }
   });
 }
+
+
+// ========== GESTION RECETTES UTILISATEUR ==========
+
+const USER_RECIPES_KEY = 'marecette_user_recipes_v1';
+let nextRecipeId = 1000;
+let editingRecipeId = null;
+let userRecipes = [];
+
+// Initialiser les recettes utilisateur au démarrage
+function initUserRecipes() {
+  userRecipes = lsGet(USER_RECIPES_KEY, []);
+  if (userRecipes.length > 0) {
+    nextRecipeId = Math.max(...userRecipes.map(r => r.id), 999) + 1;
+  }
+}
+
+// Récupérer recette utilisateur par ID
+function getUserRecipe(id) {
+  return userRecipes.find(r => r.id === id);
+}
+
+// Vérifier si une recette est créée par l'utilisateur
+function isUserRecipe(id) {
+  return userRecipes.some(r => r.id === id);
+}
+
+// ========== NAVIGATION CRÉATION ==========
+
+function openAddRecipePage() {
+  pageHistory.push('catalogue');
+  showPage('page-add-entry');
+}
+
+function startFromScratch() {
+  editingRecipeId = null;
+  initAddFormEmpty();
+  document.getElementById('clone-picker').style.display = 'none';
+  showPage('page-add-form');
+}
+
+function startFromCatalogue() {
+  document.getElementById('clone-picker').style.display = 'block';
+  document.getElementById('clone-search-input').value = '';
+  filterCloneResults('');
+}
+
+function cloneRecipe(recipeId) {
+  const recipe = RECIPES.find(r => r.id === recipeId);
+  if (!recipe) return;
+  
+  editingRecipeId = null;
+  initAddFormEmpty();
+  populateFormFromRecipe(recipe);
+  document.getElementById('clone-picker').style.display = 'none';
+  showPage('page-add-form');
+}
+
+function filterCloneResults(query) {
+  const results = document.getElementById('clone-results');
+  results.innerHTML = '';
+  const q = query.toLowerCase();
+  
+  const filtered = RECIPES.filter(r => 
+    r.title.toLowerCase().includes(q) || 
+    (r.ingredients && r.ingredients.some(ing => ing[0].toLowerCase().includes(q)))
+  ).slice(0, 20);
+  
+  if (filtered.length === 0) {
+    results.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text2);font-size:13px;">Aucune recette trouvée</div>';
+    return;
+  }
+  
+  filtered.forEach(r => {
+    const item = document.createElement('button');
+    item.style.cssText = 'padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);cursor:pointer;text-align:left;transition:all .15s;font-family:inherit;font-size:14px;';
+    item.innerHTML = '<span style="font-size:18px;margin-right:8px;">' + (r.emoji || '🍳') + '</span>' + r.title;
+    item.onmouseover = () => item.style.borderColor = 'var(--accent)';
+    item.onmouseout = () => item.style.borderColor = 'var(--border)';
+    item.onclick = () => cloneRecipe(r.id);
+    results.appendChild(item);
+  });
+}
+
+// ========== INITIALISATION FORMULAIRE ==========
+
+function initAddFormEmpty() {
+  document.getElementById('f-emoji').value = '🍳';
+  document.getElementById('f-title').value = '';
+  document.getElementById('f-cat').value = '';
+  document.getElementById('f-culture').value = '';
+  document.getElementById('f-creator').value = '';
+  document.getElementById('f-total-time').value = '30';
+  document.getElementById('f-diff').value = 'moyen';
+  document.getElementById('f-portions').value = '4';
+  document.getElementById('f-price').value = '';
+  document.getElementById('f-vegetarian').checked = false;
+  document.getElementById('form-title-label').textContent = 'Nouvelle recette';
+  document.getElementById('form-source-badge').style.display = 'none';
+  document.getElementById('ing-list').innerHTML = '';
+  document.getElementById('step-list').innerHTML = '';
+  addIngredientRow();
+  addStepRow();
+}
+
+function populateFormFromRecipe(recipe) {
+  document.getElementById('f-emoji').value = recipe.emoji || '🍳';
+  document.getElementById('f-title').value = recipe.title;
+  document.getElementById('f-cat').value = recipe.cat || '';
+  document.getElementById('f-culture').value = recipe.origin || '';
+  document.getElementById('f-creator').value = recipe.creator || '';
+  document.getElementById('f-total-time').value = (recipe.prep || 0) + (recipe.cook || 0);
+  document.getElementById('f-diff').value = recipe.diff || 'moyen';
+  document.getElementById('f-portions').value = recipe.portions || 4;
+  document.getElementById('f-price').value = recipe.price || '';
+  document.getElementById('f-vegetarian').checked = recipe.vegetarian || false;
+  document.getElementById('form-title-label').textContent = 'Adapter : ' + recipe.title;
+  document.getElementById('form-source-badge').textContent = 'Inspiré du catalogue';
+  document.getElementById('form-source-badge').style.display = 'inline-block';
+  
+  // Ingrédients
+  document.getElementById('ing-list').innerHTML = '';
+  if (recipe.ingredients && recipe.ingredients.length > 0) {
+    recipe.ingredients.forEach(ing => {
+      addIngredientRow(ing[0], ing[1], ing[2]);
+    });
+  } else {
+    addIngredientRow();
+  }
+  
+  // Étapes
+  document.getElementById('step-list').innerHTML = '';
+  if (recipe.steps && recipe.steps.length > 0) {
+    recipe.steps.forEach(step => {
+      addStepRow(step);
+    });
+  } else {
+    addStepRow();
+  }
+}
+
+// ========== GESTION INGRÉDIENTS ==========
+
+function addIngredientRow(name = '', qty = '', unit = '') {
+  const ingList = document.getElementById('ing-list');
+  const row = document.createElement('div');
+  row.className = 'ing-row';
+  row.innerHTML = `
+    <div class="form-group ing-name">
+      <input type="text" placeholder="Ex : Poivre noir" value="${name}" class="form-input ing-name-input">
+    </div>
+    <div class="form-group ing-qty">
+      <input type="number" placeholder="Qty" step="0.1" value="${qty}" class="form-input ing-qty-input">
+    </div>
+    <div class="form-group ing-unit">
+      <input type="text" placeholder="g, ml…" value="${unit}" class="form-input ing-unit-input">
+    </div>
+    <button type="button" class="ing-remove" onclick="this.parentNode.remove()">Supprimer</button>
+  `;
+  ingList.appendChild(row);
+}
+
+// ========== GESTION ÉTAPES ==========
+
+function addStepRow(text = '') {
+  const stepList = document.getElementById('step-list');
+  const row = document.createElement('div');
+  row.className = 'step-row';
+  row.innerHTML = `
+    <textarea placeholder="Décrivez cette étape en détail…" class="step-input">${text}</textarea>
+    <button type="button" class="step-remove" onclick="this.parentNode.remove()">Supprimer</button>
+  `;
+  stepList.appendChild(row);
+}
+
+function resetAddForm() {
+  initAddFormEmpty();
+}
+
+// ========== VALIDATION & SAUVEGARDE ==========
+
+function saveUserRecipe() {
+  const title = document.getElementById('f-title').value.trim();
+  const cat = document.getElementById('f-cat').value;
+  const culture = document.getElementById('f-culture').value;
+  const diff = document.getElementById('f-diff').value;
+  const emoji = document.getElementById('f-emoji').value.trim() || '🍳';
+  const totalTime = parseInt(document.getElementById('f-total-time').value) || 30;
+  const portions = parseInt(document.getElementById('f-portions').value) || 4;
+  const price = parseFloat(document.getElementById('f-price').value) || 0;
+  const vegetarian = document.getElementById('f-vegetarian').checked;
+  const creator = document.getElementById('f-creator').value.trim();
+
+  // Validations
+  if (!title) { showFormError('Le nom de la recette est obligatoire.'); return; }
+  if (!cat) { showFormError('Choisissez une catégorie.'); return; }
+  if (!culture) { showFormError('Choisissez une culture/origine.'); return; }
+  if (!diff) { showFormError('Choisissez une difficulté.'); return; }
+
+  // Ingrédients
+  const ingredients = [];
+  document.querySelectorAll('#ing-list .ing-row').forEach(row => {
+    const name = row.querySelector('.ing-name-input').value.trim();
+    const qty = parseFloat(row.querySelector('.ing-qty-input').value) || 0;
+    const unit = row.querySelector('.ing-unit-input').value.trim();
+    if (name) ingredients.push([name, qty, unit]);
+  });
+  if (ingredients.length === 0) { showFormError('Ajoutez au moins un ingrédient.'); return; }
+
+  // Étapes
+  const steps = [];
+  document.querySelectorAll('#step-list .step-row textarea').forEach(ta => {
+    const s = ta.value.trim();
+    if (s) steps.push(s);
+  });
+  if (steps.length === 0) { showFormError('Ajoutez au moins une étape.'); return; }
+
+  // Vérifier doublon
+  const titleLow = title.toLowerCase();
+  const duplicate = userRecipes.filter(r => r.title.toLowerCase() === titleLow && r.id !== editingRecipeId);
+  if (duplicate.length > 0) {
+    showFormError('Une recette s'appelle déjà "' + duplicate[0].title + '". Choisissez un autre nom.');
+    return;
+  }
+
+  // Créer l'objet recette
+  const id = editingRecipeId || nextRecipeId++;
+  const recipe = {
+    id: id,
+    title: title,
+    emoji: emoji,
+    cat: cat,
+    origin: culture,
+    diff: diff,
+    prep: Math.ceil(totalTime / 2),
+    cook: Math.floor(totalTime / 2),
+    portions: portions,
+    price: price,
+    vegetarian: vegetarian,
+    creator: creator,
+    ingredients: ingredients,
+    steps: steps,
+    tags: ingredients.map(i => i[0]),
+    userCreated: true
+  };
+
+  // Sauvegarder
+  if (editingRecipeId) {
+    userRecipes = userRecipes.map(r => r.id === editingRecipeId ? recipe : r);
+  } else {
+    userRecipes.push(recipe);
+  }
+  lsSet(USER_RECIPES_KEY, userRecipes);
+
+  // Recharger le catalogue pour afficher "Mes créations"
+  loadCatalogueTabs();
+
+  // Succès
+  showFormError('');
+  editingRecipeId = null;
+  pageHistory = ['home', 'catalogue'];
+  showRecipe(id);
+}
+
+function showFormError(msg) {
+  let errorDiv = document.getElementById('form-error-msg');
+  if (!msg) {
+    if (errorDiv) errorDiv.remove();
+    return;
+  }
+  if (!errorDiv) {
+    errorDiv = document.createElement('div');
+    errorDiv.id = 'form-error-msg';
+    const formBar = document.querySelector('.form-save-bar');
+    if (formBar) formBar.parentNode.insertBefore(errorDiv, formBar);
+  }
+  errorDiv.textContent = '⚠ ' + msg;
+  errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// ========== MODIFICATION & SUPPRESSION ==========
+
+function editUserRecipe(id) {
+  const recipe = userRecipes.find(r => r.id === id);
+  if (!recipe) return;
+  
+  editingRecipeId = id;
+  initAddFormEmpty();
+  populateFormFromRecipe(recipe);
+  pageHistory.push('recipe');
+  showPage('page-add-form');
+}
+
+function deleteUserRecipe(id) {
+  if (!confirm('Êtes-vous sûr de vouloir supprimer cette recette ? Cette action est irréversible.')) return;
+  
+  userRecipes = userRecipes.filter(r => r.id !== id);
+  lsSet(USER_RECIPES_KEY, userRecipes);
+  loadCatalogueTabs();
+  goBack();
+}
+
+// ========== AFFICHAGE BADGE & BOUTONS EN FICHE ==========
+
+function userRecipeBadgeHeader(id) {
+  const recipe = userRecipes.find(r => r.id === id);
+  if (!recipe) return '';
+  const creatorPart = recipe.creator ? '<span style="font-weight:400;opacity:.85;margin-left:6px">de ' + recipe.creator + '</span>' : '';
+  return '<div style="width:100%;margin-bottom:10px">'
+    + '<span class="user-recipe-badge">✨ Création' + creatorPart + '</span></div>';
+}
+
+function userRecipeActions(id) {
+  if (!isUserRecipe(id)) return '';
+  return '<div class="user-recipe-actions">'
+    + '<button onclick="editUserRecipe(' + id + ')">✏️ Modifier</button>'
+    + '<button class="delete" onclick="deleteUserRecipe(' + id + ')">🗑 Supprimer</button>'
+    + '</div>';
+}
+
 </script>
+
+
+<!-- PAGE CHOIX CRÉER RECETTE -->
+<div id="page-add-entry" class="page">
+  <button class="back-btn" onclick="goBack()">← Retour</button>
+  <div class="section-title" style="margin-bottom:6px">Créer une recette</div>
+  <p class="section-sub">Par où voulez-vous commencer ?</p>
+  <div class="entry-choices">
+    <button class="entry-choice-btn" onclick="startFromScratch()">
+      <span class="entry-choice-icon">🪄</span>
+      <div>
+        <div class="entry-choice-title">Créer de zéro</div>
+        <div class="entry-choice-sub">Formulaire vierge — donnez libre cours à votre créativité</div>
+      </div>
+    </button>
+    <button class="entry-choice-btn" onclick="startFromCatalogue()">
+      <span class="entry-choice-icon">📖</span>
+      <div>
+        <div class="entry-choice-title">Adapter une recette existante</div>
+        <div class="entry-choice-sub">Partez d'une recette du catalogue pour la personnaliser</div>
+      </div>
+    </button>
+  </div>
+  <div id="clone-picker" style="display:none;margin-top:24px;">
+    <div style="font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:8px;">Choisissez une recette à adapter</div>
+    <div class="clone-search-wrap" style="position:relative;margin-bottom:12px;">
+      <span style="position:absolute;left:12px;top:10px;color:var(--text3);">🔍</span>
+      <input id="clone-search-input" type="text" placeholder="Rechercher par nom ou ingrédient…" 
+        oninput="filterCloneResults(this.value)" autocomplete="off"
+        style="width:100%;padding:10px 12px 10px 36px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;">
+    </div>
+    <div id="clone-results" style="display:flex;flex-direction:column;gap:8px;"></div>
+  </div>
+</div>
+
+<!-- PAGE FORMULAIRE DE CRÉATION -->
+<div id="page-add-form" class="page">
+  <button class="back-btn" onclick="goBack()">← Retour</button>
+  <div class="form-header">
+    <div class="section-title" style="margin:0"><span id="form-title-label">Nouvelle recette</span></div>
+    <span class="form-badge-src" id="form-source-badge" style="display:none"></span>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-title">🍽️ Identité</div>
+    <div class="form-row">
+      <div class="form-group" style="flex:0 0 auto">
+        <label class="form-label">Emoji</label>
+        <input class="form-input emoji-pick" id="f-emoji" type="text" maxlength="2" placeholder="🍗">
+      </div>
+      <div class="form-group" style="flex:3">
+        <label class="form-label">Nom de la recette *</label>
+        <input class="form-input" id="f-title" type="text" placeholder="Ex : Poulet à l'ail">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Catégorie *</label>
+        <select class="form-select" id="f-cat">
+          <option value="">— Choisir —</option>
+          <option>Entrées</option><option>Plats principaux</option><option>Accompagnements</option>
+          <option>Soupes</option><option>Sauces</option><option>Desserts</option><option>Snacking</option>
+          <option>Boissons</option><option>Tartes</option><option>Salade</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Culture / Origine *</label>
+        <select class="form-select" id="f-culture">
+          <option value="">— Choisir —</option>
+          <option>Française</option><option>Italienne</option><option>Espagnole</option>
+          <option>Anglaise</option><option>Allemande</option><option>Américaine</option>
+          <option>Brésilienne</option><option>Mexicaine</option><option>Asiatique</option>
+          <option>Chinoise</option><option>Indienne</option><option>Thaïlandaise</option>
+          <option>Japonaise</option><option>Grecque</option><option>Portugaise</option>
+          <option>Maghrébine</option><option>Maroc aine</option><option>Tunisienne</option>
+          <option>Égyptienne</option><option>Moyen-Orient</option><option>Méditerranéenne</option>
+          <option>Argentine</option><option>Chilienne</option><option>Colombienne</option>
+          <option>Péruvienne</option><option>Vénézuélienne</option><option>Salvadorienne</option>
+          <option>Scandinave</option><option>Russe</option><option>Belge</option>
+          <option>Indonésienne</option><option>Vietnamienne</option><option>Latino-américaine</option>
+          <option>Provençale</option><option>Hawaïenne</option><option>Éthiopienne</option><option>Internationale</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Nom du créateur / Créatrice</label>
+        <input class="form-input" id="f-creator" type="text" placeholder="Ex : Sophie, Maman…">
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-title">⏱️ Détails</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Temps total (min) *</label>
+        <input class="form-input" id="f-total-time" type="number" min="1" max="600" value="30">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Difficulté *</label>
+        <select class="form-select" id="f-diff">
+          <option value="">— Choisir —</option>
+          <option value="facile">Facile</option>
+          <option value="moyen" selected>Moyen</option>
+          <option value="difficile">Difficile</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Portions</label>
+        <input class="form-input" id="f-portions" type="number" min="1" max="20" value="4">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Prix par portion (€)</label>
+        <input class="form-input" id="f-price" type="number" min="0" step="0.1" placeholder="0.00">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-checkbox-row">
+        <input type="checkbox" id="f-vegetarian" class="form-checkbox">
+        <label for="f-vegetarian" class="form-checkbox-label">Recette végétarienne</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-title">🫙 Ingrédients *</div>
+    <p class="ing-section-hint">Listez tous les ingrédients nécessaires</p>
+    <div id="ing-list"></div>
+    <button class="ing-add-btn" onclick="addIngredientRow()">+ Ajouter un ingrédient</button>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-title">👨‍🍳 Étapes de préparation *</div>
+    <p class="ing-section-hint">Décrivez chaque étape en détail</p>
+    <div id="step-list"></div>
+    <button class="step-add-btn" onclick="addStepRow()">+ Ajouter une étape</button>
+  </div>
+
+  <div class="form-save-bar">
+    <button class="btn btn-secondary" onclick="if(confirm('Êtes-vous sûr ? Cela réinitialisera tout le formulaire.')) resetAddForm()">Réinitialiser</button>
+    <button class="btn btn-primary" onclick="saveUserRecipe()">💾 Sauvegarder</button>
+  </div>
+</div>
 
 </body>
 </html>
