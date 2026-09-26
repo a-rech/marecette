@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════════════════════════════
-   MaRecette — Service Worker v1.4.3
+   MaRecette — Service Worker v1.4.4
    ────────────────────────────────────────────────────────────────────────
    Stratégie : Cache First + notification de mise à jour.
 
