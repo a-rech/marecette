@@ -1,21 +1,20 @@
 /* ════════════════════════════════════════════════════════════════════════
    MaRecette — Service Worker
    ────────────────────────────────────────────────────────────────────────
-   Stratégie : Cache First + notification de mise à jour.
+   Stratégie : Cache First + mise à jour automatique.
 
    Fonctionnement de la mise à jour :
    1. Le navigateur détecte que sw.js a changé (CACHE_VERSION ou contenu).
-   2. Le nouveau SW s'installe mais NE prend PAS le contrôle tout de suite
-      — il entre en état "waiting" pour ne pas casser la session en cours.
-   3. Il envoie un message 'SW_WAITING' à tous les onglets ouverts.
-   4. L'app reçoit ce message et affiche le bouton flottant "Mettre à jour".
-   5. Quand l'utilisateur clique, l'app envoie 'SKIP_WAITING' au SW.
-   6. Le SW appelle skipWaiting(), prend le contrôle, et l'app se recharge.
+   2. Le nouveau SW s'installe, met l'app en cache puis appelle skipWaiting()
+      : il prend le contrôle tout seul, sans action de l'utilisateur.
+   3. L'app détecte le changement de contrôleur (controllerchange), se
+      recharge (en attendant la fin d'une saisie en cours) et affiche un
+      pop-up "Mise à jour effectuée".
 
    Pour déclencher une mise à jour : il suffit de changer CACHE_VERSION.
    ════════════════════════════════════════════════════════════════════════ */
 
-const CACHE_VERSION = 'marecette-v1.4.8';
+const CACHE_VERSION = 'marecette-v1.5.0';
 
 function getAssets() {
   const base = self.registration.scope;
@@ -35,16 +34,9 @@ self.addEventListener('install', function(event) {
     caches.open(CACHE_VERSION)
       .then(function(cache) { return cache.addAll(getAssets()); })
       .then(function() {
-        /* On NE fait PAS skipWaiting() ici — le SW reste en état "waiting".
-           C'est l'utilisateur qui décidera via le bouton flottant.        */
-        console.log('[SW] En attente d\'activation (waiting)');
-
-        /* Notifier tous les onglets ouverts qu'une mise à jour est prête  */
-        self.clients.matchAll({ includeUncontrolled: true }).then(function(clients) {
-          clients.forEach(function(client) {
-            client.postMessage({ type: 'SW_WAITING', version: CACHE_VERSION });
-          });
-        });
+        /* Cache prêt : activation immédiate, sans attendre de clic. */
+        console.log('[SW] Cache prêt, activation automatique');
+        return self.skipWaiting();
       })
       .catch(function(err) { console.error('[SW] Échec mise en cache :', err); })
   );
@@ -72,7 +64,7 @@ self.addEventListener('activate', function(event) {
 /* ── Messages reçus de l'app ──────────────────────────────────────────── */
 self.addEventListener('message', function(event) {
   if (event.data && event.data.type === 'SKIP_WAITING') {
-    console.log('[SW] skipWaiting() déclenché par l\'utilisateur');
+    console.log('[SW] skipWaiting() demandé par l\'app');
     self.skipWaiting();
   }
   if (event.data && event.data.type === 'GET_VERSION') {

@@ -140,6 +140,25 @@
     }
     .ingredient-chip.selected { background: var(--accent); color: white; border-color: var(--accent); }
     .ingredient-chip:hover:not(.selected) { border-color: var(--accent); color: var(--accent); }
+    .ingredient-chip.excluded { background: rgba(192,57,43,.10); color: #C0392B; border-color: rgba(192,57,43,.45); text-decoration: line-through; opacity: .8; }
+    .ingredient-chip.excluded:hover { border-color: #C0392B; color: #C0392B; }
+
+    /* Mode sélection / exclusion */
+    .chip-mode-bar { display: flex; align-items: center; gap: 10px; margin: -14px 0 16px; flex-wrap: wrap; }
+    .chip-mode-hint { font-size: 12px; color: var(--text3); }
+    .chip-mode-btn {
+      padding: 6px 14px; border-radius: 20px; cursor: pointer; white-space: nowrap;
+      border: 1.5px solid var(--accent); background: rgba(196,98,45,.10); color: var(--accent);
+      font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; transition: all .2s;
+    }
+    .chip-mode-btn.chip-mode-excl { border-color: #C0392B; background: rgba(192,57,43,.12); color: #C0392B; }
+    .search-actions-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+    #btn-reset-excl {
+      padding: 6px 14px; border-radius: 20px; cursor: pointer; white-space: nowrap;
+      border: 1px solid rgba(192,57,43,.35); background: rgba(192,57,43,.10); color: #C0392B;
+      font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+    }
+    .live-count { margin-left: 8px; font-size: 12px; font-weight: 500; opacity: .9; white-space: nowrap; }
 
     .search-actions { display: flex; gap: 12px; align-items: center; margin-bottom: 28px; flex-wrap: wrap; }
     .btn {
@@ -489,22 +508,17 @@
     .filter-opt:hover { background: var(--surface2); color: var(--text); }
     .filter-opt.active { background: var(--accent); color: white; border-color: var(--accent); }
 
-    /* ---- FAB MISE À JOUR ---- */
-    .fab-update {
+    /* ---- TOAST MISE À JOUR ---- */
+    .update-toast {
       position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(16px);
-      z-index: 300;
-      padding: 13px 24px; border-radius: 50px;
-      background: #4a7c59; color: white; border: none; cursor: pointer;
+      z-index: 400; padding: 12px 22px; border-radius: 50px;
+      background: #4a7c59; color: white;
       font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
       box-shadow: 0 4px 20px rgba(0,0,0,0.25);
-      display: flex; align-items: center; gap: 8px;
-      opacity: 0; pointer-events: none;
+      opacity: 0; pointer-events: none; white-space: nowrap;
       transition: opacity .3s, transform .3s;
-      white-space: nowrap;
     }
-    .fab-update.visible { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
-    .fab-update:hover { filter: brightness(1.12); }
-    @media (max-width:480px) { .fab-update { font-size:13px; padding:11px 18px; bottom:70px; } }
+    .update-toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
 
     /* ---- FAB RESET CATALOGUE ---- */
     .fab-reset {
@@ -891,7 +905,7 @@
 
 <!-- BOUTON FLOTTANT RECHERCHE (page ingrédients) -->
 <button class="fab-search" id="fab-search" onclick="doSearch()" disabled>
-  🔍 Rechercher
+  🔍 Rechercher<span class="live-count" id="fab-live-count" style="display:none"></span>
 </button>
 
 <!-- BOUTON RETOUR EN HAUT -->
@@ -931,9 +945,17 @@
   </div>
   <div class="section-title">Recherche par ingrédients</div>
   <p class="section-sub">Sélectionnez les ingrédients que vous avez à la maison</p>
+  <div class="chip-mode-bar">
+    <button class="chip-mode-btn" onclick="toggleChipMode()">✔ Sélection</button>
+    <span class="chip-mode-hint" id="chip-mode-hint">Mode ✔ Sélection actif - Basculer en mode ✕ pour exclure</span>
+  </div>
   <div class="families-grid" id="families-container"></div>
+  <div class="search-actions-top">
+    <button class="chip-mode-btn" onclick="toggleChipMode()">✔ Sélection</button>
+    <button id="btn-reset-excl" onclick="resetExclusions()" style="display:none">✕ Effacer les exclusions</button>
+  </div>
   <div class="search-actions">
-    <button class="btn btn-primary" id="btn-search" onclick="doSearch()" disabled>Rechercher</button>
+    <button class="btn btn-primary" id="btn-search" onclick="doSearch()" disabled>Rechercher<span class="live-count" id="btn-live-count" style="display:none"></span></button>
     <button class="btn btn-secondary" onclick="resetFilters()">Réinitialiser</button>
     <span class="selected-count" id="selected-count">Aucun ingrédient sélectionné</span>
   </div>
@@ -1153,7 +1175,6 @@
   </div>
 </div>
 
-<button class="fab-update" id="fab-update" onclick="applyUpdate()">🔄 Mettre à jour</button>
 
 <!-- FAB réinitialiser (catalogue seulement) -->
 <button class="fab-reset" id="fab-reset" onclick="resetAllFilters()">↑ Réinitialiser</button>
@@ -1941,9 +1962,86 @@ function loadIngredientFamilies() {
   container.addEventListener('click', function(e) {
     const chip = e.target.closest('.ingredient-chip');
     if (!chip) return;
-    chip.classList.toggle('selected');
+    const item = chip.dataset.item || chip.textContent.trim();
+    const excl = loadExclusions();
+    const isExcluded = chip.classList.contains('excluded');
+
+    if (chipMode === 'exclude') {
+      if (isExcluded) {
+        // déjà exclu → neutre
+        chip.classList.remove('excluded');
+        saveExclusions(excl.filter(x => x !== item));
+      } else {
+        // neutre ou sélectionné → exclu
+        chip.classList.remove('selected');
+        chip.classList.add('excluded');
+        if (!excl.includes(item)) excl.push(item);
+        saveExclusions(excl);
+      }
+    } else if (isExcluded) {
+      // Mode sélection sur un chip exclu → neutre (l'exclusion est levée)
+      chip.classList.remove('excluded');
+      saveExclusions(excl.filter(x => x !== item));
+    } else {
+      chip.classList.toggle('selected');
+    }
+    syncExclBtn();
     updateSearchButton();
   });
+
+  // Restaurer les exclusions persistantes
+  loadExclusions().forEach(item => {
+    const chip = document.querySelector('.ingredient-chip[data-item="' + item.replace(/"/g, '&quot;') + '"]');
+    if (chip) { chip.classList.remove('selected'); chip.classList.add('excluded'); }
+  });
+  syncExclBtn();
+}
+
+// ── Exclusions d'ingrédients (persistées dans localStorage) ───────────────
+const EXCL_KEY = 'marecette_excl_v1';
+let chipMode = 'select'; // 'select' | 'exclude'
+
+function loadExclusions() {
+  try { return JSON.parse(localStorage.getItem(EXCL_KEY) || '[]'); } catch (e) { return []; }
+}
+function saveExclusions(arr) {
+  try { localStorage.setItem(EXCL_KEY, JSON.stringify(arr)); } catch (e) {}
+}
+
+// Affiche le bouton "Effacer les exclusions" uniquement s'il y a des exclusions
+function syncExclBtn() {
+  const btn = document.getElementById('btn-reset-excl');
+  if (btn) btn.style.display = loadExclusions().length > 0 ? 'inline-flex' : 'none';
+}
+
+function syncChipModeUI() {
+  const isExcl = chipMode === 'exclude';
+  document.querySelectorAll('.chip-mode-btn').forEach(btn => {
+    btn.textContent = isExcl ? '✕ Exclusion' : '✔ Sélection';
+    btn.classList.toggle('chip-mode-excl', isExcl);
+  });
+  const hint = document.getElementById('chip-mode-hint');
+  if (hint) hint.textContent = isExcl
+    ? 'Mode ✕ Exclusion actif - Cliquer pour exclure un ingrédient'
+    : 'Mode ✔ Sélection actif - Basculer en mode ✕ pour exclure';
+}
+
+function toggleChipMode() {
+  chipMode = (chipMode === 'select') ? 'exclude' : 'select';
+  syncChipModeUI();
+}
+
+// Efface uniquement les exclusions (la sélection est conservée)
+function resetExclusions() {
+  try { localStorage.removeItem(EXCL_KEY); } catch (e) {}
+  document.querySelectorAll('.ingredient-chip.excluded').forEach(c => c.classList.remove('excluded'));
+  syncExclBtn();
+  updateSearchButton();
+}
+
+// Une recette est écartée si elle contient au moins un ingrédient exclu
+function isRecipeExcluded(recipe, excluded) {
+  return excluded.some(ex => recipe.tags.includes(ex));
 }
 
 // Mise à jour du bouton de recherche
@@ -1959,6 +2057,27 @@ function updateSearchButton() {
   countSpan.textContent = hasSelection
     ? `${selected.length} ingrédient${selected.length > 1 ? 's' : ''} sélectionné${selected.length > 1 ? 's' : ''}`
     : 'Aucun ingrédient sélectionné';
+
+  // Compteur instantané dans les boutons Rechercher : ✓ complètes / ◐ total
+  const liveEls = [document.getElementById('btn-live-count'), document.getElementById('fab-live-count')];
+  if (!hasSelection) {
+    liveEls.forEach(el => { if (el) el.style.display = 'none'; });
+    return;
+  }
+  const names = Array.from(selected).map(c => c.dataset.item || c.textContent.trim());
+  const excluded = loadExclusions();
+  let full = 0, any = 0;
+  RECIPES.concat(userRecipes).forEach(recipe => {
+    if (isRecipeExcluded(recipe, excluded)) return;
+    const mc = names.filter(ing => recipe.tags.includes(ing)).length;
+    if (mc > 0) any++;
+    if (mc === names.length) full++;
+  });
+  liveEls.forEach(el => {
+    if (!el) return;
+    el.textContent = `✓ ${full} / ◐ ${any}`;
+    el.style.display = 'inline';
+  });
 }
 
 // Réinitialisation des filtres
@@ -1969,6 +2088,8 @@ function resetFilters() {
   // Aussi nettoyer les résultats et le cache
   document.getElementById('search-results').innerHTML = '';
   _lastFilteredPool = [];
+  // Les exclusions sont conservées ; on repasse simplement en mode sélection
+  if (chipMode !== 'select') { chipMode = 'select'; syncChipModeUI(); }
   updateSearchButton();
 }
 
@@ -1990,7 +2111,9 @@ function doSearch() {
 
   // Score chaque recette, groupe par score, mélange aléatoirement dans chaque groupe
   // IMPORTANT : inclure aussi les recettes utilisateur
+  const excluded = loadExclusions();
   const scored = RECIPES.concat(userRecipes)
+    .filter(recipe => !isRecipeExcluded(recipe, excluded))
     .map(recipe => {
       const matchCount = selectedIngredients.filter(ing => recipe.tags.includes(ing)).length;
       return { ...recipe, matchCount };
@@ -3664,57 +3787,63 @@ window.onload = function() {
 // (claudeusercontent.com ne sert pas sw.js).
 // Fonctionne sur GitHub Pages, localhost, et tout autre hébergeur HTTPS.
 if ('serviceWorker' in navigator && !location.hostname.includes('claudeusercontent')) {
+  // Mise à jour 100 % automatique : le nouveau SW s'active seul (skipWaiting
+  // dans sw.js), la page se recharge, puis un toast confirme la mise à jour.
+  var _hadController = !!navigator.serviceWorker.controller;
+
   navigator.serviceWorker.register('./sw.js')
     .then(function(reg) {
       console.log('[PWA] SW enregistré, scope :', reg.scope);
-
-      // ── Détection mise à jour ──────────────────────────────────────────
-      // Cas 1 : un nouveau SW est déjà en attente au chargement de la page
-      if (reg.waiting) {
-        showUpdateFab();
-      }
-
-      // Cas 2 : un nouveau SW vient de finir de s'installer pendant la session
-      reg.addEventListener('updatefound', function() {
-        var newWorker = reg.installing;
-        if (!newWorker) return;
-        newWorker.addEventListener('statechange', function() {
-          // Le nouveau SW est installé et attend — on peut proposer la MAJ
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            showUpdateFab();
-          }
-        });
+      // Recherche d'une nouvelle version quand l'app revient au premier plan
+      document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible') reg.update().catch(function() {});
       });
     })
     .catch(function(err) { console.warn('[PWA] SW échoué :', err); });
 
-  // Cas 3 : le SW envoie SW_WAITING après son installation (si l'onglet était déjà ouvert)
-  navigator.serviceWorker.addEventListener('message', function(event) {
-    if (event.data && event.data.type === 'SW_WAITING') {
-      showUpdateFab();
-    }
-  });
-
-  // Recharger automatiquement quand le nouveau SW prend le contrôle
   navigator.serviceWorker.addEventListener('controllerchange', function() {
-    window.location.reload();
+    // Première installation (aucun SW avant) : rien à recharger
+    if (!_hadController) { _hadController = true; return; }
+    reloadWhenSafe();
   });
+
+  // Toast "Mise à jour effectuée" si la version du SW a changé depuis la dernière visite
+  if (navigator.serviceWorker.controller) {
+    var _mc = new MessageChannel();
+    _mc.port1.onmessage = function(e) {
+      var v = e.data && e.data.version;
+      if (!v) return;
+      var prev = null;
+      try {
+        prev = localStorage.getItem('marecette_sw_version');
+        localStorage.setItem('marecette_sw_version', v);
+      } catch (err) {}
+      if (prev && prev !== v) showUpdateToast('✅ Mise à jour effectuée');
+    };
+    navigator.serviceWorker.controller.postMessage({ type: 'GET_VERSION' }, [_mc.port2]);
+  }
 }
 
-// Affiche le bouton flottant de mise à jour
-function showUpdateFab() {
-  var fab = document.getElementById('fab-update');
-  if (fab) fab.classList.add('visible');
+// Recharge la page pour appliquer la mise à jour, sans casser une action en cours
+// (formulaire de création non enregistré, mode soirée) : on attend que ce soit fini.
+function reloadWhenSafe() {
+  var active = document.querySelector('.page.active');
+  var busy = (active && active.id === 'page-add-form') || document.getElementById('soiree-overlay');
+  if (busy) { setTimeout(reloadWhenSafe, 3000); return; }
+  window.location.reload();
 }
 
-// Déclenche la mise à jour : envoie SKIP_WAITING au SW en attente
-function applyUpdate() {
-  navigator.serviceWorker.getRegistration().then(function(reg) {
-    if (reg && reg.waiting) {
-      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-      // controllerchange rechargera la page automatiquement
-    }
-  });
+// Petit pop-up temporaire (disparaît seul)
+function showUpdateToast(msg) {
+  var t = document.createElement('div');
+  t.className = 'update-toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(function() { requestAnimationFrame(function() { t.classList.add('visible'); }); });
+  setTimeout(function() {
+    t.classList.remove('visible');
+    setTimeout(function() { t.remove(); }, 400);
+  }, 3500);
 }
 </script>
 
