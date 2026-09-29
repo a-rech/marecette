@@ -508,6 +508,77 @@
     .filter-opt:hover { background: var(--surface2); color: var(--text); }
     .filter-opt.active { background: var(--accent); color: white; border-color: var(--accent); }
 
+    /* ---- SALUTATION ACCUEIL ---- */
+    .home-greeting { display: none; margin: 0 0 18px; }
+    .home-greeting-main { font-size: 18px; font-weight: 500; color: var(--accent); }
+    .home-greeting-sub { font-size: 13px; color: var(--text3); margin-top: 3px; }
+
+    /* ---- CHAMP TEXTE (Préférences / Bienvenue) ---- */
+    .prefs-input-text {
+      width: 100%; padding: 10px 12px; border-radius: 10px;
+      border: 1px solid var(--border); background: var(--surface2); color: var(--text);
+      font-family: 'DM Sans', sans-serif; font-size: 14px; transition: border-color .15s;
+    }
+    .prefs-input-text:focus { outline: none; border-color: var(--accent); }
+
+    /* ---- MESSAGE DE BIENVENUE ---- */
+    .welcome-overlay {
+      position: fixed; inset: 0; background: rgba(26,18,8,.6);
+      z-index: 500; opacity: 0; pointer-events: none;
+      transition: opacity .25s; display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .welcome-overlay.open { opacity: 1; pointer-events: auto; }
+    .welcome-modal {
+      background: var(--surface); border-radius: 20px; width: 100%; max-width: 500px;
+      max-height: 86vh; display: flex; flex-direction: column;
+      box-shadow: 0 8px 40px rgba(0,0,0,.35); border: 1px solid var(--border);
+      transform: scale(.95) translateY(12px); transition: transform .25s cubic-bezier(.4,0,.2,1);
+    }
+    .welcome-overlay.open .welcome-modal { transform: scale(1) translateY(0); }
+    .welcome-modal-head { padding: 22px 22px 0; display: flex; align-items: flex-start; justify-content: space-between; flex-shrink: 0; }
+    .welcome-modal-title { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: var(--text); line-height: 1.25; }
+    .welcome-modal-title span { color: var(--accent); }
+    .welcome-modal-close {
+      width: 30px; height: 30px; border-radius: 50%; background: var(--surface2);
+      border: none; cursor: pointer; font-size: 16px; color: var(--text2);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;
+    }
+    .welcome-modal-body { padding: 16px 22px; overflow-y: auto; flex: 1; }
+    .welcome-pseudo { margin-bottom: 8px; padding: 13px 15px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; }
+    .welcome-pseudo label { display: block; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+    .welcome-feature { display: flex; gap: 13px; align-items: flex-start; padding: 11px 0; border-bottom: 1px solid var(--border); }
+    .welcome-feature:last-of-type { border-bottom: none; }
+    .welcome-feature-icon { font-size: 20px; flex-shrink: 0; width: 28px; text-align: center; margin-top: 1px; }
+    .welcome-feature-text { flex: 1; }
+    .welcome-feature-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+    .welcome-feature-desc { font-size: 13px; color: var(--text2); line-height: 1.45; }
+    .welcome-feature-desc strong { color: var(--accent); font-weight: 500; }
+    .welcome-install-note {
+      margin: 14px 0 4px; padding: 13px 15px; background: rgba(196,98,45,.08);
+      border: 1px solid rgba(196,98,45,.25); border-radius: 12px;
+      font-size: 13px; color: var(--text2); line-height: 1.5;
+    }
+    .welcome-install-note strong { color: var(--accent); }
+    .welcome-install-btn {
+      margin-top: 10px; padding: 8px 14px; border-radius: 10px; cursor: pointer;
+      border: 1px solid var(--accent); background: transparent; color: var(--accent);
+      font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+    }
+    .welcome-install-btn:hover { background: var(--accent); color: white; }
+    .welcome-modal-foot { padding: 14px 22px 20px; display: flex; gap: 10px; flex-shrink: 0; border-top: 1px solid var(--border); }
+    .welcome-btn-close {
+      flex: 1; padding: 11px; border-radius: 12px; border: 1px solid var(--border);
+      background: var(--surface2); font-family: 'DM Sans', sans-serif; font-size: 14px;
+      font-weight: 500; color: var(--text2); cursor: pointer; transition: all .15s;
+    }
+    .welcome-btn-close:hover { border-color: var(--accent); color: var(--text); }
+    .welcome-btn-hide {
+      flex: 1.4; padding: 11px; border-radius: 12px; border: none;
+      background: var(--accent); font-family: 'DM Sans', sans-serif; font-size: 14px;
+      font-weight: 600; color: white; cursor: pointer; transition: all .15s;
+    }
+    .welcome-btn-hide:hover { background: #b05525; }
+
     /* ---- TOAST MISE À JOUR ---- */
     .update-toast {
       position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(16px);
@@ -914,6 +985,10 @@
 <!-- HOME -->
 <div id="page-home" class="page active">
   <div class="hero">
+    <div class="home-greeting" id="home-greeting">
+      <div class="home-greeting-main" id="home-greeting-main"></div>
+      <div class="home-greeting-sub" id="home-greeting-sub"></div>
+    </div>
     <h1>Cuisinez avec ce que<br>vous avez <em>déjà</em></h1>
     <p>Trouvez des recettes à partir de vos ingrédients, explorez le catalogue ou laissez-vous surprendre.</p>
     <div class="hero-btns">
@@ -933,7 +1008,7 @@
         <p>Laissez-vous inspirer par une recette tirée au hasard</p>
       </div>
     </div>
-    <button class="prefs-home-btn" onclick="openPrefs()">⚙️ Préférences</button>
+    <button class="prefs-home-btn" onclick="openPrefs()">⚙️ Paramètres</button>
   </div>
 </div>
 
@@ -1013,23 +1088,86 @@
 </div>
 
 <!-- FAB mise à jour PWA -->
-<!-- PANNEAU PRÉFÉRENCES -->
+<!-- MESSAGE DE BIENVENUE -->
+<div class="welcome-overlay" id="welcome-overlay" onclick="if(event.target===this)closeWelcome(false)">
+  <div class="welcome-modal" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+    <div class="welcome-modal-head">
+      <div class="welcome-modal-title" id="welcome-title">Bienvenue sur<br>Ma<span>Recette</span> 🍳</div>
+      <button class="welcome-modal-close" onclick="closeWelcome(false)" aria-label="Fermer">✕</button>
+    </div>
+    <div class="welcome-modal-body">
+      <div class="welcome-pseudo">
+        <label for="welcome-pseudo-input">👋 Comment doit-on vous appeler ?</label>
+        <input type="text" id="welcome-pseudo-input" class="prefs-input-text" placeholder="Votre prénom ou pseudo (facultatif)" maxlength="30" oninput="savePseudo(this.value)" autocomplete="off">
+      </div>
+      <div class="welcome-feature">
+        <div class="welcome-feature-icon">📖</div>
+        <div class="welcome-feature-text">
+          <div class="welcome-feature-title">Catalogue</div>
+          <div class="welcome-feature-desc">Parcourez toutes les recettes par <strong>catégorie</strong> ou par <strong>culture</strong>, et filtrez par difficulté, prix, temps ou régime végétarien.</div>
+        </div>
+      </div>
+      <div class="welcome-feature">
+        <div class="welcome-feature-icon">🥕</div>
+        <div class="welcome-feature-text">
+          <div class="welcome-feature-title">Recherche par ingrédients</div>
+          <div class="welcome-feature-desc">Sélectionnez ce que vous avez sous la main, <strong>excluez</strong> ce dont vous ne voulez pas, et suivez le nombre de recettes trouvées en direct.</div>
+        </div>
+      </div>
+      <div class="welcome-feature">
+        <div class="welcome-feature-icon">🎲</div>
+        <div class="welcome-feature-text">
+          <div class="welcome-feature-title">Recette au hasard</div>
+          <div class="welcome-feature-desc">Pas d'idée ? Laissez-vous surprendre par un <strong>plat salé</strong> ou <strong>sucré</strong>, puis faites défiler les suggestions.</div>
+        </div>
+      </div>
+      <div class="welcome-feature">
+        <div class="welcome-feature-icon">✨</div>
+        <div class="welcome-feature-text">
+          <div class="welcome-feature-title">Créations &amp; adaptations</div>
+          <div class="welcome-feature-desc">Créez vos propres recettes ou <strong>adaptez</strong> celles du catalogue. Retrouvez-les dans <strong>Mes créations</strong>.</div>
+        </div>
+      </div>
+      <div class="welcome-feature">
+        <div class="welcome-feature-icon">⭐</div>
+        <div class="welcome-feature-text">
+          <div class="welcome-feature-title">Favoris &amp; notes</div>
+          <div class="welcome-feature-desc">Gardez vos coups de cœur en favoris et ajoutez vos <strong>notes personnelles</strong> sur chaque recette.</div>
+        </div>
+      </div>
+      <div class="welcome-install-note">
+        📱 <strong>Installer l'application</strong> sur votre téléphone ou votre ordinateur pour l'utiliser comme une vraie app, même hors ligne.
+        <br><button class="welcome-install-btn" onclick="openInstallFromWelcome()">Voir comment l'installer</button>
+      </div>
+    </div>
+    <div class="welcome-modal-foot">
+      <button class="welcome-btn-close" onclick="closeWelcome(false)">Fermer</button>
+      <button class="welcome-btn-hide" onclick="closeWelcome(true)">Ne plus afficher</button>
+    </div>
+  </div>
+</div>
+
+<!-- PANNEAU PARAMÈTRES -->
 <div class="prefs-overlay" id="prefs-overlay" onclick="closePrefsOnOverlay(event)">
   <div class="prefs-panel" id="prefs-panel">
     <div class="prefs-handle"></div>
     <div class="prefs-header">
-      <span class="prefs-title">⚙️ Préférences</span>
+      <span class="prefs-title">⚙️ Paramètres</span>
       <button class="prefs-close" onclick="closePrefs()">✕</button>
     </div>
     <div class="prefs-tabs">
-      <button class="prefs-tab active" onclick="setPrefTab('affichage',this)">🖥 Affichage</button>
+      <button class="prefs-tab active" onclick="setPrefTab('affichage',this)">🖥 Préférences</button>
       <button class="prefs-tab" onclick="setPrefTab('install',this)">📱 Installation</button>
       <button class="prefs-tab" onclick="setPrefTab('donnees',this)">💾 Données</button>
       <button class="prefs-tab" onclick="setPrefTab('about',this)">ℹ️ À propos</button>
     </div>
 
-    <!-- Onglet Affichage -->
+    <!-- Onglet Préférences -->
     <div class="prefs-section active" id="prefs-affichage">
+      <div class="prefs-row">
+        <div class="prefs-label">Nom / Pseudo</div>
+        <input type="text" id="prefs-pseudo" class="prefs-input-text" placeholder="Votre prénom ou pseudo…" maxlength="30" oninput="savePseudo(this.value)" autocomplete="off">
+      </div>
       <div class="prefs-row">
         <div class="prefs-label">Taille de police</div>
         <div class="prefs-options">
@@ -1171,6 +1309,13 @@
         <span>Source</span>
         <span class="prefs-about-val"><a href="https://github.com/a-rech/marecette" target="_blank" style="color:var(--accent)">GitHub</a></span>
       </div>
+      <button class="data-action-btn" style="margin-top:18px" onclick="closePrefs();openWelcome();">
+        <span class="btn-icon">💬</span>
+        <div>
+          <div>Revoir le message de bienvenue</div>
+          <div class="btn-desc">Réaffiche la présentation des fonctionnalités</div>
+        </div>
+      </button>
     </div>
   </div>
 </div>
@@ -1826,6 +1971,7 @@ function showPage(pageId) {
   target.classList.add('active');
   document.getElementById('fab-search').classList.toggle('visible', pageId === 'search');
   window.scrollTo(0, 0);
+  if (pageId === 'home')      updateHomeGreeting();
   if (pageId === 'search')    loadIngredientFamilies();
   if (pageId === 'catalogue') loadCatalogueTabs();
   if (pageId === 'random')    pickRandom();
@@ -2954,6 +3100,80 @@ function savePrefs(prefs) {
   localStorage.setItem('marecette_prefs', JSON.stringify(prefs));
 }
 
+// ── Pseudo de l'utilisateur (stocké dans marecette_prefs) ─────────────────
+function getPseudo() {
+  return (loadPrefs().pseudo || '').trim();
+}
+
+function savePseudo(val) {
+  const p = loadPrefs();
+  p.pseudo = String(val || '').trim().slice(0, 30);
+  savePrefs(p);
+  // Garde les deux champs (Préférences + Bienvenue) synchronisés
+  ['prefs-pseudo', 'welcome-pseudo-input'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el !== document.activeElement) el.value = val;
+  });
+  updateHomeGreeting();
+}
+
+// Message d'accueil selon l'heure de la journée
+function updateHomeGreeting() {
+  const box = document.getElementById('home-greeting');
+  if (!box) return;
+  const pseudo = getPseudo();
+  if (!pseudo) { box.style.display = 'none'; return; }
+
+  const h = new Date().getHours();
+  let salut, emoji, sub;
+  if (h >= 5 && h < 10)        { salut = 'Bonjour';       emoji = '☀️'; sub = 'Un bon petit-déjeuner pour bien démarrer ?'; }
+  else if (h >= 10 && h < 12)  { salut = 'Bonjour';       emoji = '👋'; sub = 'Que cuisine-t-on pour midi ?'; }
+  else if (h >= 12 && h < 14)  { salut = 'Bon appétit';   emoji = '🍽️'; sub = "C'est l'heure du déjeuner !"; }
+  else if (h >= 14 && h < 18)  { salut = 'Bon après-midi'; emoji = '🍰'; sub = 'Une envie sucrée, ou on prépare déjà ce soir ?'; }
+  else if (h >= 18 && h < 22)  { salut = 'Bonsoir';       emoji = '🍳'; sub = "Qu'est-ce qu'on mijote ce soir ?"; }
+  else                         { salut = 'Bonsoir';       emoji = '🌙'; sub = 'Une petite faim nocturne ?'; }
+
+  document.getElementById('home-greeting-main').textContent = salut + ', ' + pseudo + ' ' + emoji;
+  document.getElementById('home-greeting-sub').textContent = sub;
+  box.style.display = 'block';
+}
+
+// ── Message de bienvenue ──────────────────────────────────────────────────
+const WELCOME_HIDE_KEY = 'marecette_welcome_hide';
+const WELCOME_SESSION_KEY = 'marecette_welcome_shown';
+
+function openWelcome() {
+  const overlay = document.getElementById('welcome-overlay');
+  if (!overlay) return;
+  const input = document.getElementById('welcome-pseudo-input');
+  if (input) input.value = getPseudo();
+  overlay.classList.add('open');
+  try { sessionStorage.setItem(WELCOME_SESSION_KEY, '1'); } catch (e) {}
+}
+
+function closeWelcome(hide) {
+  if (hide) { try { localStorage.setItem(WELCOME_HIDE_KEY, '1'); } catch (e) {} }
+  const overlay = document.getElementById('welcome-overlay');
+  if (overlay) overlay.classList.remove('open');
+}
+
+// Ferme la bienvenue et ouvre Paramètres directement sur l'onglet Installation
+function openInstallFromWelcome() {
+  closeWelcome(false);
+  openPrefs();
+  const tab = document.querySelector('.prefs-tab[onclick*="\'install\'"]');
+  if (tab) setPrefTab('install', tab);
+}
+
+function maybeShowWelcome() {
+  let hidden = false, alreadyShown = false;
+  try {
+    hidden = localStorage.getItem(WELCOME_HIDE_KEY) === '1';
+    alreadyShown = sessionStorage.getItem(WELCOME_SESSION_KEY) === '1'; // évite de la réafficher après un rechargement de mise à jour
+  } catch (e) {}
+  if (!hidden && !alreadyShown) openWelcome();
+}
+
 // Appliquer toutes les préférences au démarrage
 function applyPrefs() {
   const p = loadPrefs();
@@ -2982,6 +3202,8 @@ function openPrefs() {
   const overlay = document.getElementById('prefs-overlay');
   overlay.classList.add('open');
   syncPrefUI(loadPrefs());
+  const pi = document.getElementById('prefs-pseudo');
+  if (pi) pi.value = getPseudo();
   // Statistiques
   document.getElementById('about-recipe-count').textContent = RECIPES.length + ' recettes';
   const favs = getFavorites();
@@ -3250,6 +3472,9 @@ function resetAllData() {
   showDataStatus('reset-status', '✓ Toutes les données ont été effacées.', true);
   // Réinitialiser les préférences visuelles
   applyPrefs();
+  updateHomeGreeting();
+  const pi = document.getElementById('prefs-pseudo');
+  if (pi) pi.value = '';
 }
 
 // Affiche un message de statut temporaire sous un bouton
@@ -3773,6 +3998,8 @@ window.onload = function() {
   loadUserRecipes();
   applyPrefs();
   showPage('home');
+  updateHomeGreeting();
+  maybeShowWelcome();
   // Initialise l'état History API pour que le premier popstate soit intercepté
   history.replaceState({ page: 'home', depth: 1 }, '', '');
 
