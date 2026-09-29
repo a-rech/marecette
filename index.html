@@ -1175,8 +1175,13 @@
 
 <!-- RECIPE PAGE -->
 <div id="page-recipe" class="page">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
     <button class="back-btn" onclick="goBack()" style="margin:0;">← Retour</button>
+    <div id="recipe-nav-group" style="display:flex;align-items:center;gap:8px;visibility:hidden;">
+      <button id="recipe-nav-prev" onclick="_swipeNavigate(-1)" style="background:none;border:none;cursor:pointer;padding:4px 6px;font-size:15px;color:var(--text2);opacity:0.6;line-height:1;">‹</button>
+      <span id="recipe-nav-counter" style="font-size:13px;color:var(--text2);min-width:50px;text-align:center;">—</span>
+      <button id="recipe-nav-next" onclick="_swipeNavigate(1)" style="background:none;border:none;cursor:pointer;padding:4px 6px;font-size:15px;color:var(--text2);opacity:0.6;line-height:1;">›</button>
+    </div>
     <button class="btn-lexique" onclick="openLexique()">💡 Lexique</button>
   </div>
   <div id="recipe-content"></div>
@@ -1809,6 +1814,17 @@ function showPage(pageId) {
 
 // Navigation utilisateur : empile la page, affiche, et pousse dans l'History API
 function navigateTo(pageId) {
+  // Nettoyer les variables de swipe et le cache si on quitte la page recette
+  if (pageStack[pageStack.length - 1] === 'recipe' && pageId !== 'recipe') {
+    _swipeList = [];
+    _swipeIdx = -1;
+  }
+  
+  // Nettoyer le cache si on quitte le catalogue ou la recherche
+  if ((pageStack[pageStack.length - 1] === 'catalogue' || pageStack[pageStack.length - 1] === 'search') && pageId !== 'catalogue' && pageId !== 'search') {
+    _lastFilteredPool = [];
+  }
+  
   if (pageStack[pageStack.length - 1] === pageId) {
     showPage(pageId);
     return;
@@ -1822,6 +1838,21 @@ function navigateTo(pageId) {
 
 // Retour interne (boutons ← dans l'app)
 function goBack() {
+  // Nettoyer les variables de swipe si on quitte la page recette
+  if (pageStack[pageStack.length - 1] === 'recipe') {
+    _swipeList = [];
+    _swipeIdx = -1;
+  }
+  
+  // Nettoyer le cache si on quitte le catalogue ou la recherche
+  if (pageStack.length > 1) {
+    const current = pageStack[pageStack.length - 1];
+    const next = pageStack[pageStack.length - 2];
+    if ((current === 'recipe') && (next !== 'catalogue' && next !== 'search')) {
+      _lastFilteredPool = [];
+    }
+  }
+  
   if (pageStack.length > 1) {
     pageStack.pop();
   }
@@ -1835,6 +1866,10 @@ function goBack() {
 function goHome() {
   pageStack = ['home'];
   history.replaceState({ page: 'home', depth: 1 }, '', '');
+  // Nettoyer les variables de swipe et cache
+  _swipeList = [];
+  _swipeIdx = -1;
+  _lastFilteredPool = [];
   showPage('home');
 }
 
@@ -1931,6 +1966,9 @@ function resetFilters() {
   document.querySelectorAll('.ingredient-chip.selected').forEach(chip => {
     chip.classList.remove('selected');
   });
+  // Aussi nettoyer les résultats et le cache
+  document.getElementById('search-results').innerHTML = '';
+  _lastFilteredPool = [];
   updateSearchButton();
 }
 
@@ -1951,7 +1989,8 @@ function doSearch() {
   const resultsContainer = document.getElementById('search-results');
 
   // Score chaque recette, groupe par score, mélange aléatoirement dans chaque groupe
-  const scored = RECIPES
+  // IMPORTANT : inclure aussi les recettes utilisateur
+  const scored = RECIPES.concat(userRecipes)
     .map(recipe => {
       const matchCount = selectedIngredients.filter(ing => recipe.tags.includes(ing)).length;
       return { ...recipe, matchCount };
@@ -1971,6 +2010,7 @@ function doSearch() {
         <p>Aucune recette trouvée avec ces ingrédients.</p>
       </div>
     `;
+    _lastFilteredPool = []; // Vider le cache
     return;
   }
 
@@ -1978,7 +2018,7 @@ function doSearch() {
     <div class="results-count">${scoredRecipes.length} recette${scoredRecipes.length > 1 ? 's' : ''} trouvée${scoredRecipes.length > 1 ? 's' : ''}</div>
     <div class="results-grid">
       ${scoredRecipes.map(recipe => `
-        <div class="recipe-card" onclick="showRecipe(${recipe.id})">
+        <div class="recipe-card" onclick="showRecipeFromCatalogue(${recipe.id})">
           <div class="recipe-card-img">${recipe.emoji}${cardFavBtn(recipe.id)}</div>
           <div class="recipe-card-body">
             <div class="recipe-card-title">${recipe.title}</div>
@@ -1998,6 +2038,9 @@ function doSearch() {
       `).join('')}
     </div>
   `;
+
+  // IMPORTANT : mettre en cache la liste pour le swipe
+  _lastFilteredPool = scoredRecipes.slice();
 
   // Scroll vers les résultats
   resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2305,16 +2348,20 @@ function applyAllFilters() {
   // Met à jour les compteurs des onglets en fonction des filtres actifs
   updateCatalogueTabCounts();
 
+  // Affichage ou message vide
   if (pool.length === 0) {
     document.getElementById('catalogue-results').innerHTML =
       `<div class="empty-state"><div class="big">🔍</div><p>Aucune recette ne correspond à ces filtres.</p></div>`;
-    return;
+  } else {
+    renderCatalogueGrid(shuffle(pool));
+    if (query || catTabValue !== 'all') {
+      document.getElementById('catalogue-results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   }
-
-  renderCatalogueGrid(shuffle(pool));
-  if (query || catTabValue !== 'all') {
-    document.getElementById('catalogue-results').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
+  
+  // IMPORTANT : mettre en cache et retourner la liste filtrée (pour swipe)
+  _lastFilteredPool = pool.slice(); // Copie pour éviter les mutations
+  return pool;
 }
 
 // Réinitialise TOUS les filtres et remonte en haut
@@ -2351,7 +2398,7 @@ function renderCatalogueGrid(recipes) {
     ? `<div class="empty-state"><div class="big">🤍</div><p>Aucun favori pour l'instant.<br>Cliquez sur 🤍 dans une recette pour l'ajouter.</p></div>`
     : `<div class="results-grid">
       ${recipes.map(recipe => {
-        return `<div class="recipe-card" onclick="showRecipe(${recipe.id})">
+        return `<div class="recipe-card" onclick="showRecipeFromCatalogue(${recipe.id})">
           <div class="recipe-card-img">${recipe.emoji}${cardFavBtn(recipe.id)}</div>
           <div class="recipe-card-body">
             <div class="recipe-card-title">${recipe.title}</div>
@@ -2424,14 +2471,24 @@ function setRandomMode(mode, btn) {
 }
 
 function pickRandom() {
-  const pool = RECIPES.filter(r =>
+  // Créer le pool (catalogue + créations)
+  const pool = RECIPES.concat(userRecipes).filter(r =>
     randomMode === 'sucre' ? CATS_SUCRE.includes(r.cat) : !CATS_SUCRE.includes(r.cat)
   );
+  
   if (!pool.length) return;
-  const recipe = pool[Math.floor(Math.random() * pool.length)];
+  
+  // Mélanger aléatoirement la liste COMPLÈTE
+  const shuffledList = shuffle(pool.slice());
+  
+  // Mettre en cache la liste complète pour le swipe
+  _lastFilteredPool = shuffledList.slice();
+  
+  // Afficher la première recette de la liste
+  const recipe = shuffledList[0];
   const container = document.getElementById('random-recipe-container');
   container.innerHTML = `
-    <div class="recipe-card" onclick="showRecipe(${recipe.id})">
+    <div class="recipe-card" onclick="showRecipeFromCatalogue(${recipe.id})">
       <div class="recipe-card-img">${recipe.emoji}${cardFavBtn(recipe.id)}</div>
       <div class="recipe-card-body">
         <div class="recipe-card-title">${recipe.title}</div>
@@ -2565,7 +2622,7 @@ function toggleLexItem(i) {
 }
 
 // Affichage d'une recette
-function showRecipe(recipeId) {
+function showRecipe(recipeId, swipeList, animDir) {
   // Chercher dans le catalogue ET les recettes utilisateur
   let recipe = RECIPES.find(r => r.id === recipeId);
   if (!recipe) {
@@ -2574,7 +2631,21 @@ function showRecipe(recipeId) {
   if (!recipe) return;
 
   currentRecipeId = recipeId; // Stocker l'ID actuel
-  navigateTo('recipe'); // empile la page courante avant d'afficher la recette
+  
+  // Mettre à jour le contexte swipe si une liste est fournie
+  if (swipeList && swipeList.length > 0) {
+    _swipeList = swipeList.slice(); // Copie de la liste
+    _swipeIdx = swipeList.indexOf(recipeId);
+    if (_swipeIdx === -1) { _swipeList = []; } // sécurité
+  }
+  
+  // Si déjà sur la page recipe, ne pas repousser dans l'historique
+  const alreadyOnRecipe = document.getElementById('page-recipe').classList.contains('active');
+  if (alreadyOnRecipe) {
+    showPage('recipe'); // rafraîchit sans toucher pageStack
+  } else {
+    navigateTo('recipe'); // empile la page courante avant d'afficher la recette
+  }
 
   const isFav = isFavorite(recipe.id);
   const noteText = getNote(recipe.id);
@@ -2650,6 +2721,18 @@ function showRecipe(recipeId) {
       <div class="notes-saved" id="notes-saved-${recipe.id}">✓ Sauvegardé</div>
     </div>
   `;
+  
+  // Mettre à jour le compteur de navigation
+  const counter = document.getElementById('recipe-nav-counter');
+  const group = document.getElementById('recipe-nav-group');
+  if (counter && group) {
+    if (_swipeList.length > 1 && _swipeIdx !== -1) {
+      counter.textContent = (_swipeIdx + 1) + ' / ' + _swipeList.length;
+      group.style.visibility = 'visible';
+    } else {
+      group.style.visibility = 'hidden';
+    }
+  }
 }
 
 // Recalcul des quantités en fonction du nombre de portions
@@ -3067,6 +3150,11 @@ let nextUserId = 1000;
 let currentEditingId = null;
 let currentRecipeId = null; // ID de la recette actuellement affichée
 
+// Navigation par swipe
+let _swipeList = []; // Liste des recettes navigables (après filtres)
+let _swipeIdx = -1;  // Index actuel dans la liste
+let _lastFilteredPool = []; // Cache de la dernière liste filtrée (pour cohérence)
+
 // Charger les recettes utilisateur au démarrage
 function loadUserRecipes() {
   try {
@@ -3413,8 +3501,65 @@ function getRecipeActions(id) {
 }
 
 // ════════════════════════════════════════════════════════════
-// SOIRÉE MODE - AFFICHAGE EN GRAND
+// NAVIGATION PAR SWIPE/FLÈCHES
 // ════════════════════════════════════════════════════════════
+
+function showRecipeFromCatalogue(recipeId) {
+  // Utiliser la liste filtrée en cache pour cohérence
+  // (évite de rappeler applyAllFilters qui pourrait shuffle différemment)
+  let recipeIds = [];
+  if (_lastFilteredPool && _lastFilteredPool.length > 0) {
+    recipeIds = _lastFilteredPool.map(r => r.id);
+  }
+  showRecipe(recipeId, recipeIds);
+}
+
+function _swipeNavigate(dir) {
+  if (_swipeList.length < 2 || _swipeIdx === -1) return;
+  const next = _swipeIdx + dir;
+  if (next < 0 || next >= _swipeList.length) {
+    // Boucle vers le début ou la fin
+    const newIdx = next < 0 ? _swipeList.length - 1 : 0;
+    const nextId = _swipeList[newIdx];
+    showRecipe(nextId, _swipeList, dir > 0 ? 'left' : 'right');
+    return;
+  }
+  const nextId = _swipeList[next];
+  showRecipe(nextId, _swipeList, dir > 0 ? 'left' : 'right');
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+// Gestionnaires touch pour swipe horizontal
+(function() {
+  let _tx = 0, _ty = 0, _locked = false;
+  document.addEventListener('touchstart', function(e) {
+    // Ne pas swiper si SoireeMode est actif
+    if (document.getElementById('soiree-overlay')) return;
+    const page = document.getElementById('page-recipe');
+    if (!page || !page.classList.contains('active')) return;
+    if (_swipeList.length < 2) return;
+    _tx = e.touches[0].clientX;
+    _ty = e.touches[0].clientY;
+    _locked = false;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function(e) {
+    if (_locked || _swipeList.length < 2) return;
+    const dx = Math.abs(e.touches[0].clientX - _tx);
+    const dy = Math.abs(e.touches[0].clientY - _ty);
+    if (dx > dy) { _locked = true; }
+  }, { passive: true });
+
+  document.addEventListener('touchend', function(e) {
+    if (!_locked || _swipeList.length < 2) return;
+    const dx = e.changedTouches[0].clientX - _tx;
+    if (Math.abs(dx) > 50) { // Seuil de 50px
+      _swipeNavigate(dx > 0 ? -1 : 1);
+    }
+  }, { passive: true });
+})();
+
+
 
 function enterRecipeSoireeMode(id) {
   // Chercher la recette dans les deux sources
