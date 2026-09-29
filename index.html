@@ -258,6 +258,26 @@
     .info-label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text3); margin-bottom: 4px; }
     .info-val { font-size: 18px; font-weight: 500; }
 
+    /* Sélecteur de portions (− / valeur / +) */
+    .portions-stepper { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+    .portions-btn {
+      width: 30px; height: 30px; border-radius: 50%; padding: 0; line-height: 1;
+      border: 1.5px solid var(--border); background: var(--surface2); color: var(--text);
+      font-family: 'DM Sans', sans-serif; font-size: 18px; font-weight: 500; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: border-color .15s, color .15s, background .15s, transform .1s;
+      -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+    }
+    .portions-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .portions-btn:active:not(:disabled) { transform: scale(.92); }
+    .portions-btn:disabled { opacity: .35; cursor: default; }
+    .portions-value {
+      min-width: 32px; padding: 0; border: none; background: none; text-align: center;
+      font-family: 'DM Sans', sans-serif; font-size: 18px; font-weight: 600; color: var(--text);
+      cursor: default;
+    }
+    .portions-value.modified { color: var(--accent); cursor: pointer; text-decoration: underline dotted; text-underline-offset: 4px; }
+
     .recipe-body { display: grid; grid-template-columns: 1fr 2fr; gap: 32px; }
     @media (max-width: 600px) { .recipe-body { grid-template-columns: 1fr; } }
 
@@ -663,7 +683,24 @@
     .cam-frame { position: absolute; inset: 18% 18%; border: 3px solid rgba(255,255,255,.85); border-radius: 12px; pointer-events: none; }
     .cam-status { margin-top: 12px; padding: 10px; background: rgba(255,255,255,.1); border-radius: 8px; color: rgba(255,255,255,.8); font-size: 13px; text-align: center; }
 
-    /* ---- TOAST MISE À JOUR ---- */
+    /* ---- FAB MISE À JOUR ---- */
+    .fab-update {
+      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(16px);
+      z-index: 300;
+      padding: 13px 24px; border-radius: 50px;
+      background: #4a7c59; color: white; border: none; cursor: pointer;
+      font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+      display: flex; align-items: center; gap: 8px;
+      opacity: 0; pointer-events: none;
+      transition: opacity .3s, transform .3s;
+      white-space: nowrap;
+    }
+    .fab-update.visible { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
+    .fab-update:hover { filter: brightness(1.12); }
+    @media (max-width:480px) { .fab-update { font-size:13px; padding:11px 18px; bottom:70px; } }
+
+    /* ---- TOAST (messages courts) ---- */
     .update-toast {
       position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(16px);
       z-index: 400; padding: 12px 22px; border-radius: 50px;
@@ -1327,7 +1364,7 @@
         <button class="data-action-btn" onclick="exportData()">
           <span class="btn-icon">📤</span>
           <div>
-            <div>Exporter favoris &amp; notes</div>
+            <div>Exporter créations, favoris &amp; notes</div>
             <div class="btn-desc">Télécharge un fichier .json à conserver ou transférer</div>
           </div>
         </button>
@@ -1343,7 +1380,7 @@
           <span class="btn-icon">📥</span>
           <div>
             <div>Importer un fichier de sauvegarde</div>
-            <div class="btn-desc">Sélectionnez un fichier .json exporté depuis cette app</div>
+            <div class="btn-desc">Fusionne créations, favoris et notes avec vos données actuelles</div>
           </div>
         </button>
         <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(this)">
@@ -1359,7 +1396,7 @@
           <span class="btn-icon">🗑️</span>
           <div>
             <div>Effacer toutes mes données</div>
-            <div class="btn-desc">Supprime définitivement favoris, notes et préférences</div>
+            <div class="btn-desc">Supprime définitivement créations, favoris, notes et préférences</div>
           </div>
         </button>
         <div class="data-status" id="reset-status"></div>
@@ -1404,6 +1441,9 @@
   </div>
 </div>
 
+
+<!-- FAB mise à jour (affiché quand une nouvelle version est prête) -->
+<button class="fab-update" id="fab-update" onclick="applyUpdate()">🔄 Mettre à jour</button>
 
 <!-- FAB réinitialiser (catalogue seulement) -->
 <button class="fab-reset" id="fab-reset" onclick="resetAllFilters()">↑ Réinitialiser</button>
@@ -3041,11 +3081,12 @@ function showRecipe(recipeId, swipeList, animDir) {
         <div class="info-block">
           <div class="info-label">PORTIONS</div>
           <div class="info-val">
-            <select id="portions-selector" onchange="updateQuantities(${recipe.id})">
-              ${Array.from({length: 10}, (_, i) => i+1).map(i => `
-                <option value="${i}" ${i === recipe.portions ? 'selected' : ''}>${i}</option>
-              `).join('')}
-            </select>
+            <div class="portions-stepper" data-base="${recipe.portions}">
+              <button type="button" class="portions-btn" id="portions-minus" onclick="changePortions(${recipe.id}, -1)" aria-label="Moins de portions">−</button>
+              <button type="button" class="portions-value" id="portions-value" onclick="resetPortions(${recipe.id})" aria-live="polite">${recipe.portions}</button>
+              <button type="button" class="portions-btn" id="portions-plus" onclick="changePortions(${recipe.id}, 1)" aria-label="Plus de portions">+</button>
+              <input type="hidden" id="portions-selector" value="${recipe.portions}">
+            </div>
           </div>
         </div>
       </div>
@@ -3078,11 +3119,17 @@ function showRecipe(recipeId, swipeList, animDir) {
 
     <div class="recipe-notes-section">
       <div class="recipe-section-title">📝 MES NOTES</div>
-      <textarea class="notes-textarea" id="notes-${recipe.id}" placeholder="Vos astuces, variantes, retours d'expérience…" oninput="saveNote(${recipe.id}, this.value)">${noteText}</textarea>
+      <textarea class="notes-textarea" id="notes-${recipe.id}" placeholder="Vos astuces, variantes, retours d'expérience…" oninput="saveNote(${recipe.id}, this.value)">${_esc(noteText)}</textarea>
       <div class="notes-saved" id="notes-saved-${recipe.id}">✓ Sauvegardé</div>
     </div>
   `;
   
+  // État initial du sélecteur de portions (désactive − à 1, + à 50)
+  const _pin = document.getElementById('portions-selector');
+  if (_pin) { const _m = document.getElementById('portions-minus'), _p = document.getElementById('portions-plus');
+    if (_m) _m.disabled = parseInt(_pin.value) <= PORTIONS_MIN;
+    if (_p) _p.disabled = parseInt(_pin.value) >= PORTIONS_MAX; }
+
   // Mettre à jour le compteur de navigation
   const counter = document.getElementById('recipe-nav-counter');
   const group = document.getElementById('recipe-nav-group');
@@ -3094,6 +3141,42 @@ function showRecipe(recipeId, swipeList, animDir) {
       group.style.visibility = 'hidden';
     }
   }
+}
+
+// ── Sélecteur de portions (− / +) ─────────────────────────
+// La valeur courante reste dans #portions-selector (lue par updateQuantities et le mode soirée).
+const PORTIONS_MIN = 1, PORTIONS_MAX = 50;
+
+function _setPortions(recipeId, n) {
+  const input = document.getElementById('portions-selector');
+  if (!input) return;
+  n = Math.min(PORTIONS_MAX, Math.max(PORTIONS_MIN, n));
+  input.value = n;
+  const base = parseInt(input.parentNode.getAttribute('data-base')) || n;
+  const val = document.getElementById('portions-value');
+  if (val) {
+    val.textContent = n;
+    val.classList.toggle('modified', n !== base);
+    val.title = n !== base ? 'Revenir à ' + base + ' portion' + (base > 1 ? 's' : '') + ' (recette d\'origine)' : '';
+  }
+  const minus = document.getElementById('portions-minus'), plus = document.getElementById('portions-plus');
+  if (minus) minus.disabled = n <= PORTIONS_MIN;
+  if (plus) plus.disabled = n >= PORTIONS_MAX;
+  updateQuantities(recipeId);
+}
+
+function changePortions(recipeId, delta) {
+  const input = document.getElementById('portions-selector');
+  if (!input) return;
+  _setPortions(recipeId, (parseInt(input.value) || 1) + delta);
+}
+
+// Toucher la valeur (quand elle diffère de la recette) ramène au nombre de portions d'origine
+function resetPortions(recipeId) {
+  const input = document.getElementById('portions-selector');
+  if (!input) return;
+  const base = parseInt(input.parentNode.getAttribute('data-base'));
+  if (base && parseInt(input.value) !== base) _setPortions(recipeId, base);
 }
 
 // Recalcul des quantités en fonction du nombre de portions
@@ -3232,7 +3315,6 @@ function updateHomeGreeting() {
 
 // ── Message de bienvenue ──────────────────────────────────────────────────
 const WELCOME_HIDE_KEY = 'marecette_welcome_hide';
-const WELCOME_SESSION_KEY = 'marecette_welcome_shown';
 
 function openWelcome() {
   const overlay = document.getElementById('welcome-overlay');
@@ -3240,7 +3322,6 @@ function openWelcome() {
   const input = document.getElementById('welcome-pseudo-input');
   if (input) input.value = getPseudo();
   overlay.classList.add('open');
-  try { sessionStorage.setItem(WELCOME_SESSION_KEY, '1'); } catch (e) {}
 }
 
 function closeWelcome(hide) {
@@ -3259,12 +3340,9 @@ function openInstallFromWelcome() {
 
 function maybeShowWelcome() {
   if (/^#r=/.test(location.hash || '')) return; // arrivée via un lien de partage : on affiche d'abord l'import
-  let hidden = false, alreadyShown = false;
-  try {
-    hidden = localStorage.getItem(WELCOME_HIDE_KEY) === '1';
-    alreadyShown = sessionStorage.getItem(WELCOME_SESSION_KEY) === '1'; // évite de la réafficher après un rechargement de mise à jour
-  } catch (e) {}
-  if (!hidden && !alreadyShown) openWelcome();
+  let hidden = false;
+  try { hidden = localStorage.getItem(WELCOME_HIDE_KEY) === '1'; } catch (e) {}
+  if (!hidden) openWelcome();
 }
 
 // Appliquer toutes les préférences au démarrage
@@ -3458,35 +3536,37 @@ function toggleCardFav(id, btn) {
 
 // ── DONNÉES : EXPORT / IMPORT / RESET ────────────────────────────────────
 
-// Collecte toutes les données utilisateur depuis localStorage
+// Collecte toutes les données utilisateur depuis localStorage :
+// créations, favoris et notes personnelles (format v2 ; les fichiers v1 restent importables)
 function collectUserData() {
   var data = {
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     app: 'MaRecette',
+    userRecipes: [],
     favorites: [],
     notes: {}
   };
-  // Favoris
-  try { data.favorites = JSON.parse(localStorage.getItem('marecette_favs') || '[]'); } catch(e) {}
-  // Notes : toutes les clés marecette_note_*
-  Object.keys(localStorage).forEach(function(key) {
-    if (key.startsWith('marecette_note_')) {
-      var id = key.replace('marecette_note_', '');
-      data.notes[id] = localStorage.getItem(key);
-    }
-  });
+  try { data.userRecipes = JSON.parse(localStorage.getItem(USER_RECIPES_STORAGE_KEY) || '[]'); } catch(e) {}
+  try { data.favorites   = JSON.parse(localStorage.getItem('marecette_favs') || '[]'); } catch(e) {}
+  try { data.notes       = JSON.parse(localStorage.getItem('marecette_notes') || '{}'); } catch(e) {}
+  if (!Array.isArray(data.userRecipes)) data.userRecipes = [];
+  if (!Array.isArray(data.favorites)) data.favorites = [];
+  if (!data.notes || typeof data.notes !== 'object' || Array.isArray(data.notes)) data.notes = {};
   return data;
 }
+
+function _plural(n, one, many) { return n + ' ' + (n > 1 ? many : one); }
 
 // Télécharge un fichier JSON sur l'appareil
 function exportData() {
   var data = collectUserData();
-  var favCount = data.favorites.length;
+  var recCount  = data.userRecipes.length;
+  var favCount  = data.favorites.length;
   var noteCount = Object.keys(data.notes).length;
 
-  if (favCount === 0 && noteCount === 0) {
-    showDataStatus('export-status', 'Aucune donnée à exporter (pas de favoris ni de notes).', false);
+  if (recCount === 0 && favCount === 0 && noteCount === 0) {
+    showDataStatus('export-status', 'Aucune donnée à exporter (pas de création, de favori ni de note).', false);
     return;
   }
 
@@ -3500,14 +3580,130 @@ function exportData() {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 2000);
 
   showDataStatus('export-status',
-    '✓ ' + favCount + ' favori' + (favCount > 1 ? 's' : '') +
-    ' et ' + noteCount + ' note' + (noteCount > 1 ? 's' : '') + ' exportés.', true);
+    '✓ ' + _plural(recCount, 'création', 'créations') + ', ' +
+    _plural(favCount, 'favori', 'favoris') + ' et ' +
+    _plural(noteCount, 'note', 'notes') + ' exportés.', true);
 }
 
-// Lit un fichier JSON importé et restaure les données dans localStorage
+// Recette d'une sauvegarde → recette nettoyée (mêmes règles que l'import par lien, en mode « fidèle »)
+function _backupRecipeToStored(r) {
+  if (!r || typeof r !== 'object') return null;
+  return normalizeImportedRecipe({
+    t: r.title, e: r.emoji, c: r.cat, o: r.origin, d: r.diff,
+    p: r.prep, k: r.cook, n: r.portions, i: r.ingredients, s: r.steps,
+    pr: r.price, vg: r.vegetarian ? 1 : 0, cr: r.creator
+  }, true);
+}
+
+function _sameRecipeContent(a, b) {
+  return !!a && !!b
+    && a.title.toLowerCase() === b.title.toLowerCase()
+    && JSON.stringify(a.ingredients) === JSON.stringify(b.ingredients)
+    && JSON.stringify(a.steps) === JSON.stringify(b.steps);
+}
+
+// Restaure une sauvegarde par FUSION (rien n'est supprimé) et renvoie un message de résumé.
+//  • créations : ajoutées si absentes ; en cas de conflit d'identifiant, la recette reçoit un nouvel
+//    identifiant et ses favoris / notes la suivent ;
+//  • favoris : ajoutés à ceux existants ;
+//  • notes : si une note différente existe déjà, les deux sont conservées.
+function restoreBackup(data) {
+  var idMap = {};                       // identifiant du fichier → identifiant sur cet appareil
+  var created = 0, already = 0, invalid = 0;
+
+  // 1. Créations
+  var incoming = Array.isArray(data.userRecipes) ? data.userRecipes : [];
+  var local = userRecipes.slice();
+  var maxId = Math.max.apply(null, [999]
+    .concat(local.map(function(l) { return l.id; }))
+    .concat(incoming.map(function(r) { return parseInt(r && r.id) || 0; })));
+
+  incoming.forEach(function(raw) {
+    var oldId = parseInt(raw && raw.id);
+    var clean = _backupRecipeToStored(raw);
+    if (!clean || !isFinite(oldId) || oldId < 1000) { invalid++; return; }
+
+    // Déjà présente (même contenu), quel que soit son identifiant
+    var same = local.filter(function(l) { return _sameRecipeContent(clean, _backupRecipeToStored(l)); })[0];
+    if (same) { idMap[oldId] = same.id; already++; return; }
+
+    var newId = local.some(function(l) { return l.id === oldId; }) ? ++maxId : oldId;
+    var title = clean.title, n = 2;
+    var taken = function(t) { return local.some(function(l) { return String(l.title).toLowerCase() === t.toLowerCase(); }); };
+    while (taken(title)) { title = clean.title + ' (' + (n++) + ')'; }
+
+    local.push(Object.assign({}, clean, {
+      id: newId, title: title, tags: clean.ingredients.map(function(i) { return i[0]; }), userCreated: true
+    }));
+    idMap[oldId] = newId;
+    created++;
+  });
+
+  if (created > 0) {
+    userRecipes = local;
+    saveUserRecipes();
+    nextUserId = Math.max.apply(null, [999].concat(userRecipes.map(function(r) { return r.id; }))) + 1;
+  }
+
+  // Identifiant du fichier → identifiant local (null = recette inconnue, on ignore)
+  var catalogueIds = {};
+  RECIPES.forEach(function(r) { catalogueIds[r.id] = true; });
+  var localIds = {};
+  userRecipes.forEach(function(r) { localIds[r.id] = true; });
+  var mapId = function(id) {
+    id = parseInt(id);
+    if (!isFinite(id)) return null;
+    if (id < 1000) return catalogueIds[id] ? id : null;
+    if (idMap[id] !== undefined) return idMap[id];
+    return localIds[id] ? id : null;
+  };
+
+  // 2. Favoris (fusion)
+  var favSet = new Set(getFavorites());
+  var favAdded = 0;
+  (Array.isArray(data.favorites) ? data.favorites : []).forEach(function(f) {
+    var m = mapId(f);
+    if (m !== null && !favSet.has(m)) { favSet.add(m); favAdded++; }
+  });
+  if (favAdded > 0) saveFavorites(Array.from(favSet));
+
+  // 3. Notes (fusion sans jamais écraser une note existante)
+  var notes = getNotes();
+  var inNotes = (data.notes && typeof data.notes === 'object' && !Array.isArray(data.notes)) ? data.notes : {};
+  var noteAdded = 0, noteMerged = 0;
+  Object.keys(inNotes).forEach(function(k) {
+    var m = mapId(k);
+    var txt = typeof inNotes[k] === 'string' ? inNotes[k] : '';
+    if (m === null || !txt.trim()) return;
+    var cur = typeof notes[m] === 'string' ? notes[m] : '';
+    if (!cur.trim()) { notes[m] = txt; noteAdded++; }
+    else if (cur.indexOf(txt.trim()) === -1) { notes[m] = cur + '\n\n— Note importée —\n' + txt; noteMerged++; }
+  });
+  if (noteAdded + noteMerged > 0) localStorage.setItem('marecette_notes', JSON.stringify(notes));
+
+  // 4. Rafraîchir l'interface
+  if (created > 0) loadCatalogueTabs();
+  var recipePage = document.getElementById('page-recipe');
+  if ((favAdded + noteAdded + noteMerged + created) > 0 && recipePage && recipePage.classList.contains('active') && currentRecipeId) {
+    showRecipe(currentRecipeId);
+  }
+
+  // 5. Résumé
+  var parts = [];
+  if (created)   parts.push(_plural(created, 'création ajoutée', 'créations ajoutées'));
+  if (favAdded)  parts.push(_plural(favAdded, 'favori ajouté', 'favoris ajoutés'));
+  if (noteAdded) parts.push(_plural(noteAdded, 'note restaurée', 'notes restaurées'));
+  if (noteMerged) parts.push(_plural(noteMerged, 'note fusionnée avec l\'existante', 'notes fusionnées avec les existantes'));
+  var msg = parts.length ? '✓ Import réussi : ' + parts.join(', ') + '.' : '✓ Rien de nouveau : tout est déjà présent sur cet appareil.';
+  if (already && parts.length) msg += ' (' + _plural(already, 'création déjà présente', 'créations déjà présentes') + '.)';
+  if (invalid) msg += ' ' + _plural(invalid, 'recette illisible ignorée', 'recettes illisibles ignorées') + '.';
+  return msg;
+}
+
+// Lit un fichier JSON importé et restaure les données (fusion)
 function importData(input) {
   var file = input.files[0];
   if (!file) return;
@@ -3515,46 +3711,24 @@ function importData(input) {
   reader.onload = function(e) {
     try {
       var data = JSON.parse(e.target.result);
-      // Validation minimale
-      if (!data || data.app !== 'MaRecette' || data.version !== 1) {
+      // Validation minimale (v1 = favoris/notes ; v2 = + créations)
+      if (!data || data.app !== 'MaRecette' || (data.version !== 1 && data.version !== 2)) {
         showDataStatus('import-status', '✗ Fichier invalide ou incompatible.', false);
-        return;
+      } else {
+        showDataStatus('import-status', restoreBackup(data), true);
       }
-      // Restaurer favoris (fusion : on ajoute sans supprimer les existants)
-      var existingFavs = [];
-      try { existingFavs = JSON.parse(localStorage.getItem('marecette_favs') || '[]'); } catch(e) {}
-      var mergedFavs = Array.from(new Set(existingFavs.concat(data.favorites || [])));
-      localStorage.setItem('marecette_favs', JSON.stringify(mergedFavs));
-
-      // Restaurer notes (fusion : on écrase seulement si la note importée n'est pas vide)
-      var notes = data.notes || {};
-      var noteCount = 0;
-      Object.keys(notes).forEach(function(id) {
-        if (notes[id] && notes[id].trim()) {
-          localStorage.setItem('marecette_note_' + id, notes[id]);
-          noteCount++;
-        }
-      });
-
-      var favAdded = mergedFavs.length - existingFavs.length;
-      showDataStatus('import-status',
-        '✓ Import réussi : ' + favAdded + ' favori' + (favAdded > 1 ? 's' : '') +
-        ' ajouté' + (favAdded > 1 ? 's' : '') +
-        ', ' + noteCount + ' note' + (noteCount > 1 ? 's' : '') + ' restaurée' +
-        (noteCount > 1 ? 's' : '') + '.', true);
-
-      // Réinitialiser le champ fichier pour permettre une ré-importation
-      input.value = '';
     } catch(err) {
       showDataStatus('import-status', '✗ Erreur de lecture du fichier : ' + err.message, false);
     }
+    // Réinitialiser le champ fichier pour permettre une ré-importation
+    input.value = '';
   };
   reader.readAsText(file);
 }
 
-// Efface toutes les données utilisateur (favoris, notes, préférences)
+// Efface toutes les données utilisateur (créations, favoris, notes, préférences)
 function resetAllData() {
-  if (!confirm('Supprimer définitivement tous vos favoris, notes et préférences ?\nCette action est irréversible.')) return;
+  if (!confirm('Supprimer définitivement vos créations, favoris, notes et préférences ?\nCette action est irréversible.')) return;
   // Lister et supprimer toutes les clés marecette_*
   var keysToDelete = [];
   for (var i = 0; i < localStorage.length; i++) {
@@ -3562,6 +3736,10 @@ function resetAllData() {
     if (key && key.startsWith('marecette_')) keysToDelete.push(key);
   }
   keysToDelete.forEach(function(k) { localStorage.removeItem(k); });
+  // Les créations sont aussi en mémoire : on les vide et on rafraîchit le catalogue
+  userRecipes = [];
+  nextUserId = 1000;
+  loadCatalogueTabs();
   showDataStatus('reset-status', '✓ Toutes les données ont été effacées.', true);
   // Réinitialiser les préférences visuelles
   applyPrefs();
@@ -4160,6 +4338,7 @@ function buildSharePayload(recipe) {
 
 // Texte lisible (SMS, mail, WhatsApp…)
 function buildRecipeShareText(recipe) {
+  const isCatalogue = !isUserRecipe(recipe.id);
   const line = '━━━━━━━━━━━━━━━━━━━━━━';
   const mine = isUserRecipe(recipe.id);
   const price = mine ? (recipe.price || 0) : (PRICE_MAP[recipe.id] || 0);
@@ -4179,16 +4358,22 @@ function buildRecipeShareText(recipe) {
   });
   t += '\n' + line + '\nPRÉPARATION\n' + line + '\n';
   (recipe.steps || []).forEach((st, i) => { t += (i + 1) + '. ' + st + '\n'; });
-  t += '\n🍳 Partagé depuis MaRecette : ' + SHARE_BASE_URL;
+  // Création personnelle : on ajoute l'adresse de l'app pour un destinataire qui ne l'a pas encore
+  if (!isCatalogue) t += '\n🍳 Partagé depuis MaRecette : ' + SHARE_BASE_URL;
   return t;
 }
 
 function buildShareInfo(id) {
   const recipe = findRecipeAny(id);
   if (!recipe) return null;
+  // Recette du catalogue : le destinataire l'a déjà dans son app → texte seul (pas de QR ni de lien)
+  if (!isUserRecipe(recipe.id)) {
+    return { recipe: recipe, textOnly: true, code: null, link: null, text: buildRecipeShareText(recipe) };
+  }
   const payload = b64urlEncode(JSON.stringify(buildSharePayload(recipe)));
   return {
     recipe: recipe,
+    textOnly: false,
     code: SHARE_PREFIX + payload,
     link: SHARE_BASE_URL + '#r=' + payload,
     text: buildRecipeShareText(recipe)
@@ -4249,7 +4434,7 @@ function shareRecipe(id) {
         <button class="share-close" onclick="closeShareModal()" aria-label="Fermer">✕</button>
       </div>
       <div class="share-body">
-        <div class="share-section">
+        ${info.textOnly ? '' : `<div class="share-section">
           <div class="share-label">QR code</div>
           <div class="share-qr-box" id="share-qr-box" onclick="expandShareQR()" title="Agrandir"></div>
           <div class="share-hint">Scannez avec l'appareil photo : la recette s'ouvre dans MaRecette et peut être ajoutée en un tap.</div>
@@ -4266,7 +4451,7 @@ function shareRecipe(id) {
             <button class="share-btn" onclick="copyShareField('share-link-field', this, '📋 Copier')">📋 Copier</button>
             <button class="share-btn primary" onclick="shareLinkNative()">📤 Partager</button>
           </div>
-        </div>
+        </div>`}
         <div class="share-section">
           <div class="share-label">Texte à partager</div>
           <textarea class="share-field" id="share-text-field" readonly></textarea>
@@ -4280,8 +4465,9 @@ function shareRecipe(id) {
   ov.addEventListener('click', function(e) { if (e.target === ov) closeShareModal(); });
   document.body.appendChild(ov);
 
-  document.getElementById('share-link-field').value = info.link;
   document.getElementById('share-text-field').value = info.text;
+  if (info.textOnly) return; // recette du catalogue : texte uniquement
+  document.getElementById('share-link-field').value = info.link;
 
   // Génération du QR (contient le lien : ouvre directement MaRecette à la lecture)
   const box = document.getElementById('share-qr-box');
@@ -4410,9 +4596,11 @@ function copyShareField(fieldId, btn, label) {
 }
 
 // ── Décodage & validation d'une recette reçue ─────────────
-function _sanitizeText(v, max) {
+function _sanitizeText(v, max, keepNewlines) {
   // Supprime <, > et remplace " : les recettes importées sont affichées en HTML
-  return String(v == null ? '' : v).replace(/[<>]/g, '').replace(/"/g, '”').replace(/\s+/g, ' ').trim().slice(0, max);
+  let t = String(v == null ? '' : v).replace(/[<>]/g, '').replace(/"/g, '”');
+  t = keepNewlines ? t.replace(/[ \t\f\v]+/g, ' ').replace(/\s*\n\s*/g, '\n') : t.replace(/\s+/g, ' ');
+  return t.trim().slice(0, max);
 }
 
 function _candidatePayloads(input) {
@@ -4435,15 +4623,18 @@ function _selectValues(selectId, field) {
   return vals;
 }
 
-function normalizeImportedRecipe(d) {
+function normalizeImportedRecipe(d, lenient) {
   if (!d || typeof d !== 'object') return null;
-  const title = _sanitizeText(d.t, 100);
-  const ingredients = (Array.isArray(d.i) ? d.i : []).slice(0, 80).map(function(x) {
+  // lenient = restauration de SA propre sauvegarde : limites larges, aucune troncature réaliste
+  const L = lenient ? { t: 300, ing: 300, name: 300, unit: 60, steps: 200, step: 10000 }
+                    : { t: 100, ing: 80,  name: 80,  unit: 20, steps: 60,  step: 600 };
+  const title = _sanitizeText(d.t, L.t);
+  const ingredients = (Array.isArray(d.i) ? d.i : []).slice(0, L.ing).map(function(x) {
     if (!Array.isArray(x)) return null;
     const qty = Math.round(Math.min(100000, Math.max(0, Number(x[1]) || 0)) * 100) / 100;
-    return [_sanitizeText(x[0], 80), qty, _sanitizeText(x[2], 20)];
+    return [_sanitizeText(x[0], L.name), qty, _sanitizeText(x[2], L.unit)];
   }).filter(x => x && x[0]);
-  const steps = (Array.isArray(d.s) ? d.s : []).slice(0, 60).map(x => _sanitizeText(x, 600)).filter(Boolean);
+  const steps = (Array.isArray(d.s) ? d.s : []).slice(0, L.steps).map(x => _sanitizeText(x, L.step, !!lenient)).filter(Boolean);
   if (!title || !ingredients.length || !steps.length) return null;
 
   const pick = function(selectId, field, val, fallback) {
@@ -4565,7 +4756,7 @@ function commitImport(recipe) {
 
 // ── Page d'import : champ, caméra, image ─────────────────
 function setImportStatus(msg, kind) {
-  const el = document.getElementById('import-status');
+  const el = document.getElementById('recipe-import-status');
   if (!el) return;
   el.textContent = msg || '';
   el.className = 'import-status' + (kind ? ' ' + kind : '');
@@ -4730,13 +4921,31 @@ document.addEventListener('keydown', function(e) {
 // (claudeusercontent.com ne sert pas sw.js).
 // Fonctionne sur GitHub Pages, localhost, et tout autre hébergeur HTTPS.
 if ('serviceWorker' in navigator && !location.hostname.includes('claudeusercontent')) {
-  // Mise à jour 100 % automatique : le nouveau SW s'active seul (skipWaiting
-  // dans sw.js), la page se recharge, puis un toast confirme la mise à jour.
+  // Une mise à jour n'est appliquée que sur clic de l'utilisateur (bouton « Mettre à jour »).
   var _hadController = !!navigator.serviceWorker.controller;
 
   navigator.serviceWorker.register('./sw.js')
     .then(function(reg) {
       console.log('[PWA] SW enregistré, scope :', reg.scope);
+
+      // ── Détection mise à jour ──────────────────────────────────────────
+      // Cas 1 : un nouveau SW est déjà en attente au chargement de la page
+      if (reg.waiting && navigator.serviceWorker.controller) {
+        showUpdateFab();
+      }
+
+      // Cas 2 : un nouveau SW vient de finir de s'installer pendant la session
+      reg.addEventListener('updatefound', function() {
+        var newWorker = reg.installing;
+        if (!newWorker) return;
+        newWorker.addEventListener('statechange', function() {
+          // Le nouveau SW est installé et attend — on propose la MAJ
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            showUpdateFab();
+          }
+        });
+      });
+
       // Recherche d'une nouvelle version quand l'app revient au premier plan
       document.addEventListener('visibilitychange', function() {
         if (document.visibilityState === 'visible') reg.update().catch(function() {});
@@ -4744,36 +4953,36 @@ if ('serviceWorker' in navigator && !location.hostname.includes('claudeuserconte
     })
     .catch(function(err) { console.warn('[PWA] SW échoué :', err); });
 
-  navigator.serviceWorker.addEventListener('controllerchange', function() {
-    // Première installation (aucun SW avant) : rien à recharger
-    if (!_hadController) { _hadController = true; return; }
-    reloadWhenSafe();
+  // Cas 3 : le SW envoie SW_WAITING après son installation (si l'onglet était déjà ouvert)
+  navigator.serviceWorker.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'SW_WAITING' && navigator.serviceWorker.controller) {
+      showUpdateFab();
+    }
   });
 
-  // Toast "Mise à jour effectuée" si la version du SW a changé depuis la dernière visite
-  if (navigator.serviceWorker.controller) {
-    var _mc = new MessageChannel();
-    _mc.port1.onmessage = function(e) {
-      var v = e.data && e.data.version;
-      if (!v) return;
-      var prev = null;
-      try {
-        prev = localStorage.getItem('marecette_sw_version');
-        localStorage.setItem('marecette_sw_version', v);
-      } catch (err) {}
-      if (prev && prev !== v) showUpdateToast('✅ Mise à jour effectuée');
-    };
-    navigator.serviceWorker.controller.postMessage({ type: 'GET_VERSION' }, [_mc.port2]);
-  }
+  // Recharger quand le nouveau SW prend le contrôle (après le clic sur « Mettre à jour »).
+  // Pas de rechargement à la toute première installation : on ne coupe pas la bienvenue.
+  navigator.serviceWorker.addEventListener('controllerchange', function() {
+    if (!_hadController) { _hadController = true; return; }
+    window.location.reload();
+  });
 }
 
-// Recharge la page pour appliquer la mise à jour, sans casser une action en cours
-// (formulaire de création non enregistré, mode soirée) : on attend que ce soit fini.
-function reloadWhenSafe() {
-  var active = document.querySelector('.page.active');
-  var busy = (active && active.id === 'page-add-form') || document.getElementById('soiree-overlay');
-  if (busy) { setTimeout(reloadWhenSafe, 3000); return; }
-  window.location.reload();
+// Affiche le bouton flottant de mise à jour
+function showUpdateFab() {
+  var fab = document.getElementById('fab-update');
+  if (fab) fab.classList.add('visible');
+}
+
+// Déclenche la mise à jour : envoie SKIP_WAITING au SW en attente
+function applyUpdate() {
+  navigator.serviceWorker.getRegistration().then(function(reg) {
+    if (reg && reg.waiting) {
+      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+      // controllerchange rechargera la page ; le message de bienvenue
+      // se réaffichera alors s'il n'a pas été masqué.
+    }
+  });
 }
 
 // Petit pop-up temporaire (disparaît seul)
@@ -4851,7 +5060,7 @@ function showUpdateToast(msg) {
       <button class="import-btn" onclick="clearImportInput()">🗑</button>
     </div>
   </div>
-  <div class="import-status" id="import-status"></div>
+  <div class="import-status" id="recipe-import-status"></div>
 </div>
 
 <!-- PAGE FORMULAIRE DE CRÉATION -->
