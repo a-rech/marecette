@@ -607,6 +607,42 @@
     }
     .welcome-btn-hide:hover { background: #b05525; }
 
+    /* ---- MODE AGRANDIR (fiche plein écran) : suit le thème clair / sombre ---- */
+    .soiree-overlay {
+      position: fixed; inset: 0; z-index: 99990;
+      background: var(--bg); color: var(--text);
+      overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 0 60px 0;
+    }
+    .soiree-back {
+      position: fixed; top: 14px; left: 16px; z-index: 99991;
+      padding: 8px 18px; border-radius: 20px; cursor: pointer;
+      background: var(--surface); color: var(--text2); border: 1px solid var(--border);
+      font-family: 'DM Sans', sans-serif; font-size: 15px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.12);
+    }
+    .soiree-back:hover { border-color: var(--accent); color: var(--accent); }
+    .soiree-head { text-align: center; padding: 60px 24px 24px; }
+    .soiree-emoji { font-size: 80px; line-height: 1; margin-bottom: 16px; }
+    .soiree-title { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 700; color: var(--text); line-height: 1.2; }
+    .soiree-portions { font-size: 14px; color: var(--accent); margin-top: 8px; }
+    .soiree-block { padding: 0 24px 32px; }
+    .soiree-block:last-child { padding-bottom: 0; }
+    .soiree-label { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--accent); font-weight: 600; margin-bottom: 16px; }
+    .soiree-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
+    .soiree-ing {
+      font-size: 22px; color: var(--text); display: flex; align-items: baseline; gap: 8px;
+      line-height: 1.3; border-bottom: 1px solid var(--border); padding: 0 0 14px; margin-bottom: 14px;
+    }
+    .soiree-ing:last-child { margin-bottom: 0; }
+    .soiree-qty { color: var(--text2); font-size: .75em; }
+    .soiree-step { font-size: 20px; color: var(--text); line-height: 1.5; display: flex; align-items: baseline; margin-bottom: 20px; }
+    .soiree-step:last-child { margin-bottom: 0; }
+    .soiree-num {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 1.5em; height: 1.5em; border-radius: 50%; background: var(--accent); color: #fff;
+      font-size: .65em; font-weight: 700; margin-right: .6em; flex-shrink: 0;
+    }
+
     /* ---- PARTAGE / IMPORT DE RECETTES ---- */
     .share-overlay {
       position: fixed; inset: 0; background: rgba(26,18,8,.6); z-index: 520;
@@ -4232,53 +4268,40 @@ function enterRecipeSoireeMode(id) {
     let qtyStr = '';
     if (i[1]) {
       const adaptedQty = (i[1] * ratio).toFixed(1).replace(/\.0$/, '');
-      qtyStr = ' <span style="opacity:.55;font-size:.75em">' + adaptedQty + ' ' + i[2] + '</span>';
+      qtyStr = ' <span class="soiree-qty">' + adaptedQty + ' ' + i[2] + '</span>';
     }
-    return '<li style="font-size:22px;color:#fff;display:flex;align-items:baseline;gap:8px;line-height:1.3;border-bottom:1px solid rgba(255,255,255,.07);padding-bottom:14px">'
-      + i[0]
-      + qtyStr
-      + '</li>';
+    return '<li class="soiree-ing">' + i[0] + qtyStr + '</li>';
   }).join('');
 
   // Construire HTML étapes
   const stepsHtml = recipe.steps.map((s, i) => {
-    return '<li style="font-size:20px;color:rgba(255,255,255,.88);line-height:1.5;display:flex;align-items:baseline">'
-      + '<span style="display:inline-flex;align-items:center;justify-content:center;width:1.5em;height:1.5em;border-radius:50%;background:var(--accent);color:#0C0F1D;font-size:.65em;font-weight:700;margin-right:.6em;flex-shrink:0">' + (i+1) + '</span>'
-      + s + '</li>';
+    return '<li class="soiree-step"><span class="soiree-num">' + (i+1) + '</span>' + s + '</li>';
   }).join('');
 
-  // Créer l'overlay
+  // Créer l'overlay (couleurs via les variables du thème : suit clair / sombre)
   const overlay = document.createElement('div');
   overlay.id = 'soiree-overlay';
+  overlay.className = 'soiree-overlay';
   overlay.dataset.recipeId = String(id);
-  overlay.style.cssText = [
-    'position:fixed;inset:0;background:#0C0F1D;z-index:99990',
-    'overflow-y:auto;-webkit-overflow-scrolling:touch',
-    'padding:0 0 60px 0'
-  ].join(';');
 
   overlay.innerHTML = [
-    '<button onclick="exitSoireeMode()" style="position:fixed;top:14px;right:16px;z-index:99991;',
-    'padding:8px 18px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);',
-    'border:1px solid rgba(255,255,255,.2);border-radius:20px;font-size:15px;cursor:pointer">← Retour</button>',
+    '<button class="soiree-back" onclick="exitSoireeMode()">← Retour</button>',
 
-    '<div style="text-align:center;padding:48px 24px 24px">',
-    '<div style="font-size:80px;line-height:1;margin-bottom:16px">' + (recipe.emoji || '🍳') + '</div>',
-    '<div style="font-family:\'Playfair Display\',serif;font-size:32px;font-weight:700;color:#fff;line-height:1.2">' + recipe.title + '</div>',
-    (selectedPortions !== basePortions ? '<div style="font-size:14px;color:var(--accent);margin-top:8px">pour ' + selectedPortions + ' portions</div>' : ''),
+    '<div class="soiree-head">',
+    '<div class="soiree-emoji">' + (recipe.emoji || '🍳') + '</div>',
+    '<div class="soiree-title">' + recipe.title + '</div>',
+    (selectedPortions !== basePortions ? '<div class="soiree-portions">pour ' + selectedPortions + ' portions</div>' : ''),
     '</div>',
 
-    '<div style="padding:0 24px 32px">',
-    '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);font-weight:600;margin-bottom:16px">Ingrédients</div>',
-    '<ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:14px">',
-    ingHtml,
-    '</ul></div>',
+    '<div class="soiree-block">',
+    '<div class="soiree-label">Ingrédients</div>',
+    '<ul class="soiree-list">' + ingHtml + '</ul>',
+    '</div>',
 
-    '<div style="padding:0 24px">',
-    '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);font-weight:600;margin-bottom:16px">Préparation</div>',
-    '<ol style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:20px">',
-    stepsHtml,
-    '</ol></div>'
+    '<div class="soiree-block">',
+    '<div class="soiree-label">Préparation</div>',
+    '<ol class="soiree-list">' + stepsHtml + '</ol>',
+    '</div>'
   ].join('');
 
   document.body.appendChild(overlay);
