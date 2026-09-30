@@ -1,7 +1,7 @@
 {
   "name": "MaRecette",
   "short_name": "MaRecette",
-  "description": "Vos recettes de cuisine du quotidien",
+  "description": "Vos recettes de cuisine du quotidien : recherche par ingrédients, catalogue, créations personnelles et partage par QR code",
   "start_url": ".",
   "scope": "./",
   "display": "standalone",
