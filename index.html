@@ -607,42 +607,6 @@
     }
     .welcome-btn-hide:hover { background: #b05525; }
 
-    /* ---- MODE AGRANDIR (fiche plein écran) : suit le thème clair / sombre ---- */
-    .soiree-overlay {
-      position: fixed; inset: 0; z-index: 99990;
-      background: var(--bg); color: var(--text);
-      overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 0 60px 0;
-    }
-    .soiree-back {
-      position: fixed; top: 14px; left: 16px; z-index: 99991;
-      padding: 8px 18px; border-radius: 20px; cursor: pointer;
-      background: var(--surface); color: var(--text2); border: 1px solid var(--border);
-      font-family: 'DM Sans', sans-serif; font-size: 15px;
-      box-shadow: 0 2px 10px rgba(0,0,0,.12);
-    }
-    .soiree-back:hover { border-color: var(--accent); color: var(--accent); }
-    .soiree-head { text-align: center; padding: 60px 24px 24px; }
-    .soiree-emoji { font-size: 80px; line-height: 1; margin-bottom: 16px; }
-    .soiree-title { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 700; color: var(--text); line-height: 1.2; }
-    .soiree-portions { font-size: 14px; color: var(--accent); margin-top: 8px; }
-    .soiree-block { padding: 0 24px 32px; }
-    .soiree-block:last-child { padding-bottom: 0; }
-    .soiree-label { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--accent); font-weight: 600; margin-bottom: 16px; }
-    .soiree-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
-    .soiree-ing {
-      font-size: 22px; color: var(--text); display: flex; align-items: baseline; gap: 8px;
-      line-height: 1.3; border-bottom: 1px solid var(--border); padding: 0 0 14px; margin-bottom: 14px;
-    }
-    .soiree-ing:last-child { margin-bottom: 0; }
-    .soiree-qty { color: var(--text2); font-size: .75em; }
-    .soiree-step { font-size: 20px; color: var(--text); line-height: 1.5; display: flex; align-items: baseline; margin-bottom: 20px; }
-    .soiree-step:last-child { margin-bottom: 0; }
-    .soiree-num {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 1.5em; height: 1.5em; border-radius: 50%; background: var(--accent); color: #fff;
-      font-size: .65em; font-weight: 700; margin-right: .6em; flex-shrink: 0;
-    }
-
     /* ---- PARTAGE / IMPORT DE RECETTES ---- */
     .share-overlay {
       position: fixed; inset: 0; background: rgba(26,18,8,.6); z-index: 520;
@@ -2087,33 +2051,35 @@ const VEG_SET = new Set([
   449,450
 ]);
 
+// ── Modèle commun catalogue / créations ─────────────────────────────────
+// Une recette (classique ou création) porte les mêmes champs :
+//   id, title, emoji, cat, origin, diff, prep, cook, portions, ingredients, steps, tags,
+//   price (1 = €, 2 = €€, 3 = €€€), vegetarian (booléen), creator (texte), userCreated (booléen).
+// Pour les classiques déjà présents, price et vegetarian viennent de PRICE_MAP / VEG_SET
+// tant que la fiche ne les porte pas elle-même. Une nouvelle fiche ajoutée à RECIPES
+// (par exemple une création promue) peut donc contenir directement price et vegetarian,
+// sans rien ajouter dans PRICE_MAP ni VEG_SET.
+(function normalizeCatalogue() {
+  RECIPES.forEach(function(r) {
+    if (r.price == null) r.price = PRICE_MAP[r.id] || 1;
+    r.vegetarian = (r.vegetarian == null) ? VEG_SET.has(r.id) : !!r.vegetarian;
+    if (r.creator == null) r.creator = '';
+    r.userCreated = false;
+  });
+})();
+
 // Retourne le HTML du badge prix (€ / €€ / €€€)
 function priceHtml(id) {
-  // Chercher le prix dans PRICE_MAP (recettes du catalogue) ou userRecipes
-  let p = PRICE_MAP[id] || 1;
-  
-  // Vérifier si c'est une recette utilisateur
-  const userRecipe = userRecipes.find(r => r.id === id);
-  if (userRecipe && userRecipe.price) {
-    p = userRecipe.price;
-  }
-  
+  const r = findRecipeAny(id);
+  const p = (r && r.price) || 1;
   const labels = ['', '€', '€€', '€€€'];
   return `<span class="price-tag price-${p}">${labels[p]}</span>`;
 }
 
 // Retourne le badge végétarien si applicable
 function vegHtml(id) {
-  // Chercher dans VEG_SET (recettes du catalogue) ou userRecipes
-  if (VEG_SET.has(id)) return `<span class="veg-badge">🥗 Végé</span>`;
-  
-  // Vérifier si c'est une recette utilisateur
-  const userRecipe = userRecipes.find(r => r.id === id);
-  if (userRecipe && userRecipe.vegetarian) {
-    return `<span class="veg-badge">🥗 Végé</span>`;
-  }
-  
-  return '';
+  const r = findRecipeAny(id);
+  return (r && r.vegetarian) ? `<span class="veg-badge">🥗 Végé</span>` : '';
 }
 
 // Retourne le HTML du bloc accompagnements pour une fiche recette
@@ -2651,10 +2617,7 @@ function passesAllFilters(r, query = '') {
       !r.origin.toLowerCase().includes(query)) return false;
   if (filterDiff !== 'all' && r.diff !== filterDiff) return false;
   if (filterPrice !== 'all') {
-    const priceInMap = PRICE_MAP[r.id] || 1;
-    const priceFromRecipe = r.price || 0;
-    const actualPrice = r.userCreated ? priceFromRecipe : priceInMap;
-    if (actualPrice !== filterPrice) return false;
+    if ((r.price || 0) !== filterPrice) return false;
   }
   if (filterTime !== 'all') {
     const totalTime = r.prep + r.cook;
@@ -2665,8 +2628,7 @@ function passesAllFilters(r, query = '') {
     if (filterTime === 'gt90' && totalTime <= 90) return false;
   }
   if (filterVeg === 'veg') {
-    const isVeg = r.userCreated ? r.vegetarian : VEG_SET.has(r.id);
-    if (!isVeg) return false;
+    if (!r.vegetarian) return false;
   }
   return true;
 }
@@ -2755,12 +2717,7 @@ function applyAllFilters() {
 
   // 4. Prix (gérer les nombres ET les symboles €)
   if (filterPrice !== 'all') {
-    pool = pool.filter(r => {
-      const priceInMap = PRICE_MAP[r.id] || 1;
-      const priceFromRecipe = r.price || 0; // Les recettes utilisateur ont un price numérique (1, 2, 3)
-      const actualPrice = r.userCreated ? priceFromRecipe : priceInMap;
-      return actualPrice === filterPrice;
-    });
+    pool = pool.filter(r => (r.price || 0) === filterPrice);
   }
 
   // 5. Temps total
@@ -2778,13 +2735,7 @@ function applyAllFilters() {
 
   // 6. Végétarien
   if (filterVeg === 'veg') {
-    pool = pool.filter(r => {
-      // Pour les recettes du catalogue
-      if (!r.userCreated && VEG_SET.has(r.id)) return true;
-      // Pour les recettes utilisateur
-      if (r.userCreated && r.vegetarian) return true;
-      return false;
-    });
+    pool = pool.filter(r => !!r.vegetarian);
   }
 
   // Synchronise le bouton Réinitialiser selon l'état réel des filtres
@@ -3826,7 +3777,15 @@ let _lastFilteredPool = []; // Cache de la dernière liste filtrée (pour cohér
 // Charger les recettes utilisateur au démarrage
 function loadUserRecipes() {
   try {
-    userRecipes = JSON.parse(localStorage.getItem(USER_RECIPES_STORAGE_KEY) || '[]');
+    userRecipes = JSON.parse(localStorage.getItem(USER_RECIPES_STORAGE_KEY) || '[]').map(function(r) {
+      // Même forme que les recettes du catalogue (voir « Modèle commun » plus haut)
+      r.price = Number(r.price) || 0;
+      r.vegetarian = !!r.vegetarian;
+      if (r.creator == null) r.creator = '';
+      if (!Array.isArray(r.tags)) r.tags = (r.ingredients || []).map(function(i) { return i[0]; });
+      r.userCreated = true;
+      return r;
+    });
     if (userRecipes.length > 0) {
       nextUserId = Math.max(...userRecipes.map(r => r.id), 999) + 1;
     }
@@ -3947,9 +3906,7 @@ function populateFormFromRecipe(recipe) {
   
   // Gérer le prix par catégories (€, €€, €€€)
   const priceLevel = recipe.price || 0;
-  if (priceLevel <= 5) document.getElementById('f-price').value = '€';
-  else if (priceLevel <= 15) document.getElementById('f-price').value = '€€';
-  else document.getElementById('f-price').value = '€€€';
+  document.getElementById('f-price').value = priceLevel === 1 ? '€' : priceLevel === 2 ? '€€' : priceLevel === 3 ? '€€€' : '';
   
   document.getElementById('f-veg').checked = recipe.vegetarian || false;
   
@@ -4211,6 +4168,11 @@ function _isOverlayOpen() {
 }
 
 (function() {
+  // Réglages du swipe (plus strict qu'avant : un geste vertical un peu penché ne change plus de recette)
+  const SWIPE_DEADZONE = 12;  // px de mouvement avant de décider si le geste est horizontal ou vertical
+  const SWIPE_START_RATIO = 1.5; // à la décision, |dx| doit valoir au moins 1,5 × |dy|
+  const SWIPE_MIN_DX = 80;    // distance horizontale minimale pour changer de recette (avant : 50)
+  const SWIPE_END_RATIO = 2;  // au relâchement, |dx| doit valoir au moins 2 × |dy| (geste bien horizontal)
   let _tx = 0, _ty = 0, _locked = false, _tracking = false;
   document.addEventListener('touchstart', function(e) {
     // Un geste n'est suivi que s'il COMMENCE sur la fiche, sans fenêtre ouverte
@@ -4230,7 +4192,11 @@ function _isOverlayOpen() {
     if (!_tracking || _locked || _swipeList.length < 2) return;
     const dx = Math.abs(e.touches[0].clientX - _tx);
     const dy = Math.abs(e.touches[0].clientY - _ty);
-    if (dx > dy) { _locked = true; }
+    // Zone morte : on ignore les petits tremblements du doigt au début du geste
+    if (dx < SWIPE_DEADZONE && dy < SWIPE_DEADZONE) return;
+    // Direction décidée une seule fois : nettement horizontal → swipe ; sinon (vertical ou en diagonale)
+    // c'est un défilement, on abandonne le geste jusqu'au prochain toucher
+    if (dx > dy * SWIPE_START_RATIO) { _locked = true; } else { _tracking = false; }
   }, { passive: true });
 
   document.addEventListener('touchend', function(e) {
@@ -4240,7 +4206,8 @@ function _isOverlayOpen() {
     if (!wasTracking || !wasLocked || _swipeList.length < 2) return;
     if (_isOverlayOpen()) return; // une fenêtre s'est ouverte pendant le geste
     const dx = e.changedTouches[0].clientX - _tx;
-    if (Math.abs(dx) > 50) { // Seuil de 50px
+    const dy = e.changedTouches[0].clientY - _ty;
+    if (Math.abs(dx) >= SWIPE_MIN_DX && Math.abs(dx) > Math.abs(dy) * SWIPE_END_RATIO) {
       _swipeNavigate(dx > 0 ? -1 : 1);
     }
   }, { passive: true });
@@ -4268,40 +4235,53 @@ function enterRecipeSoireeMode(id) {
     let qtyStr = '';
     if (i[1]) {
       const adaptedQty = (i[1] * ratio).toFixed(1).replace(/\.0$/, '');
-      qtyStr = ' <span class="soiree-qty">' + adaptedQty + ' ' + i[2] + '</span>';
+      qtyStr = ' <span style="color:var(--text2);font-size:.75em">' + adaptedQty + ' ' + i[2] + '</span>';
     }
-    return '<li class="soiree-ing">' + i[0] + qtyStr + '</li>';
+    return '<li style="font-size:22px;color:var(--text);display:flex;align-items:baseline;gap:8px;line-height:1.3;border-bottom:1px solid var(--border);padding-bottom:14px">'
+      + i[0]
+      + qtyStr
+      + '</li>';
   }).join('');
 
   // Construire HTML étapes
   const stepsHtml = recipe.steps.map((s, i) => {
-    return '<li class="soiree-step"><span class="soiree-num">' + (i+1) + '</span>' + s + '</li>';
+    return '<li style="font-size:20px;color:var(--text);line-height:1.5;display:flex;align-items:baseline">'
+      + '<span style="display:inline-flex;align-items:center;justify-content:center;width:1.5em;height:1.5em;border-radius:50%;background:var(--accent);color:#0C0F1D;font-size:.65em;font-weight:700;margin-right:.6em;flex-shrink:0">' + (i+1) + '</span>'
+      + s + '</li>';
   }).join('');
 
-  // Créer l'overlay (couleurs via les variables du thème : suit clair / sombre)
+  // Créer l'overlay
   const overlay = document.createElement('div');
   overlay.id = 'soiree-overlay';
-  overlay.className = 'soiree-overlay';
   overlay.dataset.recipeId = String(id);
+  overlay.style.cssText = [
+    'position:fixed;inset:0;background:var(--bg);color:var(--text);z-index:99990',
+    'overflow-y:auto;-webkit-overflow-scrolling:touch',
+    'padding:0 0 60px 0'
+  ].join(';');
 
   overlay.innerHTML = [
-    '<button class="soiree-back" onclick="exitSoireeMode()">← Retour</button>',
+    '<button onclick="exitSoireeMode()" style="position:fixed;top:14px;left:16px;z-index:99991;',
+    'padding:8px 18px;background:var(--surface);color:var(--text);',
+    'border:1px solid var(--border);border-radius:20px;font-size:15px;cursor:pointer;box-shadow:var(--shadow)">← Retour</button>',
 
-    '<div class="soiree-head">',
-    '<div class="soiree-emoji">' + (recipe.emoji || '🍳') + '</div>',
-    '<div class="soiree-title">' + recipe.title + '</div>',
-    (selectedPortions !== basePortions ? '<div class="soiree-portions">pour ' + selectedPortions + ' portions</div>' : ''),
+    '<div style="text-align:center;padding:48px 24px 24px">',
+    '<div style="font-size:80px;line-height:1;margin-bottom:16px">' + (recipe.emoji || '🍳') + '</div>',
+    '<div style="font-family:\'Playfair Display\',serif;font-size:32px;font-weight:700;color:var(--text);line-height:1.2">' + recipe.title + '</div>',
+    (selectedPortions !== basePortions ? '<div style="font-size:14px;color:var(--accent);margin-top:8px">pour ' + selectedPortions + ' portions</div>' : ''),
     '</div>',
 
-    '<div class="soiree-block">',
-    '<div class="soiree-label">Ingrédients</div>',
-    '<ul class="soiree-list">' + ingHtml + '</ul>',
-    '</div>',
+    '<div style="padding:0 24px 32px">',
+    '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);font-weight:600;margin-bottom:16px">Ingrédients</div>',
+    '<ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:14px">',
+    ingHtml,
+    '</ul></div>',
 
-    '<div class="soiree-block">',
-    '<div class="soiree-label">Préparation</div>',
-    '<ol class="soiree-list">' + stepsHtml + '</ol>',
-    '</div>'
+    '<div style="padding:0 24px">',
+    '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);font-weight:600;margin-bottom:16px">Préparation</div>',
+    '<ol style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:20px">',
+    stepsHtml,
+    '</ol></div>'
   ].join('');
 
   document.body.appendChild(overlay);
@@ -4381,9 +4361,8 @@ function findRecipeAny(id) {
 
 // Données minimales transmises (clés courtes pour garder un QR code peu dense)
 function buildSharePayload(recipe) {
-  const mine = isUserRecipe(recipe.id);
-  const price = mine ? (recipe.price || 0) : (PRICE_MAP[recipe.id] || 0);
-  const veg = mine ? !!recipe.vegetarian : VEG_SET.has(recipe.id);
+  const price = recipe.price || 0;
+  const veg = !!recipe.vegetarian;
   const d = {
     v: 1, t: recipe.title, e: recipe.emoji, c: recipe.cat, o: recipe.origin, d: recipe.diff,
     p: recipe.prep || 0, k: recipe.cook || 0, n: recipe.portions || 1,
@@ -4399,9 +4378,8 @@ function buildSharePayload(recipe) {
 function buildRecipeShareText(recipe) {
   const isCatalogue = !isUserRecipe(recipe.id);
   const line = '━━━━━━━━━━━━━━━━━━━━━━';
-  const mine = isUserRecipe(recipe.id);
-  const price = mine ? (recipe.price || 0) : (PRICE_MAP[recipe.id] || 0);
-  const veg = mine ? !!recipe.vegetarian : VEG_SET.has(recipe.id);
+  const price = recipe.price || 0;
+  const veg = !!recipe.vegetarian;
   const total = (recipe.prep || 0) + (recipe.cook || 0);
   let t = (recipe.emoji || '🍳') + ' ' + recipe.title + '\n';
   if (recipe.creator) t += '✨ Création de ' + recipe.creator + '\n';
