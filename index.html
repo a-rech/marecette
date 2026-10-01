@@ -1065,9 +1065,12 @@
     #ing-list, #step-list { margin-bottom: 16px; }
     .ing-row, .step-row { display: flex; gap: 10px; margin-bottom: 12px; align-items: flex-end; }
     .ing-row .form-group { flex: 1; }
-    .ing-name { flex: 2; }
-    .ing-qty { flex: 0.8; }
-    .ing-unit { flex: 0.8; }
+    .ing-row { gap: 6px; align-items: center; }
+    .ing-row .form-input { min-width: 0; width: 0; padding: 9px 8px; font-size: 14px; }
+    .ing-row .ing-name { flex: 1 1 0; }
+    .ing-row .ing-qty  { flex: 0 0 56px; width: 56px; text-align: center; }
+    .ing-row .ing-unit { flex: 0 0 56px; width: 56px; }
+    .ing-row .ing-remove { flex: 0 0 auto; padding: 9px 10px; }
     .ing-remove, .step-remove { padding: 10px 12px; border-radius: 10px; border: 1px solid #d97979; background: transparent; color: #d97979; cursor: pointer; font-size: 12px; }
     .ing-add-btn, .step-add-btn { padding: 8px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); cursor: pointer; font-size: 13px; }
     .ing-add-btn:hover, .step-add-btn:hover { border-color: var(--accent); color: var(--accent); }
@@ -3893,9 +3896,10 @@ function resetForm() {
   }
 }
 
-function populateFormFromRecipe(recipe) {
+function populateFormFromRecipe(recipe, mode) {
+  const isEdit = (mode === 'edit');
   document.getElementById('f-emoji').value = recipe.emoji || '🍳';
-  document.getElementById('f-title').value = recipe.title + ' (adapté)';
+  document.getElementById('f-title').value = isEdit ? recipe.title : recipe.title + ' (adapté)';
   document.getElementById('f-cat').value = recipe.cat || '';
   document.getElementById('f-culture').value = recipe.origin || '';
   document.getElementById('f-creator').value = recipe.creator || '';
@@ -3910,9 +3914,14 @@ function populateFormFromRecipe(recipe) {
   
   document.getElementById('f-veg').checked = recipe.vegetarian || false;
   
-  document.getElementById('form-title').textContent = 'Adapter : ' + recipe.title;
-  document.getElementById('form-badge').textContent = 'Inspiré du catalogue';
-  document.getElementById('form-badge').style.display = 'inline-block';
+  if (isEdit) {
+    document.getElementById('form-title').textContent = 'Modifier : ' + recipe.title;
+    document.getElementById('form-badge').style.display = 'none';
+  } else {
+    document.getElementById('form-title').textContent = 'Adapter : ' + recipe.title;
+    document.getElementById('form-badge').textContent = 'Inspiré du catalogue';
+    document.getElementById('form-badge').style.display = 'inline-block';
+  }
   
   document.getElementById('ing-list').innerHTML = '';
   if (recipe.ingredients && recipe.ingredients.length) {
@@ -3933,10 +3942,14 @@ function addIngredientRow(name = '', qty = '', unit = '') {
   const list = document.getElementById('ing-list');
   const row = document.createElement('div');
   row.className = 'ing-row';
-  row.innerHTML = `<input type="text" class="form-input" placeholder="Nom" value="${name}" style="flex:2;">
-    <input type="number" class="form-input" placeholder="Qty" step="0.1" value="${qty}" style="flex:.8;">
-    <input type="text" class="form-input" placeholder="Unit" value="${unit}" style="flex:.8;">
+  row.innerHTML = `<input type="text" class="form-input ing-name" placeholder="Nom">
+    <input type="number" class="form-input ing-qty" placeholder="Qté" step="0.1" inputmode="decimal">
+    <input type="text" class="form-input ing-unit" placeholder="Unité">
     <button type="button" class="ing-remove" onclick="this.parentNode.remove()">×</button>`;
+  const inputs = row.querySelectorAll('input');
+  inputs[0].value = name;
+  inputs[1].value = qty;
+  inputs[2].value = unit;
   list.appendChild(row);
 }
 
@@ -4055,7 +4068,7 @@ function editRecipe(id) {
   
   currentEditingId = id;
   resetFormContent();
-  populateFormFromRecipe(recipe);
+  populateFormFromRecipe(recipe, 'edit');
   pageStack.push('recipe');
   showPage('add-form');
 }
