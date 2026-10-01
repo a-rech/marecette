@@ -4333,6 +4333,7 @@ window.onload = function() {
 //   Code : mr1:<données>
 const SHARE_BASE_URL = 'https://a-rech.github.io/marecette/';
 const SHARE_PREFIX = 'mr1:';
+const FOYER_BASE_URL = 'https://a-rech.github.io/foyer/'; // appli Foyer (planning des repas)
 let _shareState = null;
 
 function _esc(v) {
@@ -4496,6 +4497,9 @@ function shareRecipe(id) {
             <button class="share-btn" onclick="copyShareField('share-text-field', this, '📋 Copier')">📋 Copier</button>
             <button class="share-btn primary" onclick="shareTextNative()">📤 Partager</button>
           </div>
+          <div class="share-btns">
+            <button class="share-btn" style="flex:1" onclick="sendToFoyer()">🏠 Envoyer vers Foyer</button>
+          </div>
         </div>
       </div>
     </div>`;
@@ -4526,6 +4530,21 @@ function shareRecipe(id) {
   } else {
     box.innerHTML = '<div class="share-qr-msg">Affichage du QR code impossible sur cet appareil.</div>';
   }
+}
+
+// Envoie la recette affichée vers l'appli Foyer : le lien contient la recette encodée
+// (même format que les liens de partage) dans le fragment « #mr= », jamais envoyé à un serveur.
+// Valable pour les recettes du catalogue comme pour les créations.
+function sendToFoyer() {
+  if (!_shareState || !_shareState.info) return;
+  const payload = b64urlEncode(JSON.stringify(buildSharePayload(_shareState.info.recipe)));
+  const a = document.createElement('a');
+  a.href = FOYER_BASE_URL + '#mr=' + payload;
+  a.target = '_blank';
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 function closeShareModal() {
