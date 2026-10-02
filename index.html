@@ -1518,17 +1518,138 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
 <script>
 // ===================== DONNÉES =====================
 const FAMILIES = [
-  { id:'viandes', label:'Viandes & volailles', icon:'🥩', items:['Poulet','Bœuf','Porc','Agneau','Veau','Canard','Lapin','Lardons','Guanciale','Prosciutto','Jambon serrano','Jambon ibérique','Saucisse','Saucisse de Toulouse','Confit de canard'] },
+  { id:'viandes', label:'Viandes & volailles', icon:'🥩', items:['Poulet','Bœuf','Porc','Agneau','Veau','Canard','Lapin','Viande hachée','Lardons','Jambon','Chorizo','Guanciale','Prosciutto','Jambon serrano','Jambon ibérique','Saucisse','Saucisse de Toulouse','Confit de canard'] },
   { id:'poissons', label:'Poissons & fruits de mer', icon:'🐟', items:['Saumon','Thon','Cabillaud','Morue','Crevettes','Moule','Poulpe','Sardines','Anchois','Surimi','Pieuvre','Poisson blanc'] },
-  { id:'legumes', label:'Légumes', icon:'🥦', items:['Tomate','Courgette','Carotte','Épinards','Poivron rouge','Poivron vert','Champignons','Oignon','Oignon rouge','Ail','Poireau','Pomme de terre','Aubergine','Brocoli','Chou-fleur','Chou kale','Céleri','Navet','Fenouil','Potiron','Concombre','Haricots verts','Maïs','Artichaut','Échalote'] },
+  { id:'legumes', label:'Légumes', icon:'🥦', items:['Tomate','Courgette','Carotte','Épinards','Poivron rouge','Poivron vert','Champignons','Oignon','Oignon rouge','Ail','Poireau','Pomme de terre','Patate douce','Aubergine','Brocoli','Chou-fleur','Chou kale','Chou','Céleri','Navet','Fenouil','Potiron','Betterave','Concombre','Haricots verts','Maïs','Artichaut','Échalote','Olives','Câpres','Roquette','Endive','Asperge'] },
   { id:'fruits', label:'Fruits', icon:'🍎', items:['Citron','Orange','Pomme','Banane','Fraise','Framboise','Mangue','Avocat','Citron vert','Melon','Cerise','Ananas','Datte'] },
-  { id:'cereales', label:'Céréales & féculents', icon:'🌾', items:['Pâtes','Spaghetti','Penne','Riz','Riz basmati','Riz Arborio','Quinoa','Pain','Farine','Semoule','Polenta','Boulgour','Ramen','Vermicelle de riz','Lasagne fraîche','Nouilles de riz'] },
-  { id:'laitiers', label:'Produits laitiers & œufs', icon:'🥛', items:['Œuf','Beurre','Crème fraîche','Fromage','Yaourt','Lait','Gruyère','Parmesan','Mozzarella','Pecorino','Mascarpone','Ricotta','Reblochon','Emmental'] },
+  { id:'cereales', label:'Céréales & féculents', icon:'🌾', items:['Pâtes','Spaghetti','Penne','Macaronis','Riz','Riz basmati','Riz Arborio','Quinoa','Pain','Farine','Farine de maïs','Farine de riz','Flocons d\'avoine','Semoule','Polenta','Boulgour','Ramen','Vermicelle de riz','Lasagne fraîche','Nouilles de riz'] },
+  { id:'laitiers', label:'Produits laitiers & œufs', icon:'🥛', items:['Œuf','Beurre','Crème fraîche','Crème liquide','Fromage','Fromage blanc','Yaourt','Lait','Lait concentré','Gruyère','Parmesan','Mozzarella','Pecorino','Mascarpone','Ricotta','Reblochon','Emmental','Feta','Chèvre','Cheddar'] },
   { id:'legumineuses', label:'Légumineuses', icon:'🫘', items:['Lentilles','Lentilles corail','Lentilles noires','Pois chiches','Haricots blancs','Haricots rouges','Haricots verts','Haricots cannellini','Haricots borlotti','Petit pois','Fèves'] },
-  { id:'epices', label:'Épices & aromates', icon:'🌿', items:['Basilic','Persil','Thym','Cumin','Curry','Paprika','Paprika fumé','Herbes de Provence','Garam masala','Curcuma','Coriandre','Menthe','Safran','Cannelle','Cardamome','Gingembre','Piment','Romarin','Laurier','Sauge fraîche','Cinq-épices','Origan','Aneth'] },
-  { id:'condiments', label:'Condiments & sauces', icon:'🫙', items:['Huile d\'olive','Tomates concassées','Miel','Moutarde','Sauce soja','Sauce poisson','Sauce hoisin','Tahini','Vinaigre balsamique','Vinaigre de xérès','Harissa','Pâte miso','Pâte de curry vert','Lait de coco','Mirin','Citronelle','Worcestershire sauce'] },
-  { id:'autres', label:'Autres', icon:'🛒', items:['Vin rouge','Vin blanc','Bière','Pâte brisée','Pâte feuilletée','Pâte filo','Tortillas de maïs','Tortillas de farine','Pain pita','Chapelure','Chocolat','Pralin','Amandes','Pistache','Pignon de pin','Cacahuètes','Sésame','Levure boulangère','Bouillon de légumes','Bouillon de bœuf','Bouillon de poulet'] },
+  { id:'proteines', label:'Protéines végétales', icon:'🌱', items:['Protéines de soja texturées','Tofu','Seitan','Tempeh','Saucisse / steak végétal'] },
+  { id:'epices', label:'Épices & aromates', icon:'🌿', items:['Basilic','Persil','Thym','Cumin','Curry','Paprika','Paprika fumé','Herbes de Provence','Garam masala','Curcuma','Coriandre','Menthe','Safran','Cannelle','Cardamome','Gingembre','Piment','Romarin','Laurier','Sauge fraîche','Cinq-épices','Origan','Aneth','Bouquet garni','Vanille','Berbere','Tandoori','Ras el-hanout'] },
+  { id:'condiments', label:'Condiments & sauces', icon:'🫙', items:['Huile d\'olive','Tomates concassées','Sauce tomate','Miel','Moutarde','Sauce soja','Sauce poisson','Sauce hoisin','Sauce teriyaki','Sauce sriracha','Ketchup','Béchamel','Beurre de cacahuète','Tahini','Vinaigre balsamique','Vinaigre de xérès','Harissa','Pâte miso','Pâte de curry vert','Lait de coco','Mirin','Citronnelle','Worcestershire sauce'] },
+  { id:'autres', label:'Autres', icon:'🛒', items:['Vin rouge','Vin blanc','Bière','Sucre','Maïzena','Levure maltée','Café','Cacao','Pâte brisée','Pâte feuilletée','Pâte filo','Tortillas de maïs','Tortillas de farine','Pain pita','Chapelure','Chocolat','Pralin','Amandes','Noix','Noisettes','Noix de cajou','Noix de coco','Pistache','Pignon de pin','Cacahuètes','Sésame','Levure boulangère','Bouillon de légumes','Bouillon de bœuf','Bouillon de poulet'] },
 ];
+
+// ── Correspondance ingrédient d'une recette ↔ case de la page recherche ──
+// Les tags des recettes (surtout les créations) ne sont pas toujours écrits
+// comme les cases : « Vin blanc sec », « Tomates mûres », « Œufs »…
+// Règle : un tag correspond à une case si son début est identique à celle-ci
+// (mots entiers, sans accents, majuscules ni pluriel). La correspondance la
+// plus longue l'emporte : « Pomme de terre cuite » → Pomme de terre (et non
+// Pomme), « Vin blanc sec » → Vin blanc, « Citron vert » → Citron vert.
+// ING_RULES ajoute les rattachements particuliers :
+//   [motif, [cases], exact?]  — cases vide = bloque (ex. noix de muscade ≠ noix).
+const ING_RULES = [
+  // Protéines de soja texturées : toutes dénominations / tailles → une seule case
+  ['protéine de soja',            ['Protéines de soja texturées']],
+  ['protéine texturée',           ['Protéines de soja texturées']],
+  ['protéine végétale',           ['Protéines de soja texturées']],
+  ['soja texturé',                ['Protéines de soja texturées']],
+  ['granulé de soja',             ['Protéines de soja texturées']],
+  ['viande de soja',              ['Protéines de soja texturées']],
+  ['pst',                         ['Protéines de soja texturées']],
+  ['pvt',                         ['Protéines de soja texturées']],
+  ['gluten de blé',               ['Seitan']],
+  ['saucisse végétale',           ['Saucisse / steak végétal']],
+  ['steak végétal',               ['Saucisse / steak végétal']],
+  ['steak de soja',               ['Saucisse / steak végétal']],
+  // Tag libre « Protéine au choix : bœuf haché… »
+  ['protéine au choix',           ['Viande hachée']],
+  // Variantes rattachées à une case existante
+  ['blanc de poulet',             ['Poulet']],
+  ['margarine',                   ['Beurre']],
+  ['crème végétale',              ['Crème liquide']],
+  ['crème de soja',               ['Crème liquide']],
+  ['skyr',                        ['Fromage blanc']],
+  ['petit suisse',                ['Fromage blanc']],
+  ['purée de tomate',             ['Sauce tomate']],
+  ['coulis de tomate',            ['Sauce tomate']],
+  ['concentré de tomate',         ['Sauce tomate']],
+  ['pulpe de tomate',             ['Sauce tomate']],
+  ['crème de tomate',             ['Sauce tomate']],
+  ['fécule de maïs',              ['Maïzena']],
+  ['miso',                        ['Pâte miso']],
+  ['jus de citron vert',          ['Citron vert']],
+  ['zeste de citron vert',        ['Citron vert']],
+  ['jus de citron',               ['Citron']],
+  ['zeste de citron',             ['Citron']],
+  ['jaune d\'œuf',                ['Œuf']],
+  ['blanc d\'œuf',                ['Œuf']],
+  ['cœur d\'artichaut',           ['Artichaut']],
+  ['poudre d\'amande',            ['Amandes']],
+  ['graine de sésame',            ['Sésame']],
+  ['cassonade',                   ['Sucre']],
+  ['cube de bouillon de légumes', ['Bouillon de légumes']],
+  ['bouillon de bœuf végétal',    ['Bouillon de légumes']],
+  // Tags sans précision → cases précises existantes
+  ['poivron',   ['Poivron rouge','Poivron vert'], true],
+  ['poisson',   ['Poisson blanc'], true],
+  ['tortillas', ['Tortillas de maïs','Tortillas de farine'], true],
+  ['vinaigre',  ['Vinaigre balsamique','Vinaigre de xérès'], true],
+  ['levure',    ['Levure boulangère'], true],
+  ['curry vert',                  ['Pâte de curry vert']],
+  // Faux amis bloqués
+  ['noix de muscade',             []],
+  ['pain d\'épice',               []],
+  ['piment de la jamaïque',       []],
+];
+const ING_LEADING_ADJ = new Set(['petit','petite','gros','grosse','grand','grande']);
+const ING_NO_SINGULAR = new Set(['pois','pates','gros','anis','cassis','jus','mais']);
+
+function ingWords(s) {
+  return String(s).toLowerCase()
+    .replace(/œ/g, 'oe').replace(/æ/g, 'ae')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[’'`´]/g, ' ')
+    .replace(/[-–—,;:()%\/]/g, ' ')
+    .split(/\s+/).filter(Boolean)
+    .map(w => (w.length > 3 && w.endsWith('s') && !ING_NO_SINGULAR.has(w)) ? w.slice(0, -1) : w);
+}
+
+let _ingRules = null;
+function getIngRules() {
+  if (_ingRules) return _ingRules;
+  _ingRules = [];
+  FAMILIES.forEach(f => f.items.forEach(item => {
+    _ingRules.push({ w: ingWords(item), t: [item], exact: false });
+  }));
+  ING_RULES.forEach(r => _ingRules.push({ w: ingWords(r[0]), t: r[1], exact: !!r[2] }));
+  return _ingRules;
+}
+
+function ingMatchWords(words) {
+  let best = 0, out = [];
+  getIngRules().forEach(r => {
+    const n = r.w.length;
+    if (!n || n > words.length || n < best) return;
+    if (r.exact && n !== words.length) return;
+    for (let i = 0; i < n; i++) if (r.w[i] !== words[i]) return;
+    if (n > best) { best = n; out = []; }
+    r.t.forEach(c => { if (!out.includes(c)) out.push(c); });
+  });
+  return out;
+}
+
+const _ingTagCache = new Map();
+// Cases de recherche auxquelles correspond un tag de recette
+function chipsForTag(tag) {
+  if (_ingTagCache.has(tag)) return _ingTagCache.get(tag);
+  const words = ingWords(tag);
+  let res = ingMatchWords(words);
+  if (!res.length && words.length > 1 && ING_LEADING_ADJ.has(words[0])) {
+    res = ingMatchWords(words.slice(1));   // « Petites protéines… », « Petits poivrons… »
+  }
+  _ingTagCache.set(tag, res);
+  return res;
+}
+
+// Ensemble des cases couvertes par une recette
+function recipeChipSet(recipe) {
+  const set = new Set();
+  (recipe.tags || []).forEach(t => chipsForTag(t).forEach(c => set.add(c)));
+  return set;
+}
 
 const ORIGIN_FLAGS = {
   'Toutes':'🌍', 'Française':'🇫🇷', 'Italienne':'🇮🇹', 'Indienne':'🇮🇳',
@@ -2293,7 +2414,7 @@ const EXCL_KEY = 'marecette_excl_v1';
 let chipMode = 'select'; // 'select' | 'exclude'
 
 function loadExclusions() {
-  try { return JSON.parse(localStorage.getItem(EXCL_KEY) || '[]'); } catch (e) { return []; }
+  try { return JSON.parse(localStorage.getItem(EXCL_KEY) || '[]').map(x => x === 'Citronelle' ? 'Citronnelle' : x); } catch (e) { return []; }
 }
 function saveExclusions(arr) {
   try { localStorage.setItem(EXCL_KEY, JSON.stringify(arr)); } catch (e) {}
@@ -2332,7 +2453,8 @@ function resetExclusions() {
 
 // Une recette est écartée si elle contient au moins un ingrédient exclu
 function isRecipeExcluded(recipe, excluded) {
-  return excluded.some(ex => recipe.tags.includes(ex));
+  const chips = recipeChipSet(recipe);
+  return excluded.some(ex => chips.has(ex));
 }
 
 // Mise à jour du bouton de recherche
@@ -2360,7 +2482,8 @@ function updateSearchButton() {
   let full = 0, any = 0;
   RECIPES.concat(userRecipes).forEach(recipe => {
     if (isRecipeExcluded(recipe, excluded)) return;
-    const mc = names.filter(ing => recipe.tags.includes(ing)).length;
+    const chips = recipeChipSet(recipe);
+    const mc = names.filter(ing => chips.has(ing)).length;
     if (mc > 0) any++;
     if (mc === names.length) full++;
   });
@@ -2406,7 +2529,8 @@ function doSearch() {
   const scored = RECIPES.concat(userRecipes)
     .filter(recipe => !isRecipeExcluded(recipe, excluded))
     .map(recipe => {
-      const matchCount = selectedIngredients.filter(ing => recipe.tags.includes(ing)).length;
+      const chips = recipeChipSet(recipe);
+      const matchCount = selectedIngredients.filter(ing => chips.has(ing)).length;
       return { ...recipe, matchCount };
     })
     .filter(recipe => recipe.matchCount > 0);
