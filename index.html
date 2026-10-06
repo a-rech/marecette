@@ -1092,6 +1092,85 @@
     .user-recipe-actions button:hover { border-color: var(--accent); color: var(--accent); }
     .user-recipe-actions button.delete { border-color: #d97979; color: #d97979; }
 
+    /* ---- MENU & LISTE DE COURSES ---- */
+    .nav-btn { position: relative; }
+    .nav-badge {
+      position: absolute; top: 0; right: 0; min-width: 16px; height: 16px; padding: 0 4px;
+      border-radius: 8px; background: var(--accent); color: #fff; font-size: 10px; font-weight: 600;
+      line-height: 16px; text-align: center; box-sizing: border-box;
+    }
+    .menu-tabs { display: flex; gap: 8px; margin: 4px 0 18px; }
+    .menu-tab {
+      flex: 1; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text2); font-family: 'DM Sans', sans-serif;
+      font-size: 14px; font-weight: 500; cursor: pointer; transition: all .15s;
+    }
+    .menu-tab:hover { border-color: var(--accent); }
+    .menu-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .menu-item {
+      display: flex; align-items: center; gap: 10px 12px; flex-wrap: wrap;
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 12px 14px; margin-bottom: 10px;
+    }
+    .menu-item.missing { opacity: .7; }
+    .menu-item-main { display: flex; align-items: center; gap: 12px; flex: 1 1 200px; min-width: 0; cursor: pointer; }
+    .menu-item.missing .menu-item-main { cursor: default; }
+    .menu-item-emoji { font-size: 28px; flex-shrink: 0; }
+    .menu-item-title { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 500; color: var(--text); }
+    .menu-item-meta { font-size: 12px; color: var(--text3); margin-top: 2px; }
+    .menu-item-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .menu-ing-btn {
+      padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2);
+      color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer;
+    }
+    .menu-ing-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .menu-icon-btn {
+      width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--surface2);
+      color: var(--text2); font-size: 14px; cursor: pointer; flex-shrink: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .menu-icon-btn:hover { color: var(--hard); }
+    .menu-foot { display: flex; justify-content: center; margin-top: 18px; }
+    .menu-foot .share-btn { flex: 0 1 auto; padding: 10px 18px; }
+    .menu-empty { text-align: center; padding: 36px 12px; color: var(--text2); }
+    .menu-empty-ico { font-size: 44px; margin-bottom: 10px; }
+    .menu-empty-title { font-family: 'Playfair Display', serif; font-size: 19px; color: var(--text); margin-bottom: 8px; }
+    .menu-empty p { font-size: 14px; line-height: 1.5; max-width: 420px; margin: 0 auto 18px; }
+    .menu-empty .share-btns { max-width: 340px; margin: 0 auto; }
+    .shop-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+    .shop-count { font-size: 13px; color: var(--text2); }
+    .shop-head .share-btn { flex: 0 1 auto; padding: 7px 12px; font-size: 12px; }
+    .shop-add { display: flex; gap: 8px; margin-bottom: 14px; }
+    .shop-add input {
+      flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+      background: var(--surface); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px;
+    }
+    .shop-add input:focus { outline: none; border-color: var(--accent); }
+    .shop-add .share-btn { flex: 0 0 auto; padding: 10px 16px; }
+    .shop-item {
+      display: flex; align-items: center; gap: 12px; padding: 11px 14px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px; cursor: pointer;
+      user-select: none; -webkit-tap-highlight-color: transparent;
+    }
+    .shop-box {
+      width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--border); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; line-height: 1;
+    }
+    .shop-item.checked, .ms-ing.off { opacity: .55; }
+    .shop-item.checked .shop-box, .ms-ing:not(.off) .shop-box { background: var(--accent2); border-color: var(--accent2); }
+    .shop-item.checked .shop-name, .ms-ing.off .ms-name { text-decoration: line-through; }
+    .shop-main { flex: 1; min-width: 0; }
+    .shop-name { font-size: 15px; color: var(--text); }
+    .shop-src { font-size: 11px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+    .shop-qty { font-size: 13px; color: var(--text2); text-align: right; flex-shrink: 0; max-width: 45%; }
+    .shop-sep { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text3); font-weight: 600; margin: 16px 0 8px; }
+    .ms-hint { font-size: 12px; color: var(--text3); margin-bottom: 6px; }
+    .ms-ing { display: flex; align-items: center; gap: 10px; padding: 8px 2px; border-bottom: 1px solid var(--border); cursor: pointer; }
+    .ms-ing:last-child { border-bottom: none; }
+    .ms-name { flex: 1; font-size: 14px; color: var(--text); min-width: 0; }
+    .ms-qty { font-size: 13px; color: var(--text2); flex-shrink: 0; }
+    .ms-portions { display: flex; align-items: center; justify-content: center; }
+
   </style>
 </head>
 <body>
@@ -1103,6 +1182,7 @@
     <button class="nav-btn" onclick="navigateTo('search')">🔍<span class="nav-label"> Ingrédients</span></button>
     <button class="nav-btn" onclick="navigateTo('catalogue')">📚<span class="nav-label"> Catalogue</span></button>
     <button class="nav-btn" onclick="navigateTo('random')">🎲<span class="nav-label"> Hasard</span></button>
+    <button class="nav-btn" onclick="navigateTo('menu')">🛒<span class="nav-label"> Menu</span><span class="nav-badge" id="nav-menu-badge" style="display:none"></span></button>
   </div>
 </nav>
 
@@ -1139,6 +1219,11 @@
         <h3>Recette aléatoire</h3>
         <p>Laissez-vous inspirer par une recette tirée au hasard</p>
       </div>
+    <div class="hero-card" onclick="navigateTo('menu')">
+      <div class="icon">🛒</div>
+      <h3>Menu &amp; courses</h3>
+      <p id="home-menu-sub">Prévoyez vos repas et obtenez la liste de courses</p>
+    </div>
     </div>
     <button class="prefs-home-btn" onclick="openPrefs()">⚙️ Paramètres</button>
   </div>
@@ -1489,6 +1574,17 @@
 </div>
 
 <!-- LEXIQUE -->
+<div id="page-menu" class="page">
+  <button class="back-btn" onclick="goBack()">← Retour</button>
+  <div class="section-title" style="margin-bottom:4px">🛒 Menu &amp; courses</div>
+  <p class="section-sub">Les recettes que vous prévoyez, et la liste de courses qui en découle</p>
+  <div class="menu-tabs">
+    <button class="menu-tab active" id="menu-tab-menu" onclick="setMenuTab('menu')">📋 Menu</button>
+    <button class="menu-tab" id="menu-tab-shop" onclick="setMenuTab('shop')">🧺 Courses</button>
+  </div>
+  <div id="menu-content"></div>
+</div>
+
 <div id="page-lexique" class="page">
   <div style="display:flex;align-items:center;margin-bottom:16px;">
     <button class="back-btn" onclick="closeLexique()" style="margin:0;">← Retour</button>
@@ -2241,6 +2337,8 @@ function showPage(pageId) {
   if (pageId === 'search')    loadIngredientFamilies();
   if (pageId === 'catalogue') loadCatalogueTabs();
   if (pageId === 'random')    pickRandom();
+  if (pageId === 'menu')      renderMenuPage();
+  if (pageId === 'home')      updateMenuBadges();
   // Synchronise la visibilité du bouton Réinitialiser selon la page et l'état des filtres
   syncFabReset(pageId);
 }
@@ -2313,6 +2411,13 @@ window.addEventListener('popstate', function(e) {
   if (soireeOverlay) {
     exitSoireeMode();
     return; // Ne pas naviguer, juste fermer l'overlay
+  }
+
+  // Si la fenêtre « Ajouter à la liste » est ouverte, la fermer sans changer de page
+  if (document.getElementById('menu-sheet')) {
+    closeMenuSheet();
+    history.pushState({ page: pageStack[pageStack.length - 1], depth: pageStack.length }, '', '');
+    return;
   }
 
   if (pageStack.length > 1) {
@@ -4251,6 +4356,7 @@ function getRecipeActions(id) {
     </div>
     <div style="display: flex; gap: 8px;">
       <button onclick="shareRecipe(${id})" style="flex: 1;">📤 Partager</button>
+      <button id="btn-menu-${id}" onclick="openMenuSheet(${id})" style="flex: 1;">${menuButtonLabel(id)}</button>
     </div>`;
   
   // Deuxième ligne : Modifier + Supprimer (uniquement pour les créations)
@@ -4442,6 +4548,500 @@ function exitSoireeMode() {
   }
 }
 
+
+
+// ════════════════════════════════════════════════════════════
+// MENU & LISTE DE COURSES
+// Menu = recettes prévues (sans jour), liste de courses = calculée à partir du menu + ajouts manuels.
+// Stockage : marecette_menu [{ rid, portions, excl:[ingrédients exclus] }]
+//            marecette_courses { checked:{clé:true}, manual:[{id,text,checked}] }
+// ════════════════════════════════════════════════════════════
+const MENU_KEY = 'marecette_menu';
+const SHOP_KEY = 'marecette_courses';
+let _menu = null;
+let _shop = null;
+let _menuTab = 'menu';
+let _menuSheet = null;     // état de la fenêtre « Ajouter à la liste »
+let _shopRendered = [];    // lignes actuellement affichées (index utilisé par les clics)
+
+function _loadMenuData() {
+  if (_menu && _shop) return;
+  try {
+    const m = JSON.parse(localStorage.getItem(MENU_KEY) || '[]');
+    _menu = Array.isArray(m) ? m.filter(function(x) { return x && typeof x.rid === 'number'; }) : [];
+  } catch (e) { _menu = []; }
+  try {
+    const s = JSON.parse(localStorage.getItem(SHOP_KEY) || '{}') || {};
+    _shop = {
+      checked: (s.checked && typeof s.checked === 'object' && !Array.isArray(s.checked)) ? s.checked : {},
+      manual: Array.isArray(s.manual) ? s.manual.filter(function(x) { return x && x.text; }) : []
+    };
+  } catch (e) { _shop = { checked: {}, manual: [] }; }
+}
+
+function _saveMenuData() {
+  try {
+    localStorage.setItem(MENU_KEY, JSON.stringify(_menu));
+    localStorage.setItem(SHOP_KEY, JSON.stringify(_shop));
+  } catch (e) {}
+  updateMenuBadges();
+}
+
+function menuFind(rid) {
+  _loadMenuData();
+  return _menu.find(function(x) { return x.rid === rid; }) || null;
+}
+
+// ── Normalisation (fusion des ingrédients) ───────────────
+const _UNIT_COUNT = ['gousse', 'branche', 'feuille', 'tranche', 'tige', 'filet', 'bâton', 'bâtonnet', 'épi',
+  'goutte', 'sachet', 'botte', 'bouquet', 'rouleau', 'pincée', 'poignée', 'morceau', 'disque', 'saucisse',
+  'cuisse', 'pot', 'miche'];
+const _NO_FOLD = ['moule', 'pate'];
+let _ingNameSet = null;
+
+// minuscules, sans accents, apostrophes unifiées, œ → oe
+function _normTxt(s) {
+  return String(s == null ? '' : s).toLowerCase().replace(/[’‘`]/g, "'").replace(/œ/g, 'oe')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function _ingKnown() {
+  if (!_ingNameSet) {
+    _ingNameSet = new Set();
+    RECIPES.forEach(function(r) { r.ingredients.forEach(function(i) { _ingNameSet.add(_normTxt(i[0])); }); });
+  }
+  return _ingNameSet;
+}
+
+// Clé d'ingrédient : le pluriel est ramené au singulier seulement si le singulier existe dans le catalogue
+function _ingKey(name) {
+  let k = _normTxt(name);
+  if (k.length > 3 && k.endsWith('s') && _NO_FOLD.indexOf(k.slice(0, -1)) === -1 && _ingKnown().has(k.slice(0, -1))) {
+    k = k.slice(0, -1);
+  }
+  return k;
+}
+
+// Unité : g/kg additionnés en g, ml/cl/L en ml, singulier/pluriel unifiés pour les unités de comptage
+function _unitInfo(u) {
+  const l = String(u == null ? '' : u).trim().toLowerCase();
+  if (l === 'g') return { key: 'g', mult: 1 };
+  if (l === 'kg') return { key: 'g', mult: 1000 };
+  if (l === 'ml') return { key: 'ml', mult: 1 };
+  if (l === 'cl') return { key: 'ml', mult: 10 };
+  if (l === 'l') return { key: 'ml', mult: 1000 };
+  let sing = l;
+  if (l.endsWith('s') && _UNIT_COUNT.indexOf(l.slice(0, -1)) !== -1) sing = l.slice(0, -1);
+  return { key: sing, mult: 1, count: _UNIT_COUNT.indexOf(sing) !== -1 };
+}
+
+function _fmtNum(n) { return String(Math.round(n * 100) / 100); }
+
+function _fmtTotal(u, total) {
+  if (u.key === 'g') return total >= 1000 ? _fmtNum(total / 1000) + ' kg' : _fmtNum(total) + ' g';
+  if (u.key === 'ml') return total >= 1000 ? _fmtNum(total / 1000) + ' L' : _fmtNum(total) + ' ml';
+  if (!u.key) return _fmtNum(total);
+  return _fmtNum(total) + ' ' + ((u.count && total > 1) ? u.key + 's' : u.key);
+}
+
+function _fmtAmount(qty, unit) {
+  const q = Number(qty) || 0;
+  if (q <= 0) return '';
+  const u = _unitInfo(unit);
+  return _fmtTotal(u, q * u.mult);
+}
+
+// ── Calcul de la liste de courses ────────────────────────
+// Renvoie les lignes à afficher (ingrédients du menu fusionnés + ajouts manuels), cochés en dernier.
+function buildShoppingList() {
+  _loadMenuData();
+  const map = new Map();
+  _menu.forEach(function(item) {
+    const r = findRecipeAny(item.rid);
+    if (!r) return;
+    const ratio = (item.portions || r.portions || 1) / (r.portions || 1);
+    const excl = new Set(item.excl || []);
+    r.ingredients.forEach(function(ing) {
+      const key = _ingKey(ing[0]);
+      if (excl.has(key)) return;
+      let e = map.get(key);
+      if (!e) { e = { key: key, name: ing[0], units: new Map(), recipes: [] }; map.set(key, e); }
+      if (String(ing[0]).length < e.name.length) e.name = ing[0];
+      const u = _unitInfo(ing[2]);
+      const cur = e.units.get(u.key) || { u: u, total: 0 };
+      cur.total += (Number(ing[1]) || 0) * ratio * u.mult;
+      e.units.set(u.key, cur);
+      if (e.recipes.indexOf(r.title) === -1) e.recipes.push(r.title);
+    });
+  });
+
+  const items = [];
+  map.forEach(function(e) {
+    const parts = Array.from(e.units.values()).filter(function(p) { return p.total > 0; });
+    parts.sort(function(a, b) {
+      const rank = function(k) { return k === '' ? 0 : k === 'g' ? 1 : k === 'ml' ? 2 : 3; };
+      return rank(a.u.key) - rank(b.u.key) || a.u.key.localeCompare(b.u.key, 'fr');
+    });
+    items.push({
+      key: e.key, name: e.name, manual: false, recipes: e.recipes,
+      qty: parts.map(function(p) { return _fmtTotal(p.u, p.total); }).join(' + '),
+      checked: !!_shop.checked[e.key]
+    });
+  });
+
+  // Nettoyage : une coche d'un ingrédient qui n'est plus dans la liste ne doit pas réapparaître plus tard
+  let pruned = false;
+  Object.keys(_shop.checked).forEach(function(k) { if (!map.has(k)) { delete _shop.checked[k]; pruned = true; } });
+  if (pruned) _saveMenuData();
+
+  _shop.manual.forEach(function(m) {
+    items.push({ key: 'm:' + m.id, name: m.text, manual: true, id: m.id, recipes: [], qty: '', checked: !!m.checked });
+  });
+
+  items.sort(function(a, b) {
+    return (a.checked - b.checked) || a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' });
+  });
+  return items;
+}
+
+// ── Pastilles (barre du haut + carte d'accueil) ──────────
+function updateMenuBadges() {
+  _loadMenuData();
+  const n = _menu.length;
+  const nb = document.getElementById('nav-menu-badge');
+  if (nb) { nb.textContent = n; nb.style.display = n ? '' : 'none'; }
+  const hs = document.getElementById('home-menu-sub');
+  if (hs) {
+    hs.textContent = n
+      ? n + ' recette' + (n > 1 ? 's' : '') + ' prévue' + (n > 1 ? 's' : '') + ' · liste de courses'
+      : 'Prévoyez vos repas et obtenez la liste de courses';
+  }
+}
+
+function menuButtonLabel(rid) {
+  return menuFind(rid) ? '✅ Dans la liste' : '🛒 Ajouter à la liste';
+}
+
+function refreshMenuButton(rid) {
+  const b = document.getElementById('btn-menu-' + rid);
+  if (b) b.textContent = menuButtonLabel(rid);
+}
+
+// ── Fenêtre « Ajouter à la liste » ───────────────────────
+function openMenuSheet(rid) {
+  const r = findRecipeAny(rid);
+  if (!r) return;
+  _loadMenuData();
+  closeMenuSheet();
+  const existing = menuFind(rid);
+
+  // Portions : celles du menu si la recette y est déjà, sinon celles choisies sur la fiche, sinon celles de la recette
+  let portions = r.portions || 4;
+  if (existing) portions = existing.portions || portions;
+  const sel = document.getElementById('portions-selector');
+  const onFiche = sel && currentRecipeId === rid && document.getElementById('page-recipe').classList.contains('active');
+  if (onFiche) {
+    const v = parseInt(sel.value);
+    if (v && (!existing || v !== r.portions)) portions = v;
+  }
+  portions = Math.min(PORTIONS_MAX, Math.max(PORTIONS_MIN, portions));
+  _menuSheet = { rid: rid, portions: portions, excl: new Set(existing ? existing.excl || [] : []), editing: !!existing };
+
+  const ov = document.createElement('div');
+  ov.className = 'share-overlay';   // même calque que le partage : désactive aussi le swipe de la fiche
+  ov.id = 'menu-sheet';
+  ov.innerHTML = `
+    <div class="share-modal" role="dialog" aria-modal="true">
+      <div class="share-head">
+        <div>
+          <div class="share-title">🛒 ${existing ? 'Dans la liste de courses' : 'Ajouter à la liste'}</div>
+          <div class="share-sub">${_esc(r.emoji || '')} ${_esc(r.title)}</div>
+        </div>
+        <button class="share-close" onclick="closeMenuSheet()" aria-label="Fermer">✕</button>
+      </div>
+      <div class="share-body">
+        <div class="share-section">
+          <div class="share-label">Portions</div>
+          <div class="ms-portions">
+            <div class="portions-stepper">
+              <button type="button" class="portions-btn" id="ms-minus" onclick="menuSheetPortions(-1)" aria-label="Moins de portions">−</button>
+              <span class="portions-value" id="ms-portions"></span>
+              <button type="button" class="portions-btn" id="ms-plus" onclick="menuSheetPortions(1)" aria-label="Plus de portions">+</button>
+            </div>
+          </div>
+        </div>
+        <div class="share-section">
+          <div class="share-label">Ingrédients à acheter</div>
+          <div class="ms-hint">Touchez un ingrédient pour le retirer s'il est déjà dans vos placards.</div>
+          <div id="ms-ings"></div>
+        </div>
+        <div class="share-btns">
+          ${existing
+            ? `<button class="share-btn" onclick="menuSheetRemove()">Retirer de la liste</button>
+               <button class="share-btn primary" onclick="menuSheetConfirm()">Mettre à jour</button>`
+            : `<button class="share-btn" onclick="closeMenuSheet()">Annuler</button>
+               <button class="share-btn primary" onclick="menuSheetConfirm()">Ajouter</button>`}
+        </div>
+      </div>
+    </div>`;
+  ov.addEventListener('click', function(e) { if (e.target === ov) closeMenuSheet(); });
+  document.body.appendChild(ov);
+  menuSheetRender();
+}
+
+function closeMenuSheet() {
+  const ov = document.getElementById('menu-sheet');
+  if (ov) ov.remove();
+  _menuSheet = null;
+}
+
+function menuSheetRender() {
+  const s = _menuSheet;
+  if (!s) return;
+  const r = findRecipeAny(s.rid);
+  if (!r) return;
+  const ratio = s.portions / (r.portions || 1);
+  document.getElementById('ms-portions').textContent = s.portions;
+  document.getElementById('ms-minus').disabled = s.portions <= PORTIONS_MIN;
+  document.getElementById('ms-plus').disabled = s.portions >= PORTIONS_MAX;
+  document.getElementById('ms-ings').innerHTML = r.ingredients.map(function(ing, i) {
+    const off = s.excl.has(_ingKey(ing[0]));
+    return `<div class="ms-ing ${off ? 'off' : ''}" onclick="menuSheetToggle(${i})" role="checkbox" aria-checked="${!off}">
+      <span class="shop-box">${off ? '' : '✓'}</span>
+      <span class="ms-name">${_esc(ing[0])}</span>
+      <span class="ms-qty">${_esc(_fmtAmount((Number(ing[1]) || 0) * ratio, ing[2]))}</span>
+    </div>`;
+  }).join('');
+}
+
+function menuSheetPortions(delta) {
+  if (!_menuSheet) return;
+  _menuSheet.portions = Math.min(PORTIONS_MAX, Math.max(PORTIONS_MIN, _menuSheet.portions + delta));
+  menuSheetRender();
+}
+
+function menuSheetToggle(i) {
+  if (!_menuSheet) return;
+  const r = findRecipeAny(_menuSheet.rid);
+  if (!r || !r.ingredients[i]) return;
+  const k = _ingKey(r.ingredients[i][0]);
+  if (_menuSheet.excl.has(k)) _menuSheet.excl.delete(k); else _menuSheet.excl.add(k);
+  menuSheetRender();
+}
+
+function menuSheetConfirm() {
+  const s = _menuSheet;
+  if (!s) return;
+  _loadMenuData();
+  const data = { rid: s.rid, portions: s.portions, excl: Array.from(s.excl) };
+  const it = menuFind(s.rid);
+  if (it) Object.assign(it, data); else _menu.push(data);
+  _saveMenuData();
+  closeMenuSheet();
+  refreshMenuButton(s.rid);
+  if (document.getElementById('page-menu').classList.contains('active')) renderMenuPage();
+  showUpdateToast(s.editing ? '🛒 Liste mise à jour' : '🛒 Ajouté à la liste');
+}
+
+function menuSheetRemove() {
+  const s = _menuSheet;
+  if (!s) return;
+  closeMenuSheet();
+  menuRemove(s.rid);
+}
+
+function menuRemove(rid) {
+  _loadMenuData();
+  _menu = _menu.filter(function(x) { return x.rid !== rid; });
+  _saveMenuData();
+  refreshMenuButton(rid);
+  if (document.getElementById('page-menu').classList.contains('active')) renderMenuPage();
+}
+
+// ── Page « Menu & courses » ──────────────────────────────
+function setMenuTab(tab) {
+  _menuTab = tab;
+  renderMenuPage();
+  window.scrollTo(0, 0);
+}
+
+function renderMenuPage() {
+  _loadMenuData();
+  const box = document.getElementById('menu-content');
+  if (!box) return;
+  const shop = buildShoppingList();
+  _updateMenuTabs(shop);
+  box.innerHTML = _menuTab === 'menu' ? _menuTabHtml() : _shopTabHtml();
+  if (_menuTab === 'shop') _renderShopList(shop);
+}
+
+function _updateMenuTabs(shop) {
+  const left = shop.filter(function(x) { return !x.checked; }).length;
+  const t1 = document.getElementById('menu-tab-menu'), t2 = document.getElementById('menu-tab-shop');
+  t1.textContent = '📋 Menu (' + _menu.length + ')';
+  t2.textContent = '🧺 Courses (' + left + ')';
+  t1.classList.toggle('active', _menuTab === 'menu');
+  t2.classList.toggle('active', _menuTab === 'shop');
+}
+
+function _menuItemHtml(it) {
+  const r = findRecipeAny(it.rid);
+  if (!r) {
+    return `<div class="menu-item missing">
+      <div class="menu-item-main"><span class="menu-item-emoji">⚠️</span>
+        <div><div class="menu-item-title">Recette introuvable</div><div class="menu-item-meta">Elle a sans doute été supprimée.</div></div></div>
+      <div class="menu-item-actions"><button class="menu-icon-btn" onclick="menuRemove(${it.rid})" aria-label="Retirer du menu">✕</button></div>
+    </div>`;
+  }
+  const excl = new Set(it.excl || []);
+  const total = r.ingredients.length;
+  const kept = r.ingredients.filter(function(i) { return !excl.has(_ingKey(i[0])); }).length;
+  const p = it.portions || r.portions || 1;
+  return `<div class="menu-item">
+    <div class="menu-item-main" onclick="showRecipe(${r.id})">
+      <span class="menu-item-emoji">${_esc(r.emoji || '🍽️')}</span>
+      <div style="min-width:0">
+        <div class="menu-item-title">${_esc(r.title)}</div>
+        <div class="menu-item-meta">${kept === total ? total + ' ingrédients' : kept + ' / ' + total + ' ingrédients'}</div>
+      </div>
+    </div>
+    <div class="menu-item-actions">
+      <div class="portions-stepper">
+        <button type="button" class="portions-btn" onclick="menuItemPortions(${r.id}, -1)" ${p <= PORTIONS_MIN ? 'disabled' : ''} aria-label="Moins de portions">−</button>
+        <span class="portions-value" title="Portions">${p}</span>
+        <button type="button" class="portions-btn" onclick="menuItemPortions(${r.id}, 1)" ${p >= PORTIONS_MAX ? 'disabled' : ''} aria-label="Plus de portions">+</button>
+      </div>
+      <button class="menu-ing-btn" onclick="openMenuSheet(${r.id})">🧾 Ingrédients</button>
+      <button class="menu-icon-btn" onclick="menuRemove(${r.id})" aria-label="Retirer du menu">✕</button>
+    </div>
+  </div>`;
+}
+
+function _menuTabHtml() {
+  if (!_menu.length) {
+    return `<div class="menu-empty">
+      <div class="menu-empty-ico">🍽️</div>
+      <div class="menu-empty-title">Votre menu est vide</div>
+      <p>Ouvrez une recette et touchez « 🛒 Ajouter à la liste » : elle arrive ici, sans jour à choisir, et ses ingrédients rejoignent la liste de courses.</p>
+      <div class="share-btns">
+        <button class="share-btn primary" onclick="navigateTo('catalogue')">📚 Catalogue</button>
+        <button class="share-btn" onclick="navigateTo('random')">🎲 Au hasard</button>
+      </div>
+    </div>`;
+  }
+  return _menu.map(_menuItemHtml).join('') +
+    `<div class="menu-foot"><button class="share-btn" onclick="menuClear()">🗑 Vider le menu</button></div>`;
+}
+
+function menuItemPortions(rid, delta) {
+  const it = menuFind(rid);
+  if (!it) return;
+  const r = findRecipeAny(rid);
+  it.portions = Math.min(PORTIONS_MAX, Math.max(PORTIONS_MIN, (it.portions || (r && r.portions) || 1) + delta));
+  _saveMenuData();
+  renderMenuPage();
+}
+
+function menuClear() {
+  _loadMenuData();
+  if (!_menu.length) return;
+  if (!window.confirm('Vider le menu ? Les recettes prévues seront retirées de la liste de courses (vos ajouts manuels sont conservés).')) return;
+  const ids = _menu.map(function(x) { return x.rid; });
+  _menu = [];
+  _shop.checked = {};
+  _saveMenuData();
+  ids.forEach(refreshMenuButton);
+  renderMenuPage();
+}
+
+// ── Onglet Courses ───────────────────────────────────────
+function _shopTabHtml() {
+  return `<div class="shop-head">
+      <div class="shop-count" id="shop-count"></div>
+      <button class="share-btn" onclick="shopUncheckAll()">↺ Tout décocher</button>
+    </div>
+    <div class="shop-add">
+      <input id="shop-add-input" type="text" maxlength="80" placeholder="Ajouter un article…" enterkeyhint="done" autocomplete="off"
+             onkeydown="if (event.key === 'Enter') shopAddManual()">
+      <button class="share-btn primary" onclick="shopAddManual()">Ajouter</button>
+    </div>
+    <div id="shop-list"></div>`;
+}
+
+function _renderShopList(items) {
+  const list = document.getElementById('shop-list');
+  if (!list) return;
+  _shopRendered = items || buildShoppingList();
+  const left = _shopRendered.filter(function(x) { return !x.checked; }).length;
+  const cnt = document.getElementById('shop-count');
+  if (cnt) cnt.textContent = _shopRendered.length
+    ? left + ' à acheter · ' + (_shopRendered.length - left) + ' dans le panier'
+    : '';
+  if (!_shopRendered.length) {
+    list.innerHTML = `<div class="menu-empty">
+      <div class="menu-empty-ico">🧺</div>
+      <div class="menu-empty-title">Rien à acheter</div>
+      <p>Ajoutez des recettes au menu pour remplir la liste, ou tapez un article ci-dessus.</p>
+    </div>`;
+  } else {
+    list.innerHTML = _shopRendered.map(function(x, i) {
+      return `<div class="shop-item ${x.checked ? 'checked' : ''}" onclick="shopToggle(${i})" role="checkbox" aria-checked="${x.checked}">
+        <span class="shop-box">${x.checked ? '✓' : ''}</span>
+        <div class="shop-main">
+          <div class="shop-name">${_esc(x.name)}</div>
+          ${x.recipes.length ? `<div class="shop-src">${_esc(x.recipes.join(' · '))}</div>` : ''}
+        </div>
+        ${x.qty ? `<div class="shop-qty">${_esc(x.qty)}</div>` : ''}
+        ${x.manual ? `<button class="menu-icon-btn" onclick="event.stopPropagation(); shopRemoveManual(${x.id})" aria-label="Supprimer">✕</button>` : ''}
+      </div>`;
+    }).join('');
+  }
+  _updateMenuTabs(_shopRendered);
+}
+
+function shopToggle(i) {
+  const x = _shopRendered[i];
+  if (!x) return;
+  _loadMenuData();
+  if (x.manual) {
+    const m = _shop.manual.find(function(y) { return y.id === x.id; });
+    if (m) m.checked = !m.checked;
+  } else if (_shop.checked[x.key]) {
+    delete _shop.checked[x.key];
+  } else {
+    _shop.checked[x.key] = true;
+  }
+  _saveMenuData();
+  _renderShopList(buildShoppingList());
+}
+
+function shopAddManual() {
+  const input = document.getElementById('shop-add-input');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  _loadMenuData();
+  _shop.manual.push({ id: Date.now(), text: text, checked: false });
+  input.value = '';
+  _saveMenuData();
+  _renderShopList(buildShoppingList());
+  input.focus();
+}
+
+function shopRemoveManual(id) {
+  _loadMenuData();
+  _shop.manual = _shop.manual.filter(function(m) { return m.id !== id; });
+  _saveMenuData();
+  _renderShopList(buildShoppingList());
+}
+
+function shopUncheckAll() {
+  _loadMenuData();
+  _shop.checked = {};
+  _shop.manual.forEach(function(m) { m.checked = false; });
+  _saveMenuData();
+  _renderShopList(buildShoppingList());
+}
 
 
 window.onload = function() {
