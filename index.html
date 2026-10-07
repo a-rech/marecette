@@ -1171,6 +1171,56 @@
     .ms-qty { font-size: 13px; color: var(--text2); flex-shrink: 0; }
     .ms-portions { display: flex; align-items: center; justify-content: center; }
 
+    /* ---- Phase 2 : semainier, rayons, placard ---- */
+    .menu-toolbar { margin: 0 0 14px; }
+    .menu-switch {
+      display: inline-flex; align-items: center; gap: 10px; padding: 8px 14px 8px 10px; border-radius: 20px;
+      border: 1px solid var(--border); background: var(--surface); color: var(--text2);
+      font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer;
+    }
+    .menu-switch.on { border-color: var(--accent); color: var(--text); }
+    .menu-switch-track { width: 34px; height: 20px; border-radius: 10px; background: var(--border); position: relative; transition: background .15s; flex-shrink: 0; }
+    .menu-switch.on .menu-switch-track { background: var(--accent); }
+    .menu-switch-knob { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .15s; }
+    .menu-switch.on .menu-switch-knob { transform: translateX(14px); }
+    .menu-toolbar-hint { font-size: 12px; color: var(--text3); margin-top: 8px; }
+    .menu-section {
+      display: flex; align-items: center; justify-content: space-between; margin: 20px 0 8px;
+      font-size: 12px; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; color: var(--text2);
+    }
+    .menu-section-count { font-size: 12px; color: var(--text3); font-weight: 500; }
+    .menu-day-empty { font-size: 13px; color: var(--text3); padding: 4px 2px 2px; }
+    .menu-days { flex-basis: 100%; display: flex; gap: 6px; padding-top: 4px; }
+    .menu-day-chip {
+      flex: 1; max-width: 44px; height: 32px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2);
+      color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .menu-day-chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .menu-foot { gap: 10px; flex-wrap: wrap; }
+    .shop-modes { display: flex; gap: 6px; margin-bottom: 12px; }
+    .shop-mode {
+      flex: 1; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface);
+      color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer;
+    }
+    .shop-mode.on { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+    .shop-sep { display: flex; align-items: center; justify-content: space-between; }
+    .shop-sep:first-child { margin-top: 4px; }
+    .shop-pantry-btn { width: 26px; height: 26px; font-size: 12px; opacity: .6; }
+    .shop-pantry-btn:hover { opacity: 1; color: inherit; }
+    .shop-pantry { margin-top: 22px; }
+    .shop-pantry-head {
+      width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 11px 14px;
+      border-radius: 12px; border: 1px dashed var(--border); background: transparent; color: var(--text2);
+      font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer;
+    }
+    .pantry-row { cursor: default; }
+
+    /* ---- Phase 3 : partage de la liste ---- */
+    .shop-head-btns { display: flex; gap: 6px; flex-shrink: 0; }
+    .shop-head .share-btn:disabled { opacity: .4; cursor: default; }
+    .ms-ing.ls-opt.off .ms-name { text-decoration: none; }
+    .ms-ing.ls-opt.off { opacity: .75; }
+
   </style>
 </head>
 <body>
@@ -1460,7 +1510,7 @@
         <button class="data-action-btn" onclick="exportData()">
           <span class="btn-icon">📤</span>
           <div>
-            <div>Exporter créations, favoris &amp; notes</div>
+            <div>Exporter créations, favoris, notes &amp; menu</div>
             <div class="btn-desc">Télécharge un fichier .json à conserver ou transférer</div>
           </div>
         </button>
@@ -1476,7 +1526,7 @@
           <span class="btn-icon">📥</span>
           <div>
             <div>Importer un fichier de sauvegarde</div>
-            <div class="btn-desc">Fusionne créations, favoris et notes avec vos données actuelles</div>
+            <div class="btn-desc">Fusionne créations, favoris, notes et menu avec vos données actuelles</div>
           </div>
         </button>
         <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(this)">
@@ -1492,7 +1542,7 @@
           <span class="btn-icon">🗑️</span>
           <div>
             <div>Effacer toutes mes données</div>
-            <div class="btn-desc">Supprime définitivement créations, favoris, notes et préférences</div>
+            <div class="btn-desc">Supprime définitivement créations, favoris, notes, menu, liste de courses et préférences</div>
           </div>
         </button>
         <div class="data-status" id="reset-status"></div>
@@ -3785,6 +3835,8 @@ function collectUserData() {
   if (!Array.isArray(data.userRecipes)) data.userRecipes = [];
   if (!Array.isArray(data.favorites)) data.favorites = [];
   if (!data.notes || typeof data.notes !== 'object' || Array.isArray(data.notes)) data.notes = {};
+  var menuData = collectMenuBackup();   // menu + liste de courses (champ facultatif : les anciens fichiers restent valides)
+  if (menuData) data.menu = menuData;
   return data;
 }
 
@@ -3797,8 +3849,8 @@ function exportData() {
   var favCount  = data.favorites.length;
   var noteCount = Object.keys(data.notes).length;
 
-  if (recCount === 0 && favCount === 0 && noteCount === 0) {
-    showDataStatus('export-status', 'Aucune donnée à exporter (pas de création, de favori ni de note).', false);
+  if (recCount === 0 && favCount === 0 && noteCount === 0 && !data.menu) {
+    showDataStatus('export-status', 'Aucune donnée à exporter (pas de création, de favori, de note ni de menu).', false);
     return;
   }
 
@@ -3817,7 +3869,7 @@ function exportData() {
   showDataStatus('export-status',
     '✓ ' + _plural(recCount, 'création', 'créations') + ', ' +
     _plural(favCount, 'favori', 'favoris') + ' et ' +
-    _plural(noteCount, 'note', 'notes') + ' exportés.', true);
+    _plural(noteCount, 'note', 'notes') + ' exportés.' + (data.menu ? ' Menu et liste de courses inclus.' : ''), true);
 }
 
 // Recette d'une sauvegarde → recette nettoyée (mêmes règles que l'import par lien, en mode « fidèle »)
@@ -3916,10 +3968,13 @@ function restoreBackup(data) {
   });
   if (noteAdded + noteMerged > 0) localStorage.setItem('marecette_notes', JSON.stringify(notes));
 
+  // 3 bis. Menu et liste de courses (fusion)
+  var menuRes = restoreMenuFromBackup(data.menu, mapId);
+
   // 4. Rafraîchir l'interface
   if (created > 0) loadCatalogueTabs();
   var recipePage = document.getElementById('page-recipe');
-  if ((favAdded + noteAdded + noteMerged + created) > 0 && recipePage && recipePage.classList.contains('active') && currentRecipeId) {
+  if ((favAdded + noteAdded + noteMerged + created + menuRes.items) > 0 && recipePage && recipePage.classList.contains('active') && currentRecipeId) {
     showRecipe(currentRecipeId);
   }
 
@@ -3929,6 +3984,9 @@ function restoreBackup(data) {
   if (favAdded)  parts.push(_plural(favAdded, 'favori ajouté', 'favoris ajoutés'));
   if (noteAdded) parts.push(_plural(noteAdded, 'note restaurée', 'notes restaurées'));
   if (noteMerged) parts.push(_plural(noteMerged, 'note fusionnée avec l\'existante', 'notes fusionnées avec les existantes'));
+  if (menuRes.items)  parts.push(_plural(menuRes.items, 'recette ajoutée au menu', 'recettes ajoutées au menu'));
+  if (menuRes.manual) parts.push(_plural(menuRes.manual, 'article ajouté à la liste de courses', 'articles ajoutés à la liste de courses'));
+  if (menuRes.pantry) parts.push(_plural(menuRes.pantry, 'réglage du placard restauré', 'réglages du placard restaurés'));
   var msg = parts.length ? '✓ Import réussi : ' + parts.join(', ') + '.' : '✓ Rien de nouveau : tout est déjà présent sur cet appareil.';
   if (already && parts.length) msg += ' (' + _plural(already, 'création déjà présente', 'créations déjà présentes') + '.)';
   if (invalid) msg += ' ' + _plural(invalid, 'recette illisible ignorée', 'recettes illisibles ignorées') + '.';
@@ -3960,7 +4018,7 @@ function importData(input) {
 
 // Efface toutes les données utilisateur (créations, favoris, notes, préférences)
 function resetAllData() {
-  if (!confirm('Supprimer définitivement vos créations, favoris, notes et préférences ?\nCette action est irréversible.')) return;
+  if (!confirm('Supprimer définitivement vos créations, favoris, notes, menu, liste de courses et préférences ?\nCette action est irréversible.')) return;
   // Lister et supprimer toutes les clés marecette_*
   var keysToDelete = [];
   for (var i = 0; i < localStorage.length; i++) {
@@ -3968,6 +4026,7 @@ function resetAllData() {
     if (key && key.startsWith('marecette_')) keysToDelete.push(key);
   }
   keysToDelete.forEach(function(k) { localStorage.removeItem(k); });
+  menuResetMemory();   // menu et liste de courses en mémoire
   // Les créations sont aussi en mémoire : on les vide et on rafraîchit le catalogue
   userRecipes = [];
   nextUserId = 1000;
@@ -4550,6 +4609,51 @@ function exitSoireeMode() {
 
 
 
+// ── Rayons & placard ─────────────────────────────────────
+const SHOP_AISLES = [
+  { id: 'legumes',     ico: '🥬', label: 'Fruits, légumes & herbes' },
+  { id: 'viande',      ico: '🥩', label: 'Viandes & charcuterie' },
+  { id: 'poisson',     ico: '🐟', label: 'Poissons & fruits de mer' },
+  { id: 'cremerie',    ico: '🧀', label: 'Crèmerie, œufs & fromages' },
+  { id: 'boulangerie', ico: '🥖', label: 'Pains & pâtes fraîches' },
+  { id: 'epicerie',    ico: '🥫', label: 'Épicerie' },
+  { id: 'epices',      ico: '🧂', label: 'Épices & aromates secs' },
+  { id: 'sucre',       ico: '🍫', label: 'Sucré, pâtisserie & fruits secs' },
+  { id: 'boissons',    ico: '🍷', label: 'Boissons & alcools' },
+  { id: 'surgeles',    ico: '❄️', label: 'Surgelés' },
+  { id: 'autres',      ico: '🛒', label: 'Autres' }
+];
+
+// Règles testées dans l'ordre sur le nom normalisé (minuscules, sans accents) : la première qui correspond gagne.
+const _AISLE_RULES = [
+  ['surgeles', /^(glacons?|glace\b.*|frites?)$|\b(surgeles?|congeles?)\b/],
+  ['epicerie', /^(vinaigre|huile|sauce|bouillon|fumet|fond de|mirin|tahini|rouille|bechamel|mayonnaise|moutarde|capres?|cornichons?|ketchup|harissa|lait de coco|creme de coco|pate de (curry|miso|tandoori|tomate|mais|rendang|gulai)|graisse de canard|ghee|algue|tomates? concassees?|haricots?(?! verts?)|pois (chiches?|casses?)|feves? sechees?|lentilles?|olives?|riz|nouilles?|vermicelles?|pates|spaghetti|penne|ramen|quinoa|polenta|semoule|couscous|chapelure|farine|maizena|cepes? secs?|graines? de sesame|sesame|mais(?! frais)|coulis|conserve|creme de (tomate|marrons?)|pate (de )?(curry|miso|tamarin|gochujang|rendang|gulai|sesame)|wasabi|tabasco|pesto|chimichurri|nuoc mam|kecap|tamarin|vinaigrette|melasse|acide citrique|fumee liquide|gomme arabique|dulce de leche|fecule|trofie|linguine|feuilles? de (vigne|bananier|mais)|ble germe)\b/],
+  ['epices',   /^(sel|gros sel|fleur de sel|poivre|cumin|cannelle|paprika|curcuma|garam masala|origan|laurier|feuilles? de laurier|bouquet garni|herbes de provence|safran|cardamome|clous? de girofle|noix de muscade|muscade|berbere|ras el-hanout|curry|piment (d'espelette|en poudre|sec|moulu)|ail (en poudre|hache)|gremolata|fleurs? de lavande|pandanus|coriandre moulue|gingembre (moulu|en poudre)|oignon en poudre|colorants?|epices?|quatre[- ]epices|cinq-epices|anis etoile|sumac|achiote|niter kibbeh|fleurs? d'hibiscus)\b/],
+  ['sucre',    /^(sucre|cassonade|miel|chocolat|cacao|vanille|gousses? de vanille|levure|bicarbonate|gelatine|pralin|caramel|sirop|confiture|pate d'amandes|amandes?|poudre d'amandes|noisettes?|noix(?! de muscade)|cacahuetes?|pignons?|pistaches?|raisins? secs?|abricots? secs?|dattes?|figues? seches?|noix de (coco|cajou|pecan)|lait concentre|biscuit|glucose|fondant|creme patissiere|speculoos|biscuits?|meringue|ganache|goiabada|pruneaux|prunes?|pecans?|graines? de courge|eau de fleur d'oranger|feuilles? de gelatine)\b/],
+  ['boissons', /^(vin|biere|rhum|pisco|kirsch|marsala|cognac|whisky|porto|cidre|champagne|prosecco|amaretto|angostura|cointreau|vodka|gin|cafe|the|jus d'orange|jus de (pomme|raisin|tomate|fruits?)|eau gazeuse|limonade|soda|tonic|infusion|grand marnier|cachaca)\b/],
+  ['poisson',  /^(saumon|filets? de (saumon|poisson|cabillaud|thon)|poisson|thon|crevettes?|gambas|moules?|calamars?|poulpe|morue|anchois|cabillaud|colin|sardines?|dorade|bar|lieu|langoustines?|saint-jacques|coquilles?|crabe|homard|huitres?|truite|merlu|lotte|surimi|hareng|pieuvre|bonite|tarama)\b/],
+  ['viande',   /^(poulet|boeuf|porc|agneau|veau|jambon|lardons?|viande|saucisses?|saucisson|bacon|canard|magret|cuisses? de|escalopes?|filets? (mignon|de poulet|de porc|de boeuf)|jarret|os a moelle|guanciale|prosciutto|chorizo|dinde|lapin|merguez|chair a saucisse|confit de canard|charcuterie|steak|cote|entrecote|rumsteck|blanc de poulet|pintade|foie|poitrine|roti|cotes? de|picanha|linguica|chicharron|boyau|coeur de boeuf)\b/],
+  ['cremerie', /^(oeufs?|jaunes? d'oeuf|blancs? d'oeuf|lait|creme|beurre|fromages?|yaourts?|parmesan|gruyere|feta|mozzarella|ricotta|mascarpone|pecorino|reblochon|emmental|chevre|cheddar|comte|roquefort|camembert|brie|raclette|burrata|halloumi|skyr|kefir|petits? suisses?|tofu|margarine|paneer|provolone|tome)\b/],
+  ['boulangerie', /^(pain|pate (brisee|feuilletee|sablee|filo|a (empanadas|pain|pizza|tarte|gyoza|raviolis?))|feuilles? de (brick|lumpia|pate)|crepes?|arepas?|tortillas?|pita|lasagnes?|brioche|baguette|ciabatta|galettes?|wraps?|naan)\b/],
+  ['legumes',  /^(ail|oignons?|echalotes?|tomates?|carottes?|pommes? de terre|patates?|citrons?|oranges?|pommes?|poires?|avocats?|concombres?|courgettes?|aubergines?|poivrons?|champignons?|epinards?|poireaux?|celeri|chou|navets?|fenouil|radis|laitue|salade|roquette|endives?|betteraves?|mangues?|ananas|figues?|cerises?|bananes?|fraises?|framboises?|raisins?|peches?|abricots?|melon|pasteque|pamplemousse|courges?|potiron|asperges?|haricots verts|petits? pois|pois gourmands|mais frais|gingembre|piments?|persil|coriandre|menthe|basilic|thym|ciboulette|aneth|sauge|romarin|estragon|cerfeuil|citronnelle|galanga|combava|feuilles? de combava|zeste|jus de citron|pousses?|kale|cresson|artichauts?|brocolis?|cepes?|manioc|plantain|igname|jalapenos?|edamame|shiitake|galangal|papaye|grenade|potimarron|citrouille|yuca|platano|daikon|feuilles? de basilic|fleurs? de thym|guascas|fruits?|legumes?|herbes?|mesclun|batavia)\b/]
+];
+
+const _aisleCache = new Map();
+// Rayon d'un ingrédient à partir de son nom normalisé
+function _aisleOf(normName) {
+  let a = _aisleCache.get(normName);
+  if (a) return a;
+  a = 'autres';
+  for (let i = 0; i < _AISLE_RULES.length; i++) {
+    if (_AISLE_RULES[i][1].test(normName)) { a = _AISLE_RULES[i][0]; break; }
+  }
+  _aisleCache.set(normName, a);
+  return a;
+}
+
+// Ingrédients de base qu'on a presque toujours chez soi (réglable ingrédient par ingrédient depuis la liste)
+const _PANTRY_DEFAULT = /^(sel|gros sel|sel gros|sel fin|sel de mer|fleur de sel|poivre|poivre noir|poivre du moulin|poivre moulu|eau|eau tiede|eau chaude|eau froide|eau bouillante|sucre|sucre en poudre|sucre semoule|farine|farine de ble|farine de froment|huile|huile d'olive|huile de tournesol|huile neutre|huile de friture|vinaigre|vinaigre blanc|vinaigre de vin|vinaigre de vin rouge|vinaigre de vin blanc|vinaigre de cidre|glacons?)$/;
+
 // ════════════════════════════════════════════════════════════
 // MENU & LISTE DE COURSES
 // Menu = recettes prévues (sans jour), liste de courses = calculée à partir du menu + ajouts manuels.
@@ -4558,31 +4662,42 @@ function exitSoireeMode() {
 // ════════════════════════════════════════════════════════════
 const MENU_KEY = 'marecette_menu';
 const SHOP_KEY = 'marecette_courses';
+const MENU_OPTS_KEY = 'marecette_menu_opts';
+const MENU_DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 let _menu = null;
 let _shop = null;
+let _menuOpts = null;      // { week: semainier affiché ?, group: 'rayon' | 'az' }
+let _pantryOpen = false;   // bloc Placard déplié (non conservé)
 let _menuTab = 'menu';
 let _menuSheet = null;     // état de la fenêtre « Ajouter à la liste »
 let _shopRendered = [];    // lignes actuellement affichées (index utilisé par les clics)
 
 function _loadMenuData() {
-  if (_menu && _shop) return;
+  if (_menu && _shop && _menuOpts) return;
   try {
     const m = JSON.parse(localStorage.getItem(MENU_KEY) || '[]');
     _menu = Array.isArray(m) ? m.filter(function(x) { return x && typeof x.rid === 'number'; }) : [];
   } catch (e) { _menu = []; }
+  _menu.forEach(function(x) { if (!(Number.isInteger(x.day) && x.day >= 0 && x.day <= 6)) delete x.day; });
+  try {
+    const o = JSON.parse(localStorage.getItem(MENU_OPTS_KEY) || '{}') || {};
+    _menuOpts = { week: !!o.week, group: o.group === 'az' ? 'az' : 'rayon' };
+  } catch (e) { _menuOpts = { week: false, group: 'rayon' }; }
   try {
     const s = JSON.parse(localStorage.getItem(SHOP_KEY) || '{}') || {};
     _shop = {
       checked: (s.checked && typeof s.checked === 'object' && !Array.isArray(s.checked)) ? s.checked : {},
-      manual: Array.isArray(s.manual) ? s.manual.filter(function(x) { return x && x.text; }) : []
+      manual: Array.isArray(s.manual) ? s.manual.filter(function(x) { return x && x.text; }) : [],
+      pantry: (s.pantry && typeof s.pantry === 'object' && !Array.isArray(s.pantry)) ? s.pantry : {}
     };
-  } catch (e) { _shop = { checked: {}, manual: [] }; }
+  } catch (e) { _shop = { checked: {}, manual: [], pantry: {} }; }
 }
 
 function _saveMenuData() {
   try {
     localStorage.setItem(MENU_KEY, JSON.stringify(_menu));
     localStorage.setItem(SHOP_KEY, JSON.stringify(_shop));
+    localStorage.setItem(MENU_OPTS_KEY, JSON.stringify(_menuOpts));
   } catch (e) {}
   updateMenuBadges();
 }
@@ -4637,11 +4752,18 @@ function _unitInfo(u) {
 
 function _fmtNum(n) { return String(Math.round(n * 100) / 100); }
 
+// Arrondis pensés pour les courses : g/ml aux 5 près, pièces (sans unité ou gousses, branches…) à l'entier supérieur
 function _fmtTotal(u, total) {
-  if (u.key === 'g') return total >= 1000 ? _fmtNum(total / 1000) + ' kg' : _fmtNum(total) + ' g';
-  if (u.key === 'ml') return total >= 1000 ? _fmtNum(total / 1000) + ' L' : _fmtNum(total) + ' ml';
-  if (!u.key) return _fmtNum(total);
-  return _fmtNum(total) + ' ' + ((u.count && total > 1) ? u.key + 's' : u.key);
+  if (u.key === 'g' || u.key === 'ml') {
+    const r = total >= 50 ? Math.round(total / 5) * 5 : Math.round(total);
+    const big = u.key === 'g' ? ' kg' : ' L', small = u.key === 'g' ? ' g' : ' ml';
+    return r >= 1000 ? _fmtNum(r / 1000) + big : r + small;
+  }
+  if (!u.key || u.count) {
+    const n = Math.max(1, Math.ceil(total - 0.05));
+    return !u.key ? String(n) : n + ' ' + (n > 1 && u.count ? u.key + 's' : u.key);
+  }
+  return _fmtNum(total) + ' ' + u.key;
 }
 
 function _fmtAmount(qty, unit) {
@@ -4683,7 +4805,7 @@ function buildShoppingList() {
       return rank(a.u.key) - rank(b.u.key) || a.u.key.localeCompare(b.u.key, 'fr');
     });
     items.push({
-      key: e.key, name: e.name, manual: false, recipes: e.recipes,
+      key: e.key, name: e.name, manual: false, recipes: e.recipes, aisle: _aisleOf(e.key), pantry: _isPantry(e.key),
       qty: parts.map(function(p) { return _fmtTotal(p.u, p.total); }).join(' + '),
       checked: !!_shop.checked[e.key]
     });
@@ -4695,13 +4817,20 @@ function buildShoppingList() {
   if (pruned) _saveMenuData();
 
   _shop.manual.forEach(function(m) {
-    items.push({ key: 'm:' + m.id, name: m.text, manual: true, id: m.id, recipes: [], qty: '', checked: !!m.checked });
+    items.push({ key: 'm:' + m.id, name: m.text, manual: true, id: m.id, recipes: [], qty: '', checked: !!m.checked,
+      aisle: _aisleOf(_normTxt(m.text)), pantry: false });
   });
 
   items.sort(function(a, b) {
     return (a.checked - b.checked) || a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' });
   });
   return items;
+}
+
+// Placard : ingrédient de base qu'on a normalement déjà (réglage par défaut + choix de l'utilisateur)
+function _isPantry(key) {
+  const o = _shop.pantry[key];
+  return typeof o === 'boolean' ? o : _PANTRY_DEFAULT.test(key);
 }
 
 // ── Pastilles (barre du haut + carte d'accueil) ──────────
@@ -4876,7 +5005,7 @@ function renderMenuPage() {
 }
 
 function _updateMenuTabs(shop) {
-  const left = shop.filter(function(x) { return !x.checked; }).length;
+  const left = shop.filter(function(x) { return !x.checked && !x.pantry; }).length;
   const t1 = document.getElementById('menu-tab-menu'), t2 = document.getElementById('menu-tab-shop');
   t1.textContent = '📋 Menu (' + _menu.length + ')';
   t2.textContent = '🧺 Courses (' + left + ')';
@@ -4884,7 +5013,7 @@ function _updateMenuTabs(shop) {
   t2.classList.toggle('active', _menuTab === 'shop');
 }
 
-function _menuItemHtml(it) {
+function _menuItemHtml(it, showDays) {
   const r = findRecipeAny(it.rid);
   if (!r) {
     return `<div class="menu-item missing">
@@ -4897,6 +5026,11 @@ function _menuItemHtml(it) {
   const total = r.ingredients.length;
   const kept = r.ingredients.filter(function(i) { return !excl.has(_ingKey(i[0])); }).length;
   const p = it.portions || r.portions || 1;
+  const days = showDays
+    ? `<div class="menu-days" role="group" aria-label="Jour de la semaine">${MENU_DAYS.map(function(n, d) {
+        return `<button type="button" class="menu-day-chip ${it.day === d ? 'on' : ''}" onclick="menuSetDay(${r.id}, ${d})" aria-label="${n}" aria-pressed="${it.day === d}">${n[0]}</button>`;
+      }).join('')}</div>`
+    : '';
   return `<div class="menu-item">
     <div class="menu-item-main" onclick="showRecipe(${r.id})">
       <span class="menu-item-emoji">${_esc(r.emoji || '🍽️')}</span>
@@ -4914,12 +5048,28 @@ function _menuItemHtml(it) {
       <button class="menu-ing-btn" onclick="openMenuSheet(${r.id})">🧾 Ingrédients</button>
       <button class="menu-icon-btn" onclick="menuRemove(${r.id})" aria-label="Retirer du menu">✕</button>
     </div>
+    ${days}
   </div>`;
 }
 
+function _menuToolbarHtml() {
+  const on = _menuOpts.week;
+  return `<div class="menu-toolbar">
+    <button type="button" class="menu-switch ${on ? 'on' : ''}" role="switch" aria-checked="${on}" onclick="menuToggleWeek()">
+      <span class="menu-switch-track"><span class="menu-switch-knob"></span></span>📅 Semainier
+    </button>
+    ${on ? '<div class="menu-toolbar-hint">Facultatif : touchez une lettre (L M M J V S D) pour affecter une recette à un jour.</div>' : ''}
+  </div>`;
+}
+
+function _menuSectionHtml(title, n) {
+  return `<div class="menu-section"><span>${_esc(title)}</span><span class="menu-section-count">${n || ''}</span></div>`;
+}
+
 function _menuTabHtml() {
+  const tb = _menuToolbarHtml();
   if (!_menu.length) {
-    return `<div class="menu-empty">
+    return tb + `<div class="menu-empty">
       <div class="menu-empty-ico">🍽️</div>
       <div class="menu-empty-title">Votre menu est vide</div>
       <p>Ouvrez une recette et touchez « 🛒 Ajouter à la liste » : elle arrive ici, sans jour à choisir, et ses ingrédients rejoignent la liste de courses.</p>
@@ -4929,8 +5079,50 @@ function _menuTabHtml() {
       </div>
     </div>`;
   }
-  return _menu.map(_menuItemHtml).join('') +
-    `<div class="menu-foot"><button class="share-btn" onclick="menuClear()">🗑 Vider le menu</button></div>`;
+  if (!_menuOpts.week) {
+    return tb + _menu.map(function(it) { return _menuItemHtml(it, false); }).join('') +
+      `<div class="menu-foot"><button class="share-btn" onclick="menuClear()">🗑 Vider le menu</button></div>`;
+  }
+  // Semainier : « À prévoir » = recettes sans jour, puis les 7 jours
+  const dayOf = function(it) { return findRecipeAny(it.rid) ? it.day : undefined; };
+  const pool = _menu.filter(function(it) { return dayOf(it) === undefined; });
+  let html = tb + _menuSectionHtml('À prévoir', pool.length) +
+    (pool.length ? pool.map(function(it) { return _menuItemHtml(it, true); }).join('')
+                  : '<div class="menu-day-empty">Toutes les recettes ont un jour</div>');
+  MENU_DAYS.forEach(function(name, d) {
+    const list = _menu.filter(function(it) { return dayOf(it) === d; });
+    html += _menuSectionHtml(name, list.length) +
+      (list.length ? list.map(function(it) { return _menuItemHtml(it, true); }).join('')
+                   : '<div class="menu-day-empty">Rien de prévu</div>');
+  });
+  const planned = _menu.some(function(it) { return dayOf(it) !== undefined; });
+  return html + `<div class="menu-foot">
+    ${planned ? '<button class="share-btn" onclick="menuClearWeek()">↺ Vider le semainier</button>' : ''}
+    <button class="share-btn" onclick="menuClear()">🗑 Vider le menu</button>
+  </div>`;
+}
+
+function menuToggleWeek() {
+  _loadMenuData();
+  _menuOpts.week = !_menuOpts.week;
+  _saveMenuData();
+  renderMenuPage();
+}
+
+function menuSetDay(rid, d) {
+  const it = menuFind(rid);
+  if (!it) return;
+  if (it.day === d) delete it.day; else it.day = d;
+  _saveMenuData();
+  renderMenuPage();
+}
+
+function menuClearWeek() {
+  _loadMenuData();
+  if (!window.confirm('Vider le semainier ? Les recettes restent dans le menu, mais n\u2019ont plus de jour.')) return;
+  _menu.forEach(function(it) { delete it.day; });
+  _saveMenuData();
+  renderMenuPage();
 }
 
 function menuItemPortions(rid, delta) {
@@ -4956,9 +5148,17 @@ function menuClear() {
 
 // ── Onglet Courses ───────────────────────────────────────
 function _shopTabHtml() {
+  const g = _menuOpts.group;
   return `<div class="shop-head">
       <div class="shop-count" id="shop-count"></div>
-      <button class="share-btn" onclick="shopUncheckAll()">↺ Tout décocher</button>
+      <div class="shop-head-btns">
+        <button class="share-btn" id="shop-share-btn" onclick="openListShare()">📤 Partager</button>
+        <button class="share-btn" onclick="shopUncheckAll()">↺ Décocher</button>
+      </div>
+    </div>
+    <div class="shop-modes" role="group" aria-label="Organisation de la liste">
+      <button type="button" class="shop-mode ${g === 'rayon' ? 'on' : ''}" onclick="shopSetGroup('rayon')">🏬 Par rayon</button>
+      <button type="button" class="shop-mode ${g === 'az' ? 'on' : ''}" onclick="shopSetGroup('az')">🔤 A → Z</button>
     </div>
     <div class="shop-add">
       <input id="shop-add-input" type="text" maxlength="80" placeholder="Ajouter un article…" enterkeyhint="done" autocomplete="off"
@@ -4968,35 +5168,112 @@ function _shopTabHtml() {
     <div id="shop-list"></div>`;
 }
 
+function _shopSrcHtml(x) {
+  return x.recipes.length ? `<div class="shop-src">${_esc(x.recipes.join(' · '))}</div>` : '';
+}
+
+function _shopRowHtml(x, i) {
+  return `<div class="shop-item ${x.checked ? 'checked' : ''}" onclick="shopToggle(${i})" role="checkbox" aria-checked="${x.checked}">
+    <span class="shop-box">${x.checked ? '✓' : ''}</span>
+    <div class="shop-main"><div class="shop-name">${_esc(x.name)}</div>${_shopSrcHtml(x)}</div>
+    ${x.qty ? `<div class="shop-qty">${_esc(x.qty)}</div>` : ''}
+    ${x.manual
+      ? `<button class="menu-icon-btn" onclick="event.stopPropagation(); shopRemoveManual(${x.id})" aria-label="Supprimer">✕</button>`
+      : `<button class="menu-icon-btn shop-pantry-btn" onclick="event.stopPropagation(); shopSetPantry(${i}, true)" title="J'en ai toujours chez moi" aria-label="Ranger au placard : j'en ai toujours">🏠</button>`}
+  </div>`;
+}
+
+function _pantryRowHtml(x, i) {
+  return `<div class="shop-item pantry-row">
+    <div class="shop-main"><div class="shop-name">${_esc(x.name)}</div>${_shopSrcHtml(x)}</div>
+    ${x.qty ? `<div class="shop-qty">${_esc(x.qty)}</div>` : ''}
+    <button class="menu-ing-btn" onclick="shopSetPantry(${i}, false)">À acheter</button>
+  </div>`;
+}
+
 function _renderShopList(items) {
   const list = document.getElementById('shop-list');
   if (!list) return;
-  _shopRendered = items || buildShoppingList();
-  const left = _shopRendered.filter(function(x) { return !x.checked; }).length;
+  _loadMenuData();
+  const all = _shopRendered = items || buildShoppingList();
+  const main = [], pantry = [];
+  all.forEach(function(x, i) { (x.pantry ? pantry : main).push(i); });
+  const left = main.filter(function(i) { return !all[i].checked; }).length;
+
+  const shareBtn = document.getElementById('shop-share-btn');
+  if (shareBtn) shareBtn.disabled = !all.length;
   const cnt = document.getElementById('shop-count');
-  if (cnt) cnt.textContent = _shopRendered.length
-    ? left + ' à acheter · ' + (_shopRendered.length - left) + ' dans le panier'
-    : '';
-  if (!_shopRendered.length) {
+  if (cnt) {
+    const parts = [];
+    if (main.length) parts.push(left + ' à acheter', (main.length - left) + ' dans le panier');
+    if (pantry.length) parts.push(pantry.length + ' au placard');
+    cnt.textContent = parts.join(' · ');
+  }
+
+  if (!all.length) {
     list.innerHTML = `<div class="menu-empty">
       <div class="menu-empty-ico">🧺</div>
       <div class="menu-empty-title">Rien à acheter</div>
       <p>Ajoutez des recettes au menu pour remplir la liste, ou tapez un article ci-dessus.</p>
     </div>`;
-  } else {
-    list.innerHTML = _shopRendered.map(function(x, i) {
-      return `<div class="shop-item ${x.checked ? 'checked' : ''}" onclick="shopToggle(${i})" role="checkbox" aria-checked="${x.checked}">
-        <span class="shop-box">${x.checked ? '✓' : ''}</span>
-        <div class="shop-main">
-          <div class="shop-name">${_esc(x.name)}</div>
-          ${x.recipes.length ? `<div class="shop-src">${_esc(x.recipes.join(' · '))}</div>` : ''}
-        </div>
-        ${x.qty ? `<div class="shop-qty">${_esc(x.qty)}</div>` : ''}
-        ${x.manual ? `<button class="menu-icon-btn" onclick="event.stopPropagation(); shopRemoveManual(${x.id})" aria-label="Supprimer">✕</button>` : ''}
-      </div>`;
-    }).join('');
+    _updateMenuTabs(all);
+    return;
   }
-  _updateMenuTabs(_shopRendered);
+
+  let html = '';
+  if (!main.length) {
+    html += '<div class="menu-day-empty">Rien d\u2019autre à acheter.</div>';
+  } else if (_menuOpts.group === 'rayon') {
+    SHOP_AISLES.forEach(function(a) {
+      const idx = main.filter(function(i) { return all[i].aisle === a.id; });
+      if (!idx.length) return;
+      const todo = idx.filter(function(i) { return !all[i].checked; }).length;
+      html += `<div class="shop-sep"><span>${a.ico} ${_esc(a.label)}</span><span class="menu-section-count">${todo || '✓'}</span></div>` +
+        idx.map(function(i) { return _shopRowHtml(all[i], i); }).join('');
+    });
+  } else {
+    html += main.map(function(i) { return _shopRowHtml(all[i], i); }).join('');
+  }
+
+  if (pantry.length) {
+    html += `<div class="shop-pantry">
+      <button type="button" class="shop-pantry-head" onclick="shopTogglePantry()" aria-expanded="${_pantryOpen}">
+        <span>🏠 Placard · à vérifier (${pantry.length})</span><span>${_pantryOpen ? '▴' : '▾'}</span>
+      </button>
+      ${_pantryOpen
+        ? `<div class="ms-hint" style="margin:8px 2px">Probablement déjà chez vous. Touchez « À acheter » pour les ajouter à la liste.</div>` +
+          pantry.map(function(i) { return _pantryRowHtml(all[i], i); }).join('')
+        : ''}
+    </div>`;
+  }
+  list.innerHTML = html;
+  _updateMenuTabs(all);
+}
+
+function shopSetGroup(g) {
+  _loadMenuData();
+  _menuOpts.group = g === 'az' ? 'az' : 'rayon';
+  _saveMenuData();
+  document.querySelectorAll('.shop-mode').forEach(function(b, k) {
+    b.classList.toggle('on', (k === 0) === (_menuOpts.group === 'rayon'));
+  });
+  _renderShopList(_shopRendered);
+}
+
+function shopTogglePantry() {
+  _pantryOpen = !_pantryOpen;
+  _renderShopList(_shopRendered);
+}
+
+function shopSetPantry(i, flag) {
+  const x = _shopRendered[i];
+  if (!x || x.manual) return;
+  _loadMenuData();
+  if (flag === _PANTRY_DEFAULT.test(x.key)) delete _shop.pantry[x.key]; else _shop.pantry[x.key] = flag;
+  if (flag) delete _shop.checked[x.key];
+  _saveMenuData();
+  _renderShopList(buildShoppingList());
+  if (flag) showUpdateToast('🏠 Rangé au placard');
 }
 
 function shopToggle(i) {
@@ -5041,6 +5318,188 @@ function shopUncheckAll() {
   _shop.manual.forEach(function(m) { m.checked = false; });
   _saveMenuData();
   _renderShopList(buildShoppingList());
+}
+
+// ── Partage de la liste (texte) ──────────────────────────
+let _listShare = { done: false, pantry: false };
+
+// Texte de la liste : « à acheter » par défaut ; cochés et placard en option
+function buildShoppingText(opt) {
+  _loadMenuData();
+  const all = buildShoppingList();
+  const main = all.filter(function(x) { return !x.pantry && (opt.done || !x.checked); });
+  const line = function(x) { return (x.checked ? '✓ ' : '• ') + x.name + (x.qty ? ' : ' + x.qty : ''); };
+  const out = ['🛒 Liste de courses'];
+  const recs = _menu.map(function(it) { return findRecipeAny(it.rid); }).filter(Boolean).map(function(r) { return r.title; });
+  if (recs.length) out.push('Pour : ' + recs.join(', '));
+  out.push('');
+  if (!main.length) {
+    out.push('(rien à acheter)');
+  } else if (_menuOpts.group === 'rayon') {
+    SHOP_AISLES.forEach(function(a) {
+      const g = main.filter(function(x) { return x.aisle === a.id; });
+      if (!g.length) return;
+      out.push(a.ico + ' ' + a.label);
+      g.forEach(function(x) { out.push(line(x)); });
+      out.push('');
+    });
+  } else {
+    main.forEach(function(x) { out.push(line(x)); });
+    out.push('');
+  }
+  if (opt.pantry) {
+    const p = all.filter(function(x) { return x.pantry; });
+    if (p.length) {
+      out.push('🏠 À vérifier au placard');
+      p.forEach(function(x) { out.push(line(x)); });
+      out.push('');
+    }
+  }
+  out.push('— MaRecette');
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function openListShare() {
+  closeMenuSheet();                       // une seule fenêtre à la fois (même identifiant : le bouton retour la ferme)
+  _listShare = { done: false, pantry: false };
+  const ov = document.createElement('div');
+  ov.className = 'share-overlay';
+  ov.id = 'menu-sheet';
+  ov.innerHTML = `
+    <div class="share-modal" role="dialog" aria-modal="true">
+      <div class="share-head">
+        <div>
+          <div class="share-title">📤 Partager la liste</div>
+          <div class="share-sub" id="ls-sub"></div>
+        </div>
+        <button class="share-close" onclick="closeMenuSheet()" aria-label="Fermer">✕</button>
+      </div>
+      <div class="share-body">
+        <div class="share-section">
+          <div class="share-label">Options</div>
+          <div class="ms-ing ls-opt" id="ls-opt-done" onclick="listShareToggle('done')" role="checkbox"><span class="shop-box"></span><span class="ms-name">Inclure les articles déjà cochés</span></div>
+          <div class="ms-ing ls-opt" id="ls-opt-pantry" onclick="listShareToggle('pantry')" role="checkbox"><span class="shop-box"></span><span class="ms-name">Ajouter le placard « à vérifier »</span></div>
+        </div>
+        <div class="share-section">
+          <div class="share-label">Texte à partager</div>
+          <textarea class="share-field" id="ls-text" readonly></textarea>
+          <div class="share-btns">
+            <button class="share-btn" onclick="copyShareField('ls-text', this, '📋 Copier')">📋 Copier</button>
+            <button class="share-btn primary" onclick="listShareNative()">📤 Partager</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  ov.addEventListener('click', function(e) { if (e.target === ov) closeMenuSheet(); });
+  document.body.appendChild(ov);
+  listShareRender();
+}
+
+function listShareToggle(k) {
+  _listShare[k] = !_listShare[k];
+  listShareRender();
+}
+
+function listShareRender() {
+  const ta = document.getElementById('ls-text');
+  if (!ta) return;
+  ta.value = buildShoppingText(_listShare);
+  [['done', 'ls-opt-done'], ['pantry', 'ls-opt-pantry']].forEach(function(p) {
+    const el = document.getElementById(p[1]);
+    const on = !!_listShare[p[0]];
+    el.classList.toggle('off', !on);
+    el.setAttribute('aria-checked', on);
+    el.querySelector('.shop-box').textContent = on ? '✓' : '';
+  });
+  const all = buildShoppingList();
+  const n = all.filter(function(x) { return !x.pantry && (_listShare.done || !x.checked); }).length;
+  document.getElementById('ls-sub').textContent = n + ' article' + (n > 1 ? 's' : '');
+}
+
+function listShareNative() {
+  const ta = document.getElementById('ls-text');
+  if (!ta) return;
+  if (navigator.share) {
+    navigator.share({ title: 'Liste de courses', text: ta.value }).catch(function() {});
+  } else {
+    copyShareField('ls-text', null);
+    showUpdateToast('📋 Liste copiée');
+  }
+}
+
+// ── Sauvegarde / restauration (intégrées à l'export et à l'import existants) ──
+function collectMenuBackup() {
+  _loadMenuData();
+  if (!_menu.length && !_shop.manual.length && !Object.keys(_shop.pantry).length) return null;
+  return {
+    items: _menu.map(function(x) {
+      const o = { rid: x.rid, portions: x.portions, excl: (x.excl || []).slice() };
+      if (x.day !== undefined) o.day = x.day;
+      return o;
+    }),
+    courses: {
+      manual: _shop.manual.map(function(m) { return { id: m.id, text: m.text, checked: !!m.checked }; }),
+      pantry: Object.assign({}, _shop.pantry)
+    },
+    opts: { week: _menuOpts.week, group: _menuOpts.group }
+  };
+}
+
+// Fusion : rien n'est supprimé ni écrasé. mapId = correspondance des identifiants de recettes (fournie par restoreBackup).
+function restoreMenuFromBackup(m, mapId) {
+  const res = { items: 0, manual: 0, pantry: 0 };
+  if (!m || typeof m !== 'object') return res;
+  const hadOpts = localStorage.getItem(MENU_OPTS_KEY) !== null;
+  _loadMenuData();
+
+  (Array.isArray(m.items) ? m.items.slice(0, 200) : []).forEach(function(raw) {
+    if (!raw || typeof raw !== 'object') return;
+    const rid = mapId(raw.rid);
+    if (rid === null || menuFind(rid)) return;
+    const r = findRecipeAny(rid);
+    if (!r) return;
+    const item = {
+      rid: rid,
+      portions: Math.min(PORTIONS_MAX, Math.max(PORTIONS_MIN, parseInt(raw.portions) || r.portions || 4)),
+      excl: (Array.isArray(raw.excl) ? raw.excl : []).filter(function(k) { return typeof k === 'string' && k && k.length <= 80; }).slice(0, 100)
+    };
+    if (Number.isInteger(raw.day) && raw.day >= 0 && raw.day <= 6) item.day = raw.day;
+    _menu.push(item);
+    res.items++;
+  });
+
+  const c = (m.courses && typeof m.courses === 'object') ? m.courses : {};
+  const seen = new Set(_shop.manual.map(function(x) { return _normTxt(x.text); }));
+  let nextId = Math.max.apply(null, [Date.now()].concat(_shop.manual.map(function(x) { return (Number(x.id) || 0) + 1; })));
+  (Array.isArray(c.manual) ? c.manual.slice(0, 200) : []).forEach(function(x) {
+    const text = String(x && x.text != null ? x.text : '').replace(/\s+/g, ' ').trim().slice(0, 80);
+    const k = _normTxt(text);
+    if (!text || seen.has(k)) return;
+    seen.add(k);
+    _shop.manual.push({ id: nextId++, text: text, checked: !!(x && x.checked) });
+    res.manual++;
+  });
+  if (c.pantry && typeof c.pantry === 'object' && !Array.isArray(c.pantry)) {
+    Object.keys(c.pantry).slice(0, 500).forEach(function(k) {
+      if (k.length > 80 || typeof c.pantry[k] !== 'boolean' || typeof _shop.pantry[k] === 'boolean') return;
+      _shop.pantry[k] = c.pantry[k];
+      res.pantry++;
+    });
+  }
+  // Les préférences d'affichage ne remplacent jamais celles déjà choisies sur cet appareil
+  if (!hadOpts && m.opts && typeof m.opts === 'object') {
+    _menuOpts = { week: !!m.opts.week, group: m.opts.group === 'az' ? 'az' : 'rayon' };
+    res.opts = true;
+  }
+  if (res.items || res.manual || res.pantry || res.opts) _saveMenuData();
+  return res;
+}
+
+// « Effacer toutes mes données » : les clés marecette_* sont supprimées, on vide aussi la mémoire de l'appli
+function menuResetMemory() {
+  _menu = null; _shop = null; _menuOpts = null;
+  _pantryOpen = false; _menuTab = 'menu'; _menuSheet = null; _shopRendered = [];
+  updateMenuBadges();
 }
 
 

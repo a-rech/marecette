@@ -13,7 +13,7 @@
 | 🔍 **Recherche par ingrédients** | Sélectionnez vos ingrédients (✔) et **excluez** ceux dont vous ne voulez pas (✕). Le nombre de recettes trouvées s'affiche en direct dans le bouton *Rechercher* |
 | 📚 **Catalogue complet** | Plus de 370 recettes, filtrées par type de plat ou par culture culinaire (difficulté, prix, temps, végétarien) |
 | 🎲 **Recette aléatoire** | Un plat salé ou sucré au hasard, avec navigation par swipe dans toute la liste |
-| 🛒 **Menu & courses** | Bouton « Ajouter à la liste » sur chaque fiche : les recettes prévues (sans jour) forment le menu, et la liste de courses fusionne automatiquement les ingrédients (portions ajustables, ingrédients décochables, ajouts manuels). Données stockées localement |
+| 🛒 **Menu & courses** | Bouton « Ajouter à la liste » sur chaque fiche : les recettes prévues (sans jour) forment le menu, avec un semainier facultatif (affectation à un jour). La liste de courses fusionne automatiquement les ingrédients (portions ajustables, ingrédients décochables, ajouts manuels), se range par rayon ou de A à Z, met les basiques (sel, huile, farine…) dans un bloc « Placard » à vérifier, et se partage en texte. Le menu et la liste sont inclus dans l'export/import des données |
 | ✨ **Créations & adaptations** | Créez vos recettes, ou adaptez une recette du catalogue. Retrouvez-les dans *Mes créations* (badge ✨ Création) |
 | 📤 **Partage & import** | Partagez une recette en **texte lisible**, ou en **QR code / lien** pour vos créations. Importez celles de vos proches par scan (caméra ou image), lien ou code |
 | ❤️ **Favoris** | Sauvegardés localement, affichés en tête du catalogue |
