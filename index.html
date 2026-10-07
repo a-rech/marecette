@@ -1137,9 +1137,11 @@
     .menu-empty-title { font-family: 'Playfair Display', serif; font-size: 19px; color: var(--text); margin-bottom: 8px; }
     .menu-empty p { font-size: 14px; line-height: 1.5; max-width: 420px; margin: 0 auto 18px; }
     .menu-empty .share-btns { max-width: 340px; margin: 0 auto; }
-    .shop-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
-    .shop-count { font-size: 13px; color: var(--text2); }
-    .shop-head .share-btn { flex: 0 1 auto; padding: 7px 12px; font-size: 12px; }
+    .shop-actions { display: flex; gap: 8px; margin-bottom: 10px; }
+    .shop-actions .share-btn { flex: 1; padding: 9px 10px; }
+    .shop-actions .share-btn:disabled { opacity: .4; cursor: default; }
+    .shop-count { font-size: 13px; color: var(--text2); margin: 0 2px 14px; }
+    .shop-count:empty { display: none; }
     .shop-add { display: flex; gap: 8px; margin-bottom: 14px; }
     .shop-add input {
       flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
@@ -1216,8 +1218,14 @@
     .pantry-row { cursor: default; }
 
     /* ---- Phase 3 : partage de la liste ---- */
-    .shop-head-btns { display: flex; gap: 6px; flex-shrink: 0; }
-    .shop-head .share-btn:disabled { opacity: .4; cursor: default; }
+    .menu-topline { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .menu-undo {
+      display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; margin-bottom: 24px;
+      border: 1px solid var(--border); background: var(--surface); color: var(--text2); cursor: pointer;
+      font-family: 'DM Sans', sans-serif; font-size: 13px; transition: all .15s;
+    }
+    .menu-undo:hover:not(:disabled) { background: var(--surface2); color: var(--text); border-color: var(--accent); }
+    .menu-undo:disabled { opacity: .4; cursor: default; }
     .ms-ing.ls-opt.off .ms-name { text-decoration: none; }
     .ms-ing.ls-opt.off { opacity: .75; }
 
@@ -1625,7 +1633,10 @@
 
 <!-- LEXIQUE -->
 <div id="page-menu" class="page">
-  <button class="back-btn" onclick="goBack()">← Retour</button>
+  <div class="menu-topline">
+    <button class="back-btn" onclick="goBack()">← Retour</button>
+    <button class="menu-undo" id="menu-undo-btn" onclick="menuUndo()" disabled title="Rien à annuler" aria-label="Rien à annuler">↶ Annuler</button>
+  </div>
   <div class="section-title" style="margin-bottom:4px">🛒 Menu &amp; courses</div>
   <p class="section-sub">Les recettes que vous prévoyez, et la liste de courses qui en découle</p>
   <div class="menu-tabs">
@@ -4671,6 +4682,8 @@ let _pantryOpen = false;   // bloc Placard déplié (non conservé)
 let _menuTab = 'menu';
 let _menuSheet = null;     // état de la fenêtre « Ajouter à la liste »
 let _shopRendered = [];    // lignes actuellement affichées (index utilisé par les clics)
+let _undo = [];            // pile d'annulation : { label, key, snap } — un instantané avant chaque modification
+const UNDO_MAX = 30;
 
 function _loadMenuData() {
   if (_menu && _shop && _menuOpts) return;
@@ -4700,6 +4713,46 @@ function _saveMenuData() {
     localStorage.setItem(MENU_OPTS_KEY, JSON.stringify(_menuOpts));
   } catch (e) {}
   updateMenuBadges();
+}
+
+function _recTitle(rid) {
+  const r = findRecipeAny(rid);
+  return r ? r.title : 'une recette';
+}
+
+// Mémorise l'état AVANT une modification. key : les modifications consécutives de même clé (ex. +/− des portions) ne forment qu'une étape.
+function _undoPush(label, key) {
+  _loadMenuData();
+  const top = _undo[_undo.length - 1];
+  if (key && top && top.key === key) return;
+  _undo.push({ label: label, key: key || null, snap: JSON.stringify({ menu: _menu, shop: _shop }) });
+  if (_undo.length > UNDO_MAX) _undo.shift();
+  _updateUndoBtn();
+}
+
+function _updateUndoBtn() {
+  const b = document.getElementById('menu-undo-btn');
+  if (!b) return;
+  const top = _undo[_undo.length - 1];
+  b.disabled = !top;
+  b.title = top ? 'Annuler : ' + top.label : 'Rien à annuler';
+  b.setAttribute('aria-label', b.title);
+}
+
+function menuUndo() {
+  if (!_undo.length) return;
+  _loadMenuData();
+  const e = _undo.pop();
+  let snap;
+  try { snap = JSON.parse(e.snap); } catch (err) { _updateUndoBtn(); return; }
+  const rids = new Set(_menu.map(function(x) { return x.rid; }));
+  _menu = Array.isArray(snap.menu) ? snap.menu : [];
+  _shop = snap.shop || { checked: {}, manual: [], pantry: {} };
+  _menu.forEach(function(x) { rids.add(x.rid); });
+  _saveMenuData();
+  rids.forEach(refreshMenuButton);
+  renderMenuPage();
+  showUpdateToast('↶ Annulé : ' + e.label);
 }
 
 function menuFind(rid) {
@@ -4964,6 +5017,7 @@ function menuSheetConfirm() {
   _loadMenuData();
   const data = { rid: s.rid, portions: s.portions, excl: Array.from(s.excl) };
   const it = menuFind(s.rid);
+  _undoPush((it ? 'modification de ' : 'ajout de ') + _recTitle(s.rid));
   if (it) Object.assign(it, data); else _menu.push(data);
   _saveMenuData();
   closeMenuSheet();
@@ -4981,6 +5035,7 @@ function menuSheetRemove() {
 
 function menuRemove(rid) {
   _loadMenuData();
+  if (menuFind(rid)) _undoPush('retrait de ' + _recTitle(rid));
   _menu = _menu.filter(function(x) { return x.rid !== rid; });
   _saveMenuData();
   refreshMenuButton(rid);
@@ -5000,6 +5055,7 @@ function renderMenuPage() {
   if (!box) return;
   const shop = buildShoppingList();
   _updateMenuTabs(shop);
+  _updateUndoBtn();
   box.innerHTML = _menuTab === 'menu' ? _menuTabHtml() : _shopTabHtml();
   if (_menuTab === 'shop') _renderShopList(shop);
 }
@@ -5112,6 +5168,7 @@ function menuToggleWeek() {
 function menuSetDay(rid, d) {
   const it = menuFind(rid);
   if (!it) return;
+  _undoPush('jour de ' + _recTitle(rid), 'day:' + rid);
   if (it.day === d) delete it.day; else it.day = d;
   _saveMenuData();
   renderMenuPage();
@@ -5120,6 +5177,7 @@ function menuSetDay(rid, d) {
 function menuClearWeek() {
   _loadMenuData();
   if (!window.confirm('Vider le semainier ? Les recettes restent dans le menu, mais n\u2019ont plus de jour.')) return;
+  _undoPush('semainier vidé');
   _menu.forEach(function(it) { delete it.day; });
   _saveMenuData();
   renderMenuPage();
@@ -5128,6 +5186,7 @@ function menuClearWeek() {
 function menuItemPortions(rid, delta) {
   const it = menuFind(rid);
   if (!it) return;
+  _undoPush('portions de ' + _recTitle(rid), 'portions:' + rid);
   const r = findRecipeAny(rid);
   it.portions = Math.min(PORTIONS_MAX, Math.max(PORTIONS_MIN, (it.portions || (r && r.portions) || 1) + delta));
   _saveMenuData();
@@ -5139,6 +5198,7 @@ function menuClear() {
   if (!_menu.length) return;
   if (!window.confirm('Vider le menu ? Les recettes prévues seront retirées de la liste de courses (vos ajouts manuels sont conservés).')) return;
   const ids = _menu.map(function(x) { return x.rid; });
+  _undoPush('menu vidé');
   _menu = [];
   _shop.checked = {};
   _saveMenuData();
@@ -5149,14 +5209,7 @@ function menuClear() {
 // ── Onglet Courses ───────────────────────────────────────
 function _shopTabHtml() {
   const g = _menuOpts.group;
-  return `<div class="shop-head">
-      <div class="shop-count" id="shop-count"></div>
-      <div class="shop-head-btns">
-        <button class="share-btn" id="shop-share-btn" onclick="openListShare()">📤 Partager</button>
-        <button class="share-btn" onclick="shopUncheckAll()">↺ Décocher</button>
-      </div>
-    </div>
-    <div class="shop-modes" role="group" aria-label="Organisation de la liste">
+  return `<div class="shop-modes" role="group" aria-label="Organisation de la liste">
       <button type="button" class="shop-mode ${g === 'rayon' ? 'on' : ''}" onclick="shopSetGroup('rayon')">🏬 Par rayon</button>
       <button type="button" class="shop-mode ${g === 'az' ? 'on' : ''}" onclick="shopSetGroup('az')">🔤 A → Z</button>
     </div>
@@ -5165,6 +5218,11 @@ function _shopTabHtml() {
              onkeydown="if (event.key === 'Enter') shopAddManual()">
       <button class="share-btn primary" onclick="shopAddManual()">Ajouter</button>
     </div>
+    <div class="shop-actions">
+      <button class="share-btn" id="shop-share-btn" onclick="openListShare()">📤 Partager</button>
+      <button class="share-btn" onclick="shopUncheckAll()">↺ Tout décocher</button>
+    </div>
+    <div class="shop-count" id="shop-count"></div>
     <div id="shop-list"></div>`;
 }
 
@@ -5269,6 +5327,7 @@ function shopSetPantry(i, flag) {
   const x = _shopRendered[i];
   if (!x || x.manual) return;
   _loadMenuData();
+  _undoPush((flag ? 'rangé au placard : ' : 'sorti du placard : ') + x.name);
   if (flag === _PANTRY_DEFAULT.test(x.key)) delete _shop.pantry[x.key]; else _shop.pantry[x.key] = flag;
   if (flag) delete _shop.checked[x.key];
   _saveMenuData();
@@ -5280,6 +5339,7 @@ function shopToggle(i) {
   const x = _shopRendered[i];
   if (!x) return;
   _loadMenuData();
+  _undoPush((x.checked ? 'case décochée : ' : 'case cochée : ') + x.name);
   if (x.manual) {
     const m = _shop.manual.find(function(y) { return y.id === x.id; });
     if (m) m.checked = !m.checked;
@@ -5298,6 +5358,7 @@ function shopAddManual() {
   const text = input.value.trim();
   if (!text) return;
   _loadMenuData();
+  _undoPush('ajout de « ' + text + ' »');
   _shop.manual.push({ id: Date.now(), text: text, checked: false });
   input.value = '';
   _saveMenuData();
@@ -5307,6 +5368,8 @@ function shopAddManual() {
 
 function shopRemoveManual(id) {
   _loadMenuData();
+  const gone = _shop.manual.find(function(m) { return m.id === id; });
+  if (gone) _undoPush('suppression de « ' + gone.text + ' »');
   _shop.manual = _shop.manual.filter(function(m) { return m.id !== id; });
   _saveMenuData();
   _renderShopList(buildShoppingList());
@@ -5314,6 +5377,7 @@ function shopRemoveManual(id) {
 
 function shopUncheckAll() {
   _loadMenuData();
+  _undoPush('tout décocher');
   _shop.checked = {};
   _shop.manual.forEach(function(m) { m.checked = false; });
   _saveMenuData();
@@ -5491,14 +5555,14 @@ function restoreMenuFromBackup(m, mapId) {
     _menuOpts = { week: !!m.opts.week, group: m.opts.group === 'az' ? 'az' : 'rayon' };
     res.opts = true;
   }
-  if (res.items || res.manual || res.pantry || res.opts) _saveMenuData();
+  if (res.items || res.manual || res.pantry || res.opts) { _undo = []; _saveMenuData(); }
   return res;
 }
 
 // « Effacer toutes mes données » : les clés marecette_* sont supprimées, on vide aussi la mémoire de l'appli
 function menuResetMemory() {
   _menu = null; _shop = null; _menuOpts = null;
-  _pantryOpen = false; _menuTab = 'menu'; _menuSheet = null; _shopRendered = [];
+  _pantryOpen = false; _menuTab = 'menu'; _menuSheet = null; _shopRendered = []; _undo = [];
   updateMenuBadges();
 }
 
