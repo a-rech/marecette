@@ -84,7 +84,8 @@ Côté développement, il suffit de changer `CACHE_VERSION` dans `sw.js` pour d�
 ## Structure du projet
 
 ```
-├── index.html       Application complète (HTML + CSS + JS)
+├── index.html       Application (HTML + CSS + JS)
+├── recipes.js       Données du catalogue (recettes, accompagnements, prix, végétarien)
 ├── manifest.json    Configuration PWA
 ├── sw.js            Service Worker — cache hors ligne et mises à jour
 ├── icon-192.png     Icône 192 x 192 px

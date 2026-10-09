@@ -15,13 +15,14 @@
    Pour déclencher une mise à jour : il suffit de changer CACHE_VERSION.
    ════════════════════════════════════════════════════════════════════════ */
 
-const CACHE_VERSION = 'marecette-v2.5.0';
+const CACHE_VERSION = 'marecette-v2.6.0';
 
 function getAssets() {
   const base = self.registration.scope;
   return [
     base,
     base + 'index.html',
+    base + 'recipes.js',
     base + 'manifest.json',
     base + 'icon-192.png',
     base + 'icon-512.png',
