@@ -607,6 +607,12 @@
     }
     .welcome-btn-hide:hover { background: #b05525; }
 
+    /* ---- RAPPEL DE SAUVEGARDE (même style que la bienvenue) ---- */
+    .backup-modal { max-width: 400px; }
+    .backup-modal .welcome-modal-body p { margin: 0 0 10px; font-size: 14px; line-height: 1.5; color: var(--text2); }
+    .backup-modal .welcome-modal-body p strong { color: var(--text); }
+    .backup-modal .welcome-modal-body p.backup-sub { font-size: 12.5px; color: var(--text3); margin-bottom: 0; }
+
     /* ---- PARTAGE / IMPORT DE RECETTES ---- */
     .share-overlay {
       position: fixed; inset: 0; background: rgba(26,18,8,.6); z-index: 520;
@@ -1438,6 +1444,26 @@
     <div class="welcome-modal-foot">
       <button class="welcome-btn-close" onclick="closeWelcome(false)">Fermer</button>
       <button class="welcome-btn-hide" onclick="closeWelcome(true)">Ne plus afficher</button>
+    </div>
+  </div>
+</div>
+
+<!-- RAPPEL DE SAUVEGARDE : plus de 30 jours sans export -->
+<div class="welcome-overlay" id="backup-overlay" onclick="if(event.target===this)backupReminderLater()">
+  <div class="welcome-modal backup-modal" role="dialog" aria-modal="true" aria-labelledby="backup-title">
+    <div class="welcome-modal-head">
+      <div class="welcome-modal-title" id="backup-title">Protégez vos<br><span>données</span> 💾</div>
+      <button class="welcome-modal-close" onclick="backupReminderLater()" aria-label="Fermer">✕</button>
+    </div>
+    <div class="welcome-modal-body">
+      <p><strong>Cela fait plus de 30 jours sans sauvegarde.</strong></p>
+      <p>Vos créations, favoris, notes et menu ne sont stockés que sur cet appareil. Un fichier de sauvegarde permet de les retrouver si le téléphone change ou si les données du navigateur sont effacées.</p>
+      <p><strong>Voulez-vous sauvegarder vos données maintenant ?</strong></p>
+      <p class="backup-sub" id="backup-info"></p>
+    </div>
+    <div class="welcome-modal-foot">
+      <button class="welcome-btn-close" onclick="backupReminderLater()">Non</button>
+      <button class="welcome-btn-hide" onclick="backupReminderNow()">Oui, sauvegarder</button>
     </div>
   </div>
 </div>
@@ -2923,11 +2949,20 @@ function loadCatalogueTabs() {
 }
 
 // Helper pour vérifier si une recette passe tous les filtres actuels
+// Recherche texte tolérante : sans accents ni majuscules, « œ » = « oe » et toutes les
+// apostrophes sont équivalentes (« boeuf » trouve « Bœuf », « ' » trouve « ’ »).
+// Cherche dans le titre, les ingrédients (tags), la catégorie et l'origine.
+function matchesTextQuery(r, query) {
+  const q = _normTxt(query);
+  if (!q) return true;
+  return _normTxt(r.title).includes(q) ||
+         (r.tags || []).some(t => _normTxt(t).includes(q)) ||
+         _normTxt(r.cat).includes(q) ||
+         _normTxt(r.origin).includes(q);
+}
+
 function passesAllFilters(r, query = '') {
-  if (query && !r.title.toLowerCase().includes(query) &&
-      !r.tags.some(t => t.toLowerCase().includes(query)) &&
-      !r.cat.toLowerCase().includes(query) &&
-      !r.origin.toLowerCase().includes(query)) return false;
+  if (!matchesTextQuery(r, query)) return false;
   if (filterDiff !== 'all' && r.diff !== filterDiff) return false;
   if (filterPrice !== 'all') {
     if ((r.price || 0) !== filterPrice) return false;
@@ -3015,12 +3050,7 @@ function applyAllFilters() {
 
   // 2. Recherche texte partielle (titre, tags, catégorie, origine)
   if (query) {
-    pool = pool.filter(r =>
-      r.title.toLowerCase().includes(query) ||
-      r.tags.some(t => t.toLowerCase().includes(query)) ||
-      r.cat.toLowerCase().includes(query) ||
-      r.origin.toLowerCase().includes(query)
-    );
+    pool = pool.filter(r => matchesTextQuery(r, query));
   }
 
   // 3. Difficulté
@@ -3667,6 +3697,7 @@ function closeWelcome(hide) {
   if (hide) { try { localStorage.setItem(WELCOME_HIDE_KEY, '1'); } catch (e) {} }
   const overlay = document.getElementById('welcome-overlay');
   if (overlay) overlay.classList.remove('open');
+  setTimeout(maybeShowBackupReminder, 350);   // le rappel de sauvegarde passe après la bienvenue
 }
 
 // Ferme la bienvenue et ouvre Paramètres directement sur l'onglet Installation
@@ -3682,6 +3713,74 @@ function maybeShowWelcome() {
   let hidden = false;
   try { hidden = localStorage.getItem(WELCOME_HIDE_KEY) === '1'; } catch (e) {}
   if (!hidden) openWelcome();
+}
+
+// ── Rappel de sauvegarde (plus de 30 jours sans export) ───────────────────
+const BACKUP_LAST_KEY   = 'marecette_last_backup';    // date (ms) du dernier export
+const BACKUP_SEEN_KEY   = 'marecette_first_seen';     // 1re ouverture : référence tant qu'aucun export n'a eu lieu
+const BACKUP_SNOOZE_KEY = 'marecette_backup_snooze';  // date (ms) du dernier « Non »
+const BACKUP_DELAY_DAYS = 30;
+const BACKUP_SNOOZE_DAYS = 7;
+const DAY_MS = 86400000;
+
+function _lsNum(key) {
+  try { const n = parseInt(localStorage.getItem(key), 10); return isFinite(n) && n > 0 ? n : 0; } catch (e) { return 0; }
+}
+function _lsSet(key, val) { try { localStorage.setItem(key, String(val)); } catch (e) {} }
+
+function _hasDataToBackup() {
+  const d = collectUserData();
+  return d.userRecipes.length > 0 || d.favorites.length > 0 || Object.keys(d.notes).length > 0 || !!d.menu;
+}
+
+function maybeShowBackupReminder() {
+  const now = Date.now();
+  let seen = _lsNum(BACKUP_SEEN_KEY);
+  if (!seen || seen > now) { seen = now; _lsSet(BACKUP_SEEN_KEY, now); }   // horloge déréglée : on repart d'aujourd'hui
+  if (/^#r=/.test(location.hash || '')) return;                           // arrivée via un lien de partage
+  let last = _lsNum(BACKUP_LAST_KEY);
+  if (last > now) last = 0;
+  if (now - (last || seen) < BACKUP_DELAY_DAYS * DAY_MS) return;          // sauvegarde récente
+  const snooze = _lsNum(BACKUP_SNOOZE_KEY);
+  if (snooze && snooze <= now && now - snooze < BACKUP_SNOOZE_DAYS * DAY_MS) return;   // « Non » récent
+  if (!_hasDataToBackup()) return;                                        // rien à protéger
+  const welcome = document.getElementById('welcome-overlay');
+  const prefs = document.getElementById('prefs-overlay');
+  if ((welcome && welcome.classList.contains('open')) || (prefs && prefs.classList.contains('open'))) return;
+  openBackupReminder(last);
+}
+
+function openBackupReminder(last) {
+  const ov = document.getElementById('backup-overlay');
+  if (!ov) return;
+  const d = collectUserData();
+  const parts = [];
+  if (d.userRecipes.length) parts.push(_plural(d.userRecipes.length, 'création', 'créations'));
+  if (d.favorites.length) parts.push(_plural(d.favorites.length, 'favori', 'favoris'));
+  const nn = Object.keys(d.notes).length;
+  if (nn) parts.push(_plural(nn, 'note', 'notes'));
+  if (d.menu) parts.push('menu et liste de courses');
+  const when = last ? 'Dernière sauvegarde : ' + new Date(last).toLocaleDateString('fr-FR') + '.'
+                    : 'Aucune sauvegarde enregistrée sur cet appareil.';
+  document.getElementById('backup-info').textContent = 'À sauvegarder : ' + parts.join(', ') + '. ' + when
+    + ' Si vous répondez non, le rappel reviendra dans ' + BACKUP_SNOOZE_DAYS + ' jours.';
+  ov.classList.add('open');
+}
+
+function closeBackupReminder() {
+  const ov = document.getElementById('backup-overlay');
+  if (ov) ov.classList.remove('open');
+}
+
+function backupReminderLater() {
+  _lsSet(BACKUP_SNOOZE_KEY, Date.now());
+  closeBackupReminder();
+}
+
+function backupReminderNow() {
+  closeBackupReminder();
+  exportData();   // télécharge le fichier et enregistre la date de sauvegarde
+  showUpdateToast('💾 Sauvegarde téléchargée');
 }
 
 // Appliquer toutes les préférences au démarrage
@@ -3927,6 +4026,8 @@ function exportData() {
   a.click();
   document.body.removeChild(a);
   setTimeout(function() { URL.revokeObjectURL(url); }, 2000);
+  _lsSet(BACKUP_LAST_KEY, Date.now());                    // date du dernier export (rappel des 30 jours)
+  try { localStorage.removeItem(BACKUP_SNOOZE_KEY); } catch (e) {}
 
   showDataStatus('export-status',
     '✓ ' + _plural(recCount, 'création', 'créations') + ', ' +
@@ -4187,11 +4288,11 @@ function startFromCatalogue() {
 function filterCloneResults(query) {
   const results = document.getElementById('clone-results');
   results.innerHTML = '';
-  const q = query.toLowerCase();
-  
-  const filtered = RECIPES.filter(r => 
-    r.title.toLowerCase().includes(q) || 
-    (r.ingredients && r.ingredients.some(ing => ing[0].toLowerCase().includes(q)))
+  const q = _normTxt(query);   // même tolérance que la recherche du catalogue
+
+  const filtered = RECIPES.filter(r =>
+    _normTxt(r.title).includes(q) ||
+    (r.ingredients && r.ingredients.some(ing => _normTxt(ing[0]).includes(q)))
   ).slice(0, 15);
   
   if (filtered.length === 0) {
@@ -4289,10 +4390,11 @@ function populateFormFromRecipe(recipe, mode) {
 }
 
 function addIngredientRow(name = '', qty = '', unit = '') {
+  ensureIngDatalist();
   const list = document.getElementById('ing-list');
   const row = document.createElement('div');
   row.className = 'ing-row';
-  row.innerHTML = `<input type="text" class="form-input ing-name" placeholder="Nom">
+  row.innerHTML = `<input type="text" class="form-input ing-name" placeholder="Nom" list="ing-suggest" autocomplete="off" autocapitalize="sentences">
     <input type="number" class="form-input ing-qty" placeholder="Qté" step="0.1" inputmode="decimal">
     <input type="text" class="form-input ing-unit" placeholder="Unité">
     <button type="button" class="ing-remove" onclick="this.parentNode.remove()">×</button>`;
@@ -4310,6 +4412,144 @@ function addStepRow(text = '') {
   row.innerHTML = `<textarea class="form-input" placeholder="Étape…">${text}</textarea>
     <button type="button" class="step-remove" onclick="this.parentNode.remove()">×</button>`;
   list.appendChild(row);
+}
+
+// ════════════════════════════════════════════════════════════
+// NORMALISATION À LA SAISIE (formulaire + import)
+// ════════════════════════════════════════════════════════════
+// • apostrophes typographiques (’ ‘ ` ´) → apostrophe droite, espaces superflus retirés
+// • nom d'ingrédient reconnu dans le catalogue → orthographe du catalogue
+//   (« boeuf » → « Bœuf », « tomates » → « Tomate », « pommes de terre » → « Pomme de terre »)
+// • unités : variantes unifiées (gramme, cuillère à soupe… → g, c.à.s…), 1000 g → 1 kg, 1500 ml → 1,5 L,
+//   0,5 kg → 500 g, cl/dl → ml, singulier/pluriel selon la quantité (« 1 gousses » → « 1 gousse »)
+// Un nom inconnu du catalogue n'est jamais réécrit (seule la 1re lettre passe en majuscule).
+function _tidyApos(s) { return String(s == null ? '' : s).replace(/[’‘`´ʼ]/g, "'"); }
+function _tidyText(s) { return _tidyApos(s).replace(/\s+/g, ' ').trim(); }
+
+// « boeuf » → « bœuf », « oeufs » → « œufs », « coeur » → « cœur » (casse de la 1re lettre conservée)
+function _fixLigatures(s) {
+  return String(s)
+    .replace(/\bboeuf/gi, m => m[0] + 'œuf')
+    .replace(/\boeuf/gi,  m => (m[0] === 'O' ? 'Œ' : 'œ') + 'uf')
+    .replace(/\bcoeur/gi, m => m[0] + 'œur');
+}
+function _tidyTitle(s) { return _fixLigatures(_tidyText(s)); }
+
+// Index des noms du catalogue : clé (mots sans accents ni pluriel) → libellé le plus utilisé.
+// En cas d'égalité, le libellé des cases de la page « recherche par ingrédients » (FAMILIES) l'emporte.
+let _ingCanon = null;
+function _ingCanonIndex() {
+  if (_ingCanon) return _ingCanon;
+  const votes = new Map();
+  const vote = function(label, w) {
+    const l = _tidyText(label), k = ingWords(l).join(' ');
+    if (!k) return;
+    if (!votes.has(k)) votes.set(k, new Map());
+    const m = votes.get(k);
+    m.set(l, (m.get(l) || 0) + w);
+  };
+  FAMILIES.forEach(f => f.items.forEach(it => vote(it, 0.5)));   // simple départage en cas d'égalité
+  RECIPES.forEach(r => (r.ingredients || []).forEach(i => vote(i[0], 1)));
+  _ingCanon = new Map();
+  votes.forEach(function(m, k) {
+    let best = '', bw = -1;
+    m.forEach(function(w, l) { if (w > bw) { best = l; bw = w; } });
+    _ingCanon.set(k, best);
+  });
+  return _ingCanon;
+}
+
+function canonIngredientName(name) {
+  const t = _fixLigatures(_tidyText(name));
+  if (!t) return '';
+  const hit = _ingCanonIndex().get(ingWords(t).join(' '));
+  return hit || (t.charAt(0).toLocaleUpperCase('fr') + t.slice(1));
+}
+
+let _countUnits = null;
+function _countUnitMap() {
+  if (!_countUnits) {
+    _countUnits = new Map();
+    _UNIT_COUNT.forEach(u => _countUnits.set(_normTxt(u), u));
+  }
+  return _countUnits;
+}
+
+// Renvoie [quantité, unité] normalisées
+function normalizeQtyUnit(qty, unit) {
+  let q = Number(qty) || 0;
+  let u = _tidyText(unit);
+  const k = _normTxt(u).replace(/[.\s]/g, '');     // « c. à soupe » → « casoupe »
+  if (/^(g|gr|grs|gramme|grammes)$/.test(k)) u = 'g';
+  else if (/^(kg|kgs|kilo|kilos|kilogramme|kilogrammes)$/.test(k)) u = 'kg';
+  else if (/^(ml|mls|millilitre|millilitres)$/.test(k)) u = 'ml';
+  else if (/^(cl|centilitre|centilitres)$/.test(k)) { u = 'ml'; q *= 10; }
+  else if (/^(dl|decilitre|decilitres)$/.test(k)) { u = 'ml'; q *= 100; }
+  else if (/^(l|lt|litre|litres)$/.test(k)) u = 'L';
+  else if (/^(cas|casoupe|cuilleres?asoupe|cuilleres?soupe)$/.test(k)) u = 'c.à.s';
+  else if (/^(cac|cacafe|cuilleres?acafe|cuilleres?cafe)$/.test(k)) u = 'c.à.c';
+  else if (u) {
+    // Unités de comptage : singulier jusqu'à 1, pluriel au-delà (convention du catalogue)
+    const cu = _countUnitMap(), nk = _normTxt(u);
+    const sing = (nk.length > 2 && nk.endsWith('s') && cu.has(nk.slice(0, -1))) ? nk.slice(0, -1) : nk;
+    if (cu.has(sing)) u = q > 1 ? cu.get(sing) + 's' : cu.get(sing);
+  }
+  if (q > 0) {
+    if (u === 'g' && q >= 1000)        { u = 'kg'; q = q / 1000; }
+    else if (u === 'kg' && q < 1)      { u = 'g';  q = q * 1000; }
+    else if (u === 'ml' && q >= 1000)  { u = 'L';  q = q / 1000; }
+    else if (u === 'L' && q < 1)       { u = 'ml'; q = q * 1000; }
+  }
+  return [Math.round(q * 1000) / 1000, u];
+}
+
+// [[nom, qté, unité], …] → même structure, normalisée (lignes sans nom retirées)
+function normalizeIngredients(list) {
+  return (Array.isArray(list) ? list : []).map(function(i) {
+    const qu = normalizeQtyUnit(i[1], i[2]);
+    return [canonIngredientName(i[0]), qu[0], qu[1]];
+  }).filter(function(i) { return i[0]; });
+}
+
+// Suggestions du formulaire : ingrédients du catalogue + ceux déjà utilisés dans « Mes créations »
+let _ingSuggestN = -1;
+function ensureIngDatalist() {
+  const n = userRecipes ? userRecipes.length : 0;
+  let dl = document.getElementById('ing-suggest');
+  if (dl && _ingSuggestN === n) return;
+  if (!dl) { dl = document.createElement('datalist'); dl.id = 'ing-suggest'; document.body.appendChild(dl); }
+  const names = new Map();
+  _ingCanonIndex().forEach(function(label, key) { names.set(key, label); });
+  (userRecipes || []).forEach(r => (r.ingredients || []).forEach(function(i) {
+    const label = _tidyText(i[0]), key = ingWords(label).join(' ');
+    if (key && !names.has(key)) names.set(key, label);
+  }));
+  const frag = document.createDocumentFragment();
+  Array.from(names.values()).sort((a, b) => a.localeCompare(b, 'fr')).forEach(function(label) {
+    const o = document.createElement('option');
+    o.value = label;
+    frag.appendChild(o);
+  });
+  dl.innerHTML = '';
+  dl.appendChild(frag);
+  _ingSuggestN = n;
+}
+
+// Correction immédiate (à la sortie du champ) dans le formulaire
+function onIngredientFieldChange(e) {
+  const el = e.target;
+  if (!el || !el.classList) return;
+  const row = el.closest('.ing-row');
+  if (!row) return;
+  if (el.classList.contains('ing-name')) {
+    el.value = canonIngredientName(el.value);
+  } else if (el.classList.contains('ing-qty') || el.classList.contains('ing-unit')) {
+    const qi = row.querySelector('.ing-qty'), ui = row.querySelector('.ing-unit');
+    const hasQty = qi.value !== '';
+    const r = normalizeQtyUnit(hasQty ? qi.value : 0, ui.value);
+    if (hasQty) qi.value = r[0];
+    ui.value = r[1];
+  }
 }
 
 // ════════════════════════════════════════════════════════════
@@ -4332,7 +4572,7 @@ function clearError() {
 function saveRecipe() {
   clearError();
   
-  const title = document.getElementById('f-title').value.trim();
+  const title = _tidyTitle(document.getElementById('f-title').value);
   const cat = document.getElementById('f-cat').value;
   const culture = document.getElementById('f-culture').value;
   const diff = document.getElementById('f-diff').value;
@@ -4350,25 +4590,27 @@ function saveRecipe() {
   if (!culture) { showError('Origine requise'); return; }
   if (!diff) { showError('Difficulté requise'); return; }
   
-  const ingredients = [];
+  const rawIngredients = [];
   document.querySelectorAll('#ing-list .ing-row').forEach(row => {
     const inputs = row.querySelectorAll('input');
     const name = inputs[0].value.trim();
     const qty = parseFloat(inputs[1].value) || 0;
     const unit = inputs[2].value.trim();
-    if (name) ingredients.push([name, qty, unit]);
+    if (name) rawIngredients.push([name, qty, unit]);
   });
-  if (!ingredients.length) { showError('Au moins 1 ingrédient'); return; }
+  if (!rawIngredients.length) { showError('Au moins 1 ingrédient'); return; }
+  // Normalisation : orthographe du catalogue, apostrophes, unités (1000 g → 1 kg, « 1 gousses » → « 1 gousse »)
+  const ingredients = normalizeIngredients(rawIngredients);
   
   const steps = [];
   document.querySelectorAll('#step-list textarea').forEach(ta => {
     const s = ta.value.trim();
-    if (s) steps.push(s);
+    if (s) steps.push(_tidyApos(s));
   });
   if (!steps.length) { showError('Au moins 1 étape'); return; }
   
   const titleLower = title.toLowerCase();
-  const dupe = userRecipes.filter(r => r.title.toLowerCase() === titleLower && r.id !== currentEditingId);
+  const dupe = userRecipes.filter(r => _tidyApos(r.title).toLowerCase() === titleLower && r.id !== currentEditingId);
   if (dupe.length) { showError('Nom déjà utilisé'); return; }
   
   const id = currentEditingId || nextUserId++;
@@ -5683,6 +5925,12 @@ window.onload = function() {
   showPage('home');
   updateHomeGreeting();
   maybeShowWelcome();
+  maybeShowBackupReminder();   // ne s'affiche pas tant que la bienvenue est ouverte
+  // Formulaire de création : correction à la sortie des champs ingrédient et titre
+  const ingList = document.getElementById('ing-list');
+  if (ingList) ingList.addEventListener('change', onIngredientFieldChange);
+  const fTitle = document.getElementById('f-title');
+  if (fTitle) fTitle.addEventListener('change', function() { fTitle.value = _tidyTitle(fTitle.value); });
   // Initialise l'état History API pour que le premier popstate soit intercepté
   history.replaceState({ page: 'home', depth: 1 }, '', '');
 
@@ -6054,14 +6302,22 @@ function normalizeImportedRecipe(d, lenient) {
   // lenient = restauration de SA propre sauvegarde : limites larges, aucune troncature réaliste
   const L = lenient ? { t: 300, ing: 300, name: 300, unit: 60, steps: 200, step: 10000 }
                     : { t: 100, ing: 80,  name: 80,  unit: 20, steps: 60,  step: 600 };
-  const title = _sanitizeText(d.t, L.t);
-  const ingredients = (Array.isArray(d.i) ? d.i : []).slice(0, L.ing).map(function(x) {
+  let title = _sanitizeText(d.t, L.t);
+  let ingredients = (Array.isArray(d.i) ? d.i : []).slice(0, L.ing).map(function(x) {
     if (!Array.isArray(x)) return null;
     const qty = Math.round(Math.min(100000, Math.max(0, Number(x[1]) || 0)) * 100) / 100;
     return [_sanitizeText(x[0], L.name), qty, _sanitizeText(x[2], L.unit)];
   }).filter(x => x && x[0]);
-  const steps = (Array.isArray(d.s) ? d.s : []).slice(0, L.steps).map(x => _sanitizeText(x, L.step, !!lenient)).filter(Boolean);
+  let steps = (Array.isArray(d.s) ? d.s : []).slice(0, L.steps).map(x => _sanitizeText(x, L.step, !!lenient)).filter(Boolean);
   if (!title || !ingredients.length || !steps.length) return null;
+
+  // Import normal (lien, QR code, scan) : normalisation à la saisie.
+  // La restauration de sa propre sauvegarde (lenient) reste fidèle, sans rien réécrire.
+  if (!lenient) {
+    title = _tidyTitle(title);
+    ingredients = normalizeIngredients(ingredients);
+    steps = steps.map(_tidyApos);
+  }
 
   const pick = function(selectId, field, val, fallback) {
     const vals = _selectValues(selectId, field);
@@ -6110,9 +6366,14 @@ function _uniqueUserTitle(title) {
 }
 
 function _sameRecipeAlreadyStored(recipe) {
-  const sig = JSON.stringify([recipe.ingredients, recipe.steps]);
-  return userRecipes.some(r => r.title.toLowerCase() === recipe.title.toLowerCase()
-    && JSON.stringify([r.ingredients, r.steps]) === sig);
+  // Comparaison sur les formes normalisées : une création enregistrée avant la normalisation
+  // est quand même reconnue si on réimporte la même recette
+  const sig = function(r) {
+    return JSON.stringify([normalizeIngredients(r.ingredients), (r.steps || []).map(_tidyApos)]);
+  };
+  const mine = sig(recipe);
+  return userRecipes.some(r => _tidyApos(r.title).toLowerCase() === _tidyApos(recipe.title).toLowerCase()
+    && sig(r) === mine);
 }
 
 // ── Aperçu + confirmation avant ajout ────────────────────
