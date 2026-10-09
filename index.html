@@ -607,6 +607,57 @@
     }
     .welcome-btn-hide:hover { background: #b05525; }
 
+    /* ---- MODE MAGASIN (liste de courses) ---- */
+    .store-toggle {
+      display: block; width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 12px;
+      border: 1px solid var(--accent); background: transparent; color: var(--accent);
+      font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer;
+    }
+    .store-toggle.on { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+    .store-hint { font-size: 12px; color: var(--text3); margin: -6px 2px 12px; text-align: center; }
+    .store-hint:empty { display: none; }
+    .shop-sep[role="button"] { cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+    .shop-fold { margin-left: 6px; }
+    .store-mode .shop-actions, .store-mode .shop-item .menu-icon-btn { display: none; }
+    .store-mode .shop-item { padding: 18px 16px; gap: 16px; margin-bottom: 10px; }
+    .store-mode .shop-box { width: 36px; height: 36px; border-radius: 10px; font-size: 24px; }
+    .store-mode .shop-name { font-size: 18px; }
+    .store-mode .shop-qty { font-size: 15px; }
+    .store-mode .shop-src { font-size: 12px; }
+    .store-mode .shop-sep { font-size: 13px; padding: 12px 4px; margin: 14px 0 6px; }
+    .store-mode .menu-section-count { font-size: 14px; }
+
+    /* ---- MINUTEURS DANS LES ÉTAPES ---- */
+    .step-timer {
+      display: inline-flex; align-items: center; gap: 4px; padding: 1px 9px; border-radius: 999px;
+      border: 1px solid var(--accent); background: transparent; color: var(--accent);
+      font: inherit; font-size: .9em; line-height: 1.4; cursor: pointer; white-space: nowrap;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .step-timer.big { padding: 3px 14px; font-size: .95em; }
+    .step-timer:active { background: var(--accent); color: #fff; }
+    .timer-dock {
+      position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+      z-index: 100000; display: flex; flex-direction: column; gap: 6px; pointer-events: none;
+      max-width: 520px; margin: 0 auto;
+    }
+    .timer-chip {
+      pointer-events: auto; display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+      background: var(--surface); color: var(--text); border: 1px solid var(--accent);
+      border-radius: 14px; box-shadow: var(--shadow); font-size: 14px;
+    }
+    .timer-chip .tc-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text2); }
+    .timer-chip .tc-time { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 18px; color: var(--accent); }
+    .timer-chip .tc-x {
+      width: 30px; height: 30px; border-radius: 50%; border: none; background: transparent;
+      color: inherit; font-size: 16px; cursor: pointer; flex-shrink: 0;
+    }
+    .timer-chip.done { background: var(--accent); color: #fff; animation: timerPulse 1s ease-in-out infinite; cursor: pointer; }
+    .timer-chip.done .tc-label, .timer-chip.done .tc-time { color: #fff; }
+    @keyframes timerPulse { 50% { transform: scale(1.02); } }
+    @media (prefers-reduced-motion: reduce) { .timer-chip.done { animation: none; } }
+    body.has-timers { padding-bottom: 96px; }
+
     /* ---- RAPPEL DE SAUVEGARDE (même style que la bienvenue) ---- */
     .backup-modal { max-width: 400px; }
     .backup-modal .welcome-modal-body p { margin: 0 0 10px; font-size: 14px; line-height: 1.5; color: var(--text2); }
@@ -2439,6 +2490,7 @@ function showPage(pageId) {
   target.classList.add('active');
   document.getElementById('fab-search').classList.toggle('visible', pageId === 'search');
   window.scrollTo(0, 0);
+  if (pageId !== 'menu')      stopStoreMode();
   if (pageId === 'home')      updateHomeGreeting();
   if (pageId === 'import')    resetImportPage();
   if (pageId === 'search')    loadIngredientFamilies();
@@ -3468,7 +3520,7 @@ function showRecipe(recipeId, swipeList, animDir) {
           ${recipe.ingredients.map(ing => `
             <li>
               <span>${ing[0]}</span>
-              <span class="ing-qty" data-base-qty="${ing[1]}" data-unit="${ing[2]}">${ing[1]} ${ing[2]}</span>
+              <span class="ing-qty" data-base-qty="${ing[1]}" data-unit="${ing[2]}">${ing[1]} ${pluralUnit(ing[2], ing[1])}</span>
             </li>
           `).join('')}
         </ul>
@@ -3477,7 +3529,7 @@ function showRecipe(recipeId, swipeList, animDir) {
       <div>
         <div class="recipe-section-title">ÉTAPES</div>
         <ol class="steps-list">
-          ${recipe.steps.map((step, i) => `<li>${step}</li>`).join('')}
+          ${recipe.steps.map((step, i) => `<li>${stepWithTimers(step, recipe.id, i, recipe.title)}</li>`).join('')}
         </ol>
       </div>
     </div>
@@ -3565,8 +3617,7 @@ function updateQuantities(recipeId) {
     const qtySpan = item.querySelector('.ing-qty');
     const baseQty = parseFloat(qtySpan.getAttribute('data-base-qty'));
     const unit = qtySpan.getAttribute('data-unit');
-    const newQty = (baseQty * ratio).toFixed(1).replace(/\.?0+$/, '');
-    qtySpan.textContent = `${newQty} ${unit}`;
+    qtySpan.textContent = fmtIngQty(baseQty, unit, ratio);
   });
 }
 
@@ -4488,12 +4539,7 @@ function normalizeQtyUnit(qty, unit) {
   else if (/^(l|lt|litre|litres)$/.test(k)) u = 'L';
   else if (/^(cas|casoupe|cuilleres?asoupe|cuilleres?soupe)$/.test(k)) u = 'c.à.s';
   else if (/^(cac|cacafe|cuilleres?acafe|cuilleres?cafe)$/.test(k)) u = 'c.à.c';
-  else if (u) {
-    // Unités de comptage : singulier jusqu'à 1, pluriel au-delà (convention du catalogue)
-    const cu = _countUnitMap(), nk = _normTxt(u);
-    const sing = (nk.length > 2 && nk.endsWith('s') && cu.has(nk.slice(0, -1))) ? nk.slice(0, -1) : nk;
-    if (cu.has(sing)) u = q > 1 ? cu.get(sing) + 's' : cu.get(sing);
-  }
+  else if (u) u = pluralUnit(u, q);
   if (q > 0) {
     if (u === 'g' && q >= 1000)        { u = 'kg'; q = q / 1000; }
     else if (u === 'kg' && q < 1)      { u = 'g';  q = q * 1000; }
@@ -4501,6 +4547,24 @@ function normalizeQtyUnit(qty, unit) {
     else if (u === 'L' && q < 1)       { u = 'ml'; q = q * 1000; }
   }
   return [Math.round(q * 1000) / 1000, u];
+}
+
+// Unités de comptage : singulier jusqu'à 1, pluriel au-delà (convention du catalogue).
+// Les autres unités sont renvoyées telles quelles.
+function pluralUnit(unit, q) {
+  const u = String(unit == null ? '' : unit).trim();
+  if (!u) return u;
+  const cu = _countUnitMap(), nk = _normTxt(u);
+  const sing = (nk.length > 2 && nk.endsWith('s') && cu.has(nk.slice(0, -1))) ? nk.slice(0, -1) : nk;
+  if (!cu.has(sing)) return u;
+  return (Number(q) > 1) ? cu.get(sing) + 's' : cu.get(sing);
+}
+
+// Quantité d'une fiche recalculée pour un nombre de portions : « 1 gousse » × 2 → « 2 gousses »
+function fmtIngQty(qty, unit, ratio) {
+  const base = Number(qty) || 0;
+  const txt = ratio === 1 ? String(base) : (base * ratio).toFixed(1).replace(/\.?0+$/, '');
+  return txt + ' ' + pluralUnit(unit, parseFloat(txt));
 }
 
 // [[nom, qté, unité], …] → même structure, normalisée (lignes sans nom retirées)
@@ -4840,8 +4904,7 @@ function enterRecipeSoireeMode(id) {
   const ingHtml = recipe.ingredients.map(i => {
     let qtyStr = '';
     if (i[1]) {
-      const adaptedQty = (i[1] * ratio).toFixed(1).replace(/\.0$/, '');
-      qtyStr = ' <span style="color:var(--text2);font-size:.75em">' + adaptedQty + ' ' + i[2] + '</span>';
+      qtyStr = ' <span style="color:var(--text2);font-size:.75em">' + fmtIngQty(i[1], i[2], ratio) + '</span>';
     }
     return '<li style="font-size:22px;color:var(--text);display:flex;align-items:baseline;gap:8px;line-height:1.3;border-bottom:1px solid var(--border);padding-bottom:14px">'
       + i[0]
@@ -4853,7 +4916,7 @@ function enterRecipeSoireeMode(id) {
   const stepsHtml = recipe.steps.map((s, i) => {
     return '<li style="font-size:20px;color:var(--text);line-height:1.5;display:flex;align-items:baseline">'
       + '<span style="display:inline-flex;align-items:center;justify-content:center;width:1.5em;height:1.5em;border-radius:50%;background:var(--accent);color:#0C0F1D;font-size:.65em;font-weight:700;margin-right:.6em;flex-shrink:0">' + (i+1) + '</span>'
-      + s + '</li>';
+      + '<span>' + stepWithTimers(s, recipe.id, i, recipe.title, true) + '</span></li>';
   }).join('');
 
   // Créer l'overlay
@@ -4863,7 +4926,7 @@ function enterRecipeSoireeMode(id) {
   overlay.style.cssText = [
     'position:fixed;inset:0;background:var(--bg);color:var(--text);z-index:99990',
     'overflow-y:auto;-webkit-overflow-scrolling:touch',
-    'padding:0 0 60px 0'
+    'padding:0 0 120px 0'
   ].join(';');
 
   overlay.innerHTML = [
@@ -4892,16 +4955,14 @@ function enterRecipeSoireeMode(id) {
 
   document.body.appendChild(overlay);
 
-  // Wake lock pour éviter extinction écran
-  if (navigator.wakeLock) {
-    navigator.wakeLock.request('screen').then(wl => { overlay._wl = wl; }).catch(() => {});
-  }
+  // Écran maintenu allumé (redemandé automatiquement au retour sur l'appli)
+  acquireWake('soiree');
 }
 
 function exitSoireeMode() {
   const overlay = document.getElementById('soiree-overlay');
   if (!overlay) return;
-  if (overlay._wl) overlay._wl.release().catch(() => {});
+  releaseWake('soiree');
   const rid = parseInt(overlay.dataset.recipeId);
   overlay.remove();
   // On reste à la fiche recette. Filet de sécurité : si, malgré tout, une autre recette s'est affichée
@@ -4911,6 +4972,201 @@ function exitSoireeMode() {
   }
 }
 
+
+
+// ── Écran maintenu allumé (Mode Agrandir, Mode magasin, minuteurs) ─────────
+// Plusieurs « demandeurs » possibles : l'écran reste allumé tant qu'au moins un est actif.
+// Le navigateur coupe le verrou quand l'appli passe en arrière-plan : on le redemande au retour.
+const _wakeOwners = new Set();
+let _wakeLock = null, _wakePending = false;
+function _wakeSync() {
+  if (!('wakeLock' in navigator)) return;
+  if (_wakeOwners.size) {
+    if (_wakeLock || _wakePending || document.visibilityState !== 'visible') return;
+    _wakePending = true;
+    navigator.wakeLock.request('screen').then(function(wl) {
+      _wakePending = false;
+      if (!_wakeOwners.size) { wl.release().catch(function() {}); return; }
+      _wakeLock = wl;
+      wl.addEventListener('release', function() { if (_wakeLock === wl) _wakeLock = null; });
+    }).catch(function() { _wakePending = false; });
+  } else if (_wakeLock) {
+    const wl = _wakeLock; _wakeLock = null;
+    wl.release().catch(function() {});
+  }
+}
+function acquireWake(owner) { _wakeOwners.add(owner); _wakeSync(); }
+function releaseWake(owner) { _wakeOwners.delete(owner); _wakeSync(); }
+document.addEventListener('visibilitychange', function() {
+  _wakeSync();
+  if (document.visibilityState === 'visible') _tickTimers();
+});
+
+// ── Minuteurs dans les étapes ─────────────────────────────────────────────
+// Détecte « 15 minutes », « 10 à 15 min » (→ la plus courte), « 1h30 », « 1 heure 30 », « 30 secondes »,
+// « demi-heure », « quart d'heure » (entre 5 s et 6 h) et les transforme en bouton ⏱ qui lance un minuteur.
+const _DUR_RE = /(\d+(?:[.,]\d+)?)(?:\s*(?:à|a|-|–|ou)\s*\d+(?:[.,]\d+)?)?\s*(heures?|h|minutes?|mins?|secondes?|sec)(?![a-zà-ÿ0-9])|(?:une\s+)?demi[- ]heure|1\/2\s*heure|quart\s+d['’]heure|(\d{1,2})\s*h\s*(\d{2})(?!\d)/gi;
+const _DUR_MIN_RE = /^\s*(?:et\s+)?(\d{1,2})(?:\s*(?:minutes?|mins?)(?![a-zà-ÿ])|(?!\d)(?!\s*(?:(?:g|kg|mg|ml|cl|dl|l|cm|mm)(?![a-zà-ÿ])|[°%]|c\.|cuill|œuf|oeuf|de(?![a-zà-ÿ])|d['’])))/i;
+
+function stepWithTimers(text, rid, idx, title, big) {
+  text = String(text == null ? '' : text);
+  if (/[<>]/.test(text)) return text;           // étape contenant déjà du balisage : on n'y touche pas
+  let out = '', last = 0, m;
+  _DUR_RE.lastIndex = 0;
+  while ((m = _DUR_RE.exec(text))) {
+    let end = m.index + m[0].length, secs = 0;
+    if (m.index > 0 && /[0-9a-zà-ÿ.,\/]/i.test(text.charAt(m.index - 1))) continue;   // milieu d'un mot ou d'un nombre
+    if (m[1] !== undefined) {
+      const unit = m[2].toLowerCase();
+      const f = unit.charAt(0) === 'h' ? 3600 : (unit.charAt(0) === 'm' ? 60 : 1);
+      secs = parseFloat(m[1].replace(',', '.')) * f;
+      if (f === 3600) {                           // « 1 heure 30 » / « 1 heure et 30 minutes »
+        const x = _DUR_MIN_RE.exec(text.slice(end));
+        if (x) { secs += parseInt(x[1], 10) * 60; end += x[0].length; }
+      }
+    } else if (m[3] !== undefined) {
+      secs = parseInt(m[3], 10) * 3600 + parseInt(m[4], 10) * 60;
+    } else {
+      secs = /quart/i.test(m[0]) ? 900 : 1800;
+    }
+    secs = Math.round(secs);
+    if (secs < 5 || secs > 21600) continue;
+    _DUR_RE.lastIndex = end;
+    out += text.slice(last, m.index)
+      + '<button type="button" class="step-timer' + (big ? ' big' : '') + '" data-sec="' + secs
+      + '" data-key="' + rid + ':' + idx + ':' + secs
+      + '" data-label="' + _esc('Étape ' + (idx + 1) + ' · ' + title)
+      + '" onclick="startStepTimer(this)" title="Lancer un minuteur">⏱ ' + text.slice(m.index, end) + '</button>';
+    last = end;
+  }
+  return out + text.slice(last);
+}
+
+const TIMERS_KEY = 'marecette_timers';
+let _timers = [], _timerSeq = 1, _timerInt = null, _audioCtx = null;
+
+function _fmtTimer(ms) {
+  const t = Math.max(0, Math.ceil(ms / 1000)), h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60;
+  const two = function(n) { return (n < 10 ? '0' : '') + n; };
+  return h ? h + ':' + two(m) + ':' + two(s) : two(m) + ':' + two(s);
+}
+
+function _saveTimers() {
+  try {
+    if (_timers.length) localStorage.setItem(TIMERS_KEY, JSON.stringify(_timers));
+    else localStorage.removeItem(TIMERS_KEY);
+  } catch (e) {}
+}
+
+function startStepTimer(btn) {
+  const secs = parseInt(btn.dataset.sec, 10);
+  if (!(secs > 0)) return;
+  try {   // l'audio ne peut démarrer qu'après un geste : on le prépare ici
+    _audioCtx = _audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (_audioCtx.state === 'suspended') _audioCtx.resume();
+  } catch (e) {}
+  const key = btn.dataset.key || (btn.dataset.label + '|' + secs);
+  if (_timers.some(function(t) { return t.key === key && !t.done; })) {
+    showUpdateToast('⏱ Ce minuteur est déjà lancé');
+    return;
+  }
+  _timers.push({ id: _timerSeq++, key: key, label: btn.dataset.label || 'Minuteur', total: secs, end: Date.now() + secs * 1000, done: false });
+  _saveTimers();
+  _renderTimers();
+  _syncTimerLoop();
+}
+
+function dismissTimer(id) {
+  _timers = _timers.filter(function(t) { return t.id !== id; });
+  _saveTimers();
+  _renderTimers();
+  _syncTimerLoop();
+}
+
+function _renderTimers() {
+  let dock = document.getElementById('timer-dock');
+  if (!_timers.length) {
+    if (dock) dock.remove();
+    document.body.classList.remove('has-timers');
+    return;
+  }
+  if (!dock) {
+    dock = document.createElement('div');
+    dock.id = 'timer-dock';
+    dock.className = 'timer-dock';
+    dock.setAttribute('role', 'region');
+    dock.setAttribute('aria-label', 'Minuteurs');
+    document.body.appendChild(dock);
+  }
+  document.body.classList.add('has-timers');
+  dock.innerHTML = _timers.map(function(t) {
+    return '<div class="timer-chip' + (t.done ? ' done' : '') + '"' + (t.done ? ' onclick="dismissTimer(' + t.id + ')"' : '') + '>'
+      + '<span aria-hidden="true">⏱</span><span class="tc-label">' + _esc(t.label) + '</span>'
+      + '<span class="tc-time" data-tid="' + t.id + '">' + (t.done ? 'Terminé !' : _fmtTimer(t.end - Date.now())) + '</span>'
+      + '<button type="button" class="tc-x" onclick="event.stopPropagation(); dismissTimer(' + t.id + ')" aria-label="'
+      + (t.done ? 'Fermer' : 'Annuler le minuteur') + '">✕</button></div>';
+  }).join('');
+}
+
+function _tickTimers() {
+  if (!_timers.length) return;
+  const now = Date.now();
+  let changed = false;
+  _timers.forEach(function(t) {
+    if (t.done) return;
+    if (t.end <= now) { t.done = true; changed = true; _ringTimer(t); return; }
+    const el = document.querySelector('#timer-dock .tc-time[data-tid="' + t.id + '"]');
+    if (el) el.textContent = _fmtTimer(t.end - now);
+  });
+  if (changed) { _saveTimers(); _renderTimers(); _syncTimerLoop(); }
+}
+
+// Boucle d'affichage + écran allumé tant qu'un minuteur tourne
+function _syncTimerLoop() {
+  const running = _timers.some(function(t) { return !t.done; });
+  if (running && !_timerInt) _timerInt = setInterval(_tickTimers, 500);
+  if (!running && _timerInt) { clearInterval(_timerInt); _timerInt = null; }
+  if (running) acquireWake('timers'); else releaseWake('timers');
+}
+
+// Sonnerie : séries de bips + vibration, répétées jusqu'à ce que le minuteur soit fermé (6 fois max)
+function _ringTimer(t) {
+  let n = 0;
+  (function loop() {
+    if (_timers.indexOf(t) === -1 || n++ >= 6) return;
+    try { if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 300]); } catch (e) {}
+    try {
+      if (_audioCtx) {
+        for (let k = 0; k < 3; k++) {
+          const o = _audioCtx.createOscillator(), g = _audioCtx.createGain(), at = _audioCtx.currentTime + k * 0.35;
+          o.type = 'sine'; o.frequency.value = 880;
+          g.gain.setValueAtTime(0.0001, at);
+          g.gain.exponentialRampToValueAtTime(0.4, at + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, at + 0.25);
+          o.connect(g); g.connect(_audioCtx.destination);
+          o.start(at); o.stop(at + 0.3);
+        }
+      }
+    } catch (e) {}
+    setTimeout(loop, 4000);
+  })();
+}
+
+// Après un rechargement (mise à jour de l'appli…) les minuteurs en cours reprennent
+function restoreTimers() {
+  let saved = [];
+  try { saved = JSON.parse(localStorage.getItem(TIMERS_KEY) || '[]'); } catch (e) {}
+  const now = Date.now();
+  _timers = (Array.isArray(saved) ? saved : []).filter(function(t) {
+    return t && typeof t.end === 'number' && typeof t.label === 'string' && t.end > now - 30 * 60000;
+  }).map(function(t) {
+    _timerSeq = Math.max(_timerSeq, (parseInt(t.id, 10) || 0) + 1);
+    return { id: parseInt(t.id, 10) || _timerSeq++, key: String(t.key || ''), label: t.label.slice(0, 120), total: t.total || 0, end: t.end, done: t.end <= now };
+  });
+  _saveTimers();
+  _renderTimers();
+  _syncTimerLoop();
+}
 
 
 // ── Rayons & placard ─────────────────────────────────────
@@ -4974,6 +5230,8 @@ let _menuNeedsKeyMigration = false;
 let _menuOpts = null;      // { week: semainier affiché ?, group: 'rayon' | 'az' }
 let _pantryOpen = false;   // bloc Placard déplié (non conservé)
 let _menuTab = 'menu';
+let _storeMode = false;    // mode magasin actif (non conservé)
+const _foldedAisles = new Set();   // rayons repliés (non conservé)
 let _menuSheet = null;     // état de la fenêtre « Ajouter à la liste »
 let _shopRendered = [];    // lignes actuellement affichées (index utilisé par les clics)
 let _undo = [];            // pile d'annulation : { label, key, snap } — un instantané avant chaque modification
@@ -5395,9 +5653,42 @@ function menuRemove(rid) {
 
 // ── Page « Menu & courses » ──────────────────────────────
 function setMenuTab(tab) {
+  if (tab !== 'shop') stopStoreMode();
   _menuTab = tab;
   renderMenuPage();
   window.scrollTo(0, 0);
+}
+
+// ── Mode magasin : écran allumé, grosses cases, boutons d'édition masqués ──
+function _applyStoreMode() {
+  const box = document.getElementById('menu-content');
+  if (box) box.classList.toggle('store-mode', _storeMode);
+  const b = document.getElementById('store-toggle');
+  if (b) {
+    b.classList.toggle('on', _storeMode);
+    b.setAttribute('aria-pressed', String(_storeMode));
+    b.textContent = _storeMode ? '✕ Quitter le mode magasin' : '🛍️ Mode magasin';
+  }
+  const h = document.getElementById('store-hint');
+  if (h) h.textContent = !_storeMode ? '' : ('wakeLock' in navigator ? '🔆 Écran maintenu allumé' : 'Maintien de l\u2019écran allumé non pris en charge par ce navigateur');
+}
+function toggleStoreMode() {
+  _storeMode = !_storeMode;
+  if (_storeMode) acquireWake('store'); else releaseWake('store');
+  _applyStoreMode();
+}
+function stopStoreMode() {
+  if (!_storeMode) return;
+  _storeMode = false;
+  releaseWake('store');
+  _applyStoreMode();
+}
+function shopToggleAisle(id) {
+  if (_foldedAisles.has(id)) _foldedAisles.delete(id); else _foldedAisles.add(id);
+  _renderShopList(_shopRendered);
+  // la liste est redessinée : on redonne le focus à l'en-tête (navigation au clavier)
+  const el = document.querySelector('.shop-sep[data-aisle="' + id + '"]');
+  if (el && document.activeElement === document.body) el.focus();
 }
 
 function renderMenuPage() {
@@ -5409,6 +5700,7 @@ function renderMenuPage() {
   _updateUndoBtn();
   box.innerHTML = _menuTab === 'menu' ? _menuTabHtml() : _shopTabHtml();
   if (_menuTab === 'shop') _renderShopList(shop);
+  _applyStoreMode();
 }
 
 function _updateMenuTabs(shop) {
@@ -5560,7 +5852,9 @@ function menuClear() {
 // ── Onglet Courses ───────────────────────────────────────
 function _shopTabHtml() {
   const g = _menuOpts.group;
-  return `<div class="shop-modes" role="group" aria-label="Organisation de la liste">
+  return `<button type="button" class="store-toggle" id="store-toggle" onclick="toggleStoreMode()" aria-pressed="false">🛍️ Mode magasin</button>
+    <div class="store-hint" id="store-hint"></div>
+    <div class="shop-modes" role="group" aria-label="Organisation de la liste">
       <button type="button" class="shop-mode ${g === 'rayon' ? 'on' : ''}" onclick="shopSetGroup('rayon')">🏬 Par rayon</button>
       <button type="button" class="shop-mode ${g === 'az' ? 'on' : ''}" onclick="shopSetGroup('az')">🔤 A → Z</button>
     </div>
@@ -5637,8 +5931,11 @@ function _renderShopList(items) {
       const idx = main.filter(function(i) { return all[i].aisle === a.id; });
       if (!idx.length) return;
       const todo = idx.filter(function(i) { return !all[i].checked; }).length;
-      html += `<div class="shop-sep"><span>${a.ico} ${_esc(a.label)}</span><span class="menu-section-count">${todo || '✓'}</span></div>` +
-        idx.map(function(i) { return _shopRowHtml(all[i], i); }).join('');
+      const folded = _foldedAisles.has(a.id);
+      html += `<div class="shop-sep" role="button" tabindex="0" data-aisle="${a.id}" aria-expanded="${!folded}" onclick="shopToggleAisle('${a.id}')"
+          onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); shopToggleAisle('${a.id}'); }">
+          <span>${a.ico} ${_esc(a.label)}</span><span class="menu-section-count">${todo || '✓'}<span class="shop-fold">${folded ? '▾' : '▴'}</span></span></div>` +
+        (folded ? '' : idx.map(function(i) { return _shopRowHtml(all[i], i); }).join(''));
     });
   } else {
     html += main.map(function(i) { return _shopRowHtml(all[i], i); }).join('');
@@ -5914,6 +6211,7 @@ function restoreMenuFromBackup(m, mapId) {
 // « Effacer toutes mes données » : les clés marecette_* sont supprimées, on vide aussi la mémoire de l'appli
 function menuResetMemory() {
   _menu = null; _shop = null; _menuOpts = null;
+  stopStoreMode(); _foldedAisles.clear();
   _pantryOpen = false; _menuTab = 'menu'; _menuSheet = null; _shopRendered = []; _undo = [];
   updateMenuBadges();
 }
@@ -5926,6 +6224,7 @@ window.onload = function() {
   updateHomeGreeting();
   maybeShowWelcome();
   maybeShowBackupReminder();   // ne s'affiche pas tant que la bienvenue est ouverte
+  restoreTimers();             // minuteurs en cours avant un rechargement
   // Formulaire de création : correction à la sortie des champs ingrédient et titre
   const ingList = document.getElementById('ing-list');
   if (ingList) ingList.addEventListener('change', onIngredientFieldChange);
