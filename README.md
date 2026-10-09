@@ -22,7 +22,7 @@
 | 🔥 **Mode Agrandir** | Ingrédients et étapes en grand, écran maintenu allumé pendant que vous cuisinez |
 | 💾 **Sauvegarde & restauration** | Export / import d'un fichier `.json` : créations, favoris et notes, fusionnés sans rien écraser |
 | 🎨 **Personnalisation** | Pseudo (salutation selon l'heure), thème clair / sombre, taille de police |
-| 💡 **Lexique** | Les termes de cuisine expliqués |
+| 💡 **Lexique** | Techniques, ingrédients et matériel expliqués (réhydrater des PST, lier une sauce, choisir son riz…), avec recherche. Accessible depuis la recherche par ingrédients et depuis chaque fiche recette |
 | 📱 **PWA** | Installable sur mobile, fonctionne hors ligne, mise à jour en un clic |
 
 ---

@@ -1316,11 +1316,10 @@
 <div id="page-catalogue" class="page">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
     <button class="back-btn" onclick="goHome()" style="margin:0;">← Accueil</button>
-    <button class="btn-lexique" onclick="openLexique()">💡 Lexique</button>
+    <button class="btn btn-primary" onclick="openCreateRecipe()" style="padding:8px 12px;font-size:13px;">✨ Créer</button>
   </div>
   <div style="display:flex;gap:12px;align-items:center;">
     <div class="section-title" style="margin:0;flex:1;">📖 Catalogue</div>
-    <button class="btn btn-primary" onclick="openCreateRecipe()" style="padding:8px 12px;font-size:13px;">✨ Créer</button>
   </div>
   <p class="section-sub">Toutes les recettes classées par catégorie</p>
 
@@ -1397,6 +1396,13 @@
         </div>
       </div>
       <div class="welcome-feature">
+        <div class="welcome-feature-icon">🛒</div>
+        <div class="welcome-feature-text">
+          <div class="welcome-feature-title">Menu &amp; courses</div>
+          <div class="welcome-feature-desc">Touchez <strong>« Ajouter à la liste »</strong> sur une recette : les ingrédients sont <strong>fusionnés</strong> et rangés par rayon, les basiques (sel, huile…) vont au <strong>placard</strong>. Semainier facultatif, partage de la liste en texte, et bouton <strong>Annuler</strong> en cas d'erreur.</div>
+        </div>
+      </div>
+      <div class="welcome-feature">
         <div class="welcome-feature-icon">✨</div>
         <div class="welcome-feature-text">
           <div class="welcome-feature-title">Créations &amp; adaptations</div>
@@ -1408,6 +1414,20 @@
         <div class="welcome-feature-text">
           <div class="welcome-feature-title">Favoris &amp; notes</div>
           <div class="welcome-feature-desc">Gardez vos coups de cœur en favoris et ajoutez vos <strong>notes personnelles</strong> sur chaque recette.</div>
+        </div>
+      </div>
+      <div class="welcome-feature">
+        <div class="welcome-feature-icon">💡</div>
+        <div class="welcome-feature-text">
+          <div class="welcome-feature-title">Lexique</div>
+          <div class="welcome-feature-desc">Techniques, ingrédients et matériel expliqués : <strong>réhydrater des PST</strong>, lier une sauce, choisir son riz… Accessible depuis la recherche par ingrédients et depuis chaque recette.</div>
+        </div>
+      </div>
+      <div class="welcome-feature">
+        <div class="welcome-feature-icon">💾</div>
+        <div class="welcome-feature-text">
+          <div class="welcome-feature-title">Sauvegarde &amp; restauration</div>
+          <div class="welcome-feature-desc">Dans les Paramètres, exportez vos <strong>créations, favoris, notes et menu</strong> dans un fichier, et restaurez-les sur un autre appareil sans rien écraser.</div>
         </div>
       </div>
       <div class="welcome-install-note">
@@ -3212,6 +3232,17 @@ const LEXIQUE = {
     { name:'Réduire', ico:'🔥', body:'Faire évaporer une partie de l\'eau d\'un liquide (sauce, bouillon) à feu vif pour concentrer les saveurs et épaissir naturellement. On parle de "réduction de moitié" ou "des deux tiers".' },
     { name:'Tempérer', ico:'🍫', body:'En pâtisserie : technique précise de chauffe et refroidissement du chocolat fondu pour obtenir une structure cristalline stable. Donne au chocolat son brillant, son craquant et évite le blanchissement.' },
     { name:'Monter en neige', ico:'🥚', body:'Fouetter des blancs d\'œuf pour y incorporer de l\'air jusqu\'à obtenir une mousse ferme et brillante. Indispensable pour les soufflés, mousses et macarons.' },
+    { name:'Réhydrater', ico:'💦', body:'Redonner de l\'eau à un aliment séché en le laissant tremper dans un liquide chaud ou froid : protéines de soja texturées (PST), champignons secs (cèpes, shiitakés), tomates séchées, nouilles de riz, piments secs. Un liquide aromatisé (bouillon, sauce soja, épices) parfume l\'aliment pendant qu\'il gonfle. L\'eau de trempage des champignons, filtrée, est précieuse pour les sauces. Voir aussi PST.' },
+    { name:'Faire revenir', ico:'🍳', body:'Cuire à feu moyen à vif dans un peu de matière grasse en remuant, pour colorer légèrement et développer les arômes (oignon, lardons, viande hachée, épices). Plus coloré que faire suer, moins vif que saisir.' },
+    { name:'Saisir', ico:'🥩', body:'Cuire à feu très vif, dans une poêle ou une cocotte bien chaude avec peu de matière grasse, pour former une croûte dorée. Ne pas surcharger la poêle ni retourner trop tôt : un aliment bien saisi se détache tout seul.' },
+    { name:'Mijoter', ico:'🍲', body:'Cuire doucement, à petits frémissements, souvent à couvert et longtemps. Attendrit les viandes, concentre les saveurs et fait fondre les légumes dans la sauce (ragoûts, currys, soupes). Le liquide doit à peine bouger : ce n\'est pas bouillir.' },
+    { name:'Mariner', ico:'🥣', body:'Laisser un aliment tremper dans un mélange assaisonné (huile, acide comme citron ou vinaigre, épices, herbes, sauce soja) pour le parfumer et l\'attendrir. Au frais, de 30 minutes à quelques heures : trop longtemps dans un acide, la chair devient pâteuse. Jeter la marinade ayant touché de la viande crue, ou la faire bouillir quelques minutes avant de la servir.' },
+    { name:'Lier', ico:'🥄', body:'Épaissir une sauce pour lui donner du corps : avec un roux, de la maïzena diluée à froid, un jaune d\'œuf, de la crème, du beurre ou un légume mixé. Toujours délayer la fécule dans un peu de liquide froid avant de l\'ajouter, pour éviter les grumeaux.' },
+    { name:'Caraméliser', ico:'🍯', body:'Faire dorer les sucres naturels d\'un aliment à feu doux jusqu\'à une couleur ambrée : oignons (30 à 40 minutes avec un peu de matière grasse), légumes rôtis, sucre en caramel. Au-delà du brun foncé, le goût devient amer.' },
+    { name:'Al dente', ico:'🍝', body:'Cuisson arrêtée quand l\'aliment offre encore une légère résistance sous la dent (pâtes, riz, légumes). Goûter 1 à 2 minutes avant le temps indiqué sur le paquet : les pâtes finissent de cuire dans la sauce.' },
+    { name:'Parer', ico:'🔪', body:'Retirer ce qui ne se mange pas ou ne cuit pas bien avant la découpe : peau, nerfs et excès de gras d\'une viande, fils des légumes, bout dur des haricots verts, pied des champignons.' },
+    { name:'Bain-marie', ico:'🫕', body:'Chauffer doucement un récipient placé sur une casserole d\'eau frémissante, sans que le fond touche l\'eau : fond le chocolat sans le brûler et monte les sauces délicates. Au four, un plat posé dans un plat d\'eau chaude cuit crèmes, flans et terrines en douceur.' },
+    { name:'Faire reposer', ico:'⏳', body:'Laisser une préparation tranquille avant de la manger ou de la travailler : une viande cuite 5 à 10 minutes sous du papier aluminium (les jus se répartissent), une pâte à pain ou à tarte (elle se détend), une pâte à crêpes (la farine s\'hydrate).' },
   ],
   ingredients: [
     { name:'Guanciale', ico:'🥓', body:'Joue ou bajoue de porc séchée et épicée, spécialité du Latium (Italie). Plus grasse et plus aromatique que la pancetta ou les lardons. Indispensable dans l\'Amatriciana et la Carbonara authentique.' },
@@ -3226,6 +3257,21 @@ const LEXIQUE = {
     { name:'Ricotta', ico:'🧀', body:'Fromage frais italien obtenu par recuisson du lactosérum (petit-lait). Doux, légèrement granuleux. Utilisé dans les lasagnes, cannoli, raviolis et gâteaux. Ne fond pas à la cuisson.' },
     { name:'Mascarpone', ico:'🧀', body:'Fromage frais italien très riche en matières grasses (environ 75%). Texture crémeuse et goût doux légèrement acidulé. Base du tiramisu, aussi utilisé pour alléger les sauces.' },
     { name:'Cinq-épices', ico:'⭐', body:'Mélange traditionnel chinois : anis étoilé, clou de girofle, cannelle, poivre de Sichuan, fenouil. Équilibre les cinq saveurs. Utilisé pour le porc laqué, le canard et les marinades asiatiques.' },
+    { name:'PST (protéines de soja texturées)', ico:'🌱', body:'Protéines de soja déshydratées, vendues sèches en petits éclats (type haché), en morceaux ou en lamelles. Pour les réhydrater : les couvrir de liquide bouillant aromatisé (bouillon de légumes, sauce soja, épices ou herbes — l\'eau seule les laisse fades) et les laisser gonfler à couvert 10 à 30 minutes selon la taille, les morceaux larges étant plus longs. Elles absorbent 2 à 3 fois leur poids. Les égoutter ensuite en les pressant fermement entre les mains ou dans un linge propre : c\'est ce qui donne une texture ferme et limite le goût de soja. Elles sont alors prêtes à être marinées, dorées à la poêle ou mijotées (bolognaise, blanquette, chili). Vérifier l\'emballage : les temps varient selon la marque. Réhydratées, elles se gardent 2 à 3 jours au frais ou se congèlent. Voir Réhydrater.' },
+    { name:'Tofu', ico:'🥡', body:'Fromage de soja pressé. Ferme : à presser 15 à 30 minutes sous un poids pour en retirer l\'eau, puis à couper en dés et dorer à la poêle ou au four, ou à mariner. Soyeux : texture crémeuse, non pressé, pour sauces, soupes miso, mousses et desserts. Fumé : déjà parfumé, se mange tel quel ou en dés.' },
+    { name:'Seitan', ico:'🌾', body:'« Viande » végétale à base de gluten de blé, dense et riche en protéines. Se trouve prêt à l\'emploi ou se prépare avec de la farine de gluten. S\'émince, se marine et se dore ; à éviter en cas d\'intolérance au gluten.' },
+    { name:'Tempeh', ico:'🫘', body:'Soja entier fermenté et compacté en bloc, d\'origine indonésienne. Goût de noix prononcé, texture ferme. Se coupe en tranches ou en dés, se marine puis se poêle ou se rôtit ; une courte cuisson à la vapeur ou à l\'eau en atténue l\'amertume.' },
+    { name:'Sauce soja', ico:'🍶', body:'Condiment de soja fermenté. La sauce soja salée (type shoyu) est l\'usage courant : très salée, elle remplace le sel. La sauce soja sucrée (type kecap manis) est sirupeuse, pour laquer et mariner. Le tamari, souvent sans blé, est plus rond et convient aux régimes sans gluten (vérifier l\'étiquette).' },
+    { name:'Sauce poisson (nuoc-mâm)', ico:'🐟', body:'Condiment d\'Asie du Sud-Est issu de poisson fermenté dans le sel. Très salée et riche en umami : une cuillère à café relève soupes, sautés, marinades et sauces. Son odeur forte s\'adoucit à la cuisson.' },
+    { name:'Citronnelle, galanga, combava', ico:'🌿', body:'Trio aromatique des cuisines thaïe et vietnamienne. Citronnelle : on utilise la base tendre des tiges, écrasée ou émincée finement. Galanga : rhizome voisin du gingembre, plus résineux et piquant. Feuilles de combava (kaffir) : parfum d\'agrume intense, à infuser entières et à retirer avant de manger. Se congèlent bien.' },
+    { name:'Levures (chimique, boulangère, maltée)', ico:'🍞', body:'Levure chimique : poudre en sachet qui fait lever gâteaux et crêpes grâce à la chaleur, sans repos. Levure de boulanger (fraîche ou sèche) : organisme vivant qui fait lever les pâtes à pain après repos, à délayer dans de l\'eau tiède, pas chaude. Levure maltée (ou nutritionnelle) : flocons jaunes désactivés au goût de fromage, à saupoudrer ; elle ne fait pas lever.' },
+    { name:'Maïzena (fécule de maïs)', ico:'🌽', body:'Amidon de maïs très fin qui épaissit sauces, crèmes et currys. La délayer dans un peu de liquide froid, la verser dans la préparation chaude et porter à frémissement en remuant 1 à 2 minutes. Environ 1 cuillère à soupe pour 250 ml de liquide donne une sauce nappante.' },
+    { name:'Bouillon, fond, fumet', ico:'🍲', body:'Bouillon : eau parfumée par la cuisson de viande, volaille ou légumes. Fond : bouillon réduit et concentré qui sert de base aux sauces. Fumet : même principe avec des arêtes de poisson, cuit seulement 20 à 30 minutes. Les cubes et poudres sont salés : goûter avant de saler le plat.' },
+    { name:'Pâtes à tarte', ico:'🥧', body:'Brisée : friable, pour quiches et tartes salées ou sucrées. Sablée : plus riche en beurre et en sucre, pour les tartes sucrées. Feuilletée : beurre en couches, elle gonfle en feuillets (chaussons, galettes). Filo : feuilles très fines à badigeonner de beurre ou d\'huile, croustillantes (bricks, bouchées, baklavas).' },
+    { name:'Légumineuses sèches', ico:'🫘', body:'Lentilles vertes, corail et noires : pas de trempage, 15 à 30 minutes de cuisson. Pois chiches et haricots secs : tremper 8 à 12 heures dans beaucoup d\'eau froide, jeter l\'eau, puis cuire 1 h à 1 h 30 (20 à 30 minutes en autocuiseur). Saler en fin de cuisson. Les haricots rouges doivent bouillir à gros bouillons 10 minutes au début : crus, ils sont toxiques.' },
+    { name:'Riz', ico:'🍚', body:'Basmati ou long : grains qui se détachent, à rincer avant cuisson (pilafs, accompagnements). Arborio ou rond (risotto) : riche en amidon, il devient crémeux quand on ajoute le bouillon louche par louche, sans le rincer. Riz rond ou à dessert : riz au lait. Compter environ 1,5 à 2 volumes d\'eau pour 1 volume de riz basmati, à couvert.' },
+    { name:'Piment', ico:'🌶️', body:'La chaleur se concentre dans les graines et les membranes blanches : les retirer adoucit le plat. Le piment d\'Espelette est doux et fruité ; les flocons et les piments secs sont plus puissants (les piments secs se réhydratent). Se laver les mains après manipulation et ne pas se toucher les yeux.' },
+    { name:'Vanille', ico:'🍦', body:'Gousse : la plus parfumée, à fendre en deux et gratter pour en récupérer les graines, en infusant aussi la gousse. Extrait : liquide, à ajouter plutôt en fin de préparation. Sucre vanillé : sucre aromatisé, plus discret. La gousse se réutilise, rincée et séchée.' },
   ],
   materiel: [
     { name:'Mandoline', ico:'🔪', body:'Ustensile de découpe manuel avec une lame réglable permettant de trancher les légumes en lamelles d\'épaisseur précise et régulière. Indispensable pour les gratins. Attention aux doigts — toujours utiliser le protège-main.' },
@@ -3238,6 +3284,11 @@ const LEXIQUE = {
     { name:'Rouleau à pâtisserie', ico:'🫓', body:'Cylindre lisse pour étaler uniformément une pâte. Le modèle à poignées avec roulements est plus précis. Pour une épaisseur régulière, placer deux règles ou tiges de même épaisseur de chaque côté de la pâte.' },
     { name:'Batteur électrique', ico:'⚡', body:'Permet de monter des blancs en neige, fouetter de la crème ou crémer du beurre sans effort. Le batteur sur socle (type KitchenAid) est plus stable pour les longues préparations comme les pâtes levées.' },
     { name:'Cuit-vapeur', ico:'💨', body:'Permet de cuire sans matière grasse en conservant nutriments, couleurs et textures. Peut être un panier en bambou posé sur une casserole d\'eau frémissante, ou électrique avec minuterie.' },
+    { name:'Four', ico:'♨️', body:'Statique : chaleur du haut et du bas, idéal pour la pâtisserie et les gratins. Chaleur tournante : l\'air est brassé, la cuisson plus homogène et rapide, avec plusieurs plaques possibles ; on baisse souvent de 10 à 20 °C. Thermostat : Th. 6 = 180 °C, Th. 7 = 210 °C, Th. 8 = 240 °C. Préchauffer 10 à 15 minutes avant d\'enfourner.' },
+    { name:'Poêle', ico:'🍳', body:'Antiadhésive : pour œufs, crêpes et poissons délicats, sans feu trop vif ni ustensiles métalliques. Inox ou fonte : supportent le feu vif et forment de belles croûtes. Toujours la préchauffer avant d\'ajouter la matière grasse : un aliment colle dans une poêle froide.' },
+    { name:'Moules à gâteau', ico:'🎂', body:'Moule à manqué : rond aux bords évasés, pour les gâteaux classiques. Moule à charnière : fond détachable, pour cheesecakes, tartes et gâteaux fragiles. Moule à cake : rectangulaire. Silicone : souple, pas besoin de beurrer, à laisser tiédir avant de démouler. Le métal foncé cuit plus vite.' },
+    { name:'Mixeur plongeant', ico:'🌀', body:'Mixeur à main plongé directement dans la casserole ou le bol : veloutés, soupes, sauces, purées. Plonger l\'appareil avant de le démarrer et laisser un peu refroidir les liquides bouillants pour éviter les éclaboussures.' },
+    { name:'Papier sulfurisé', ico:'📄', body:'Papier de cuisson antiadhésif et résistant à la chaleur (vérifier la température sur l\'emballage). Tapisse plaques et moules, sert à cuire en papillote (poisson, légumes) ou à couvrir une viande qui repose. Ne pas le laisser toucher la résistance du four.' },
   ],
 };
 
