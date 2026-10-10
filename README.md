@@ -86,10 +86,26 @@ Côté développement, il suffit de changer `CACHE_VERSION` dans `sw.js` pour d�
 ```
 ├── index.html       Application (HTML + CSS + JS)
 ├── recipes.js       Données du catalogue (recettes, accompagnements, prix, végétarien)
+├── lib/
+│   ├── qrcode.min.js  Génération des QR codes (qrcode-generator)
+│   └── jsqr.min.js    Lecture des QR codes (jsQR)
+├── tests/           Tests automatiques (développement uniquement, voir ci-dessous)
 ├── manifest.json    Configuration PWA
 ├── sw.js            Service Worker — cache hors ligne et mises à jour
 ├── icon-192.png     Icône 192 x 192 px
 └── icon-512.png     Icône 512 x 512 px
+```
+
+---
+
+## Tests automatiques (développement)
+
+Le dossier `tests/` rejoue en quelques secondes les vérifications faites à la main après chaque modification (recherche, normalisation, sauvegarde, minuteurs, mode magasin, QR codes, mode hors ligne…). Il ne sert pas à utiliser l'application.
+
+```bash
+cd tests
+npm install     # une seule fois (puppeteer-core, sans télécharger de navigateur)
+npm test        # nécessite Chrome ou Chromium (sinon : CHROME_PATH=/chemin/vers/chrome npm test)
 ```
 
 ---
@@ -111,7 +127,7 @@ Puis ouvrez `http://localhost:8000`. Les liens de partage pointent toujours vers
 - HTML / CSS / JavaScript — aucun framework, aucune étape de compilation
 - PWA : Service Worker + Web App Manifest
 - `localStorage` pour les favoris, notes, créations, préférences et exclusions d'ingrédients
-- QR codes (générés et lus hors ligne) grâce à deux bibliothèques intégrées dans `index.html` :
+- QR codes (générés et lus hors ligne) grâce à deux bibliothèques placées dans `lib/` :
   - [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) (Kazuhiko Arase, licence MIT)
   - [jsQR](https://github.com/cozmo/jsQR) (Cosmo Wolfe, licence Apache-2.0)
 - Seules les polices Google Fonts sont chargées en ligne
