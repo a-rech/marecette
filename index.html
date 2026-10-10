@@ -652,6 +652,11 @@
       width: 30px; height: 30px; border-radius: 50%; border: none; background: transparent;
       color: inherit; font-size: 16px; cursor: pointer; flex-shrink: 0;
     }
+    .timer-chip .tc-plus {
+      padding: 4px 10px; border-radius: 999px; border: 1px solid currentColor; background: transparent;
+      color: var(--accent); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; flex-shrink: 0; white-space: nowrap;
+    }
+    .timer-chip.done .tc-plus { color: #fff; }
     .timer-chip.done { background: var(--accent); color: #fff; animation: timerPulse 1s ease-in-out infinite; cursor: pointer; }
     .timer-chip.done .tc-label, .timer-chip.done .tc-time { color: #fff; }
     @keyframes timerPulse { 50% { transform: scale(1.02); } }
@@ -1619,6 +1624,13 @@
             <div class="btn-desc">Télécharge un fichier .json à conserver ou transférer</div>
           </div>
         </button>
+        <button class="data-action-btn" id="export-share-btn" style="display:none;margin-top:8px" onclick="exportData(true)">
+          <span class="btn-icon">📲</span>
+          <div>
+            <div>Partager la sauvegarde</div>
+            <div class="btn-desc">Enregistrer dans Fichiers, envoyer par mail ou messagerie…</div>
+          </div>
+        </button>
         <div class="data-status" id="export-status"></div>
       </div>
 
@@ -2306,19 +2318,19 @@ function doSearch() {
     <div class="results-grid">
       ${scoredRecipes.map(recipe => `
         <div class="recipe-card" onclick="showRecipeFromCatalogue(${recipe.id})">
-          <div class="recipe-card-img">${recipe.emoji}${cardCreationBadge(recipe.id)}${cardFavBtn(recipe.id)}</div>
+          <div class="recipe-card-img">${_esc(recipe.emoji)}${cardCreationBadge(recipe.id)}${cardFavBtn(recipe.id)}</div>
           <div class="recipe-card-body">
-            <div class="recipe-card-title">${recipe.title}</div>
+            <div class="recipe-card-title">${_esc(recipe.title)}</div>
             <div class="recipe-card-meta">
               <span>🕒 ${recipe.prep + recipe.cook} min</span>
               <span>🍽 ${recipe.portions} pers.</span>
               <span style="color:var(--accent);font-weight:500">✓ ${recipe.matchCount}/${selectedIngredients.length}</span>
             </div>
             <div class="recipe-card-tags">
-              <span class="tag diff-${recipe.diff}">${recipe.diff}</span>
+              <span class="tag diff-${_esc(recipe.diff)}">${_esc(recipe.diff)}</span>
               ${priceHtml(recipe.id)}
               ${vegHtml(recipe.id)}
-              ${recipe.tags.slice(0, 2).map(tag => `<span class="tag">${tag}</span>`).join('')}
+              ${recipe.tags.slice(0, 2).map(tag => `<span class="tag">${_esc(tag)}</span>`).join('')}
             </div>
           </div>
         </div>
@@ -2675,18 +2687,18 @@ function renderCatalogueGrid(recipes) {
     : `<div class="results-grid">
       ${recipes.map(recipe => {
         return `<div class="recipe-card" onclick="showRecipeFromCatalogue(${recipe.id})">
-          <div class="recipe-card-img">${recipe.emoji}${cardCreationBadge(recipe.id)}${cardFavBtn(recipe.id)}</div>
+          <div class="recipe-card-img">${_esc(recipe.emoji)}${cardCreationBadge(recipe.id)}${cardFavBtn(recipe.id)}</div>
           <div class="recipe-card-body">
-            <div class="recipe-card-title">${recipe.title}</div>
+            <div class="recipe-card-title">${_esc(recipe.title)}</div>
             <div class="recipe-card-meta">
               <span>🕒 ${recipe.prep + recipe.cook} min</span>
               <span>🍽 ${recipe.portions} pers.</span>
             </div>
             <div class="recipe-card-tags">
-              <span class="tag diff-${recipe.diff}">${recipe.diff}</span>
+              <span class="tag diff-${_esc(recipe.diff)}">${_esc(recipe.diff)}</span>
               ${priceHtml(recipe.id)}
               ${vegHtml(recipe.id)}
-              <span class="tag">${recipe.origin}</span>
+              <span class="tag">${_esc(recipe.origin)}</span>
             </div>
           </div>
         </div>`;
@@ -2765,19 +2777,19 @@ function pickRandom() {
   const container = document.getElementById('random-recipe-container');
   container.innerHTML = `
     <div class="recipe-card" onclick="showRecipeFromCatalogue(${recipe.id})">
-      <div class="recipe-card-img">${recipe.emoji}${cardCreationBadge(recipe.id)}${cardFavBtn(recipe.id)}</div>
+      <div class="recipe-card-img">${_esc(recipe.emoji)}${cardCreationBadge(recipe.id)}${cardFavBtn(recipe.id)}</div>
       <div class="recipe-card-body">
-        <div class="recipe-card-title">${recipe.title}</div>
+        <div class="recipe-card-title">${_esc(recipe.title)}</div>
         <div class="recipe-card-meta">
           <span>🕒 ${recipe.prep + recipe.cook} min</span>
           <span>🍽 ${recipe.portions} pers.</span>
-          <span>🌍 ${recipe.origin}</span>
+          <span>🌍 ${_esc(recipe.origin)}</span>
         </div>
         <div class="recipe-card-tags">
-          <span class="tag diff-${recipe.diff}">${recipe.diff}</span>
+          <span class="tag diff-${_esc(recipe.diff)}">${_esc(recipe.diff)}</span>
           ${priceHtml(recipe.id)}
           ${vegHtml(recipe.id)}
-          ${recipe.tags.slice(0, 3).map(t => `<span class="tag">${t}</span>`).join('')}
+          ${recipe.tags.slice(0, 3).map(t => `<span class="tag">${_esc(t)}</span>`).join('')}
         </div>
       </div>
     </div>
@@ -2885,13 +2897,29 @@ function clearLexique() {
   renderLexique();
 }
 
+const _ACCENT_CLASSES = { a: 'aàâä', c: 'cç', e: 'eéèêë', i: 'iîï', o: 'oôö', u: 'uùûü', y: 'yÿ', "'": "'’‘`´" };
+function _accentRegex(q) {
+  const n = _normTxt(q);
+  let out = '';
+  for (let i = 0; i < n.length; i++) {
+    const c = n.charAt(i);
+    if (c === 'o' && n.charAt(i + 1) === 'e') { out += '(?:œ|[oôö][eéèêë])'; i++; }
+    else if (_ACCENT_CLASSES[c]) out += '[' + _ACCENT_CLASSES[c] + ']';
+    else if (/\s/.test(c)) out += '\\s+';
+    else out += c.replace(/[.*+?^${}()|[\]\\\/-]/g, '\\$&');
+  }
+  return new RegExp('(' + out + ')', 'gi');
+}
+
 function renderLexique() {
   const q = currentLexQuery;
   let items;
   if (q) {
     // Cherche dans tous les onglets simultanément
+    // Insensible aux accents, à la casse, à « œ » et aux apostrophes (même règle que la recherche du catalogue)
+    const nq = _normTxt(q);
     items = Object.values(LEXIQUE).flat().filter(item =>
-      item.name.toLowerCase().includes(q) || item.body.toLowerCase().includes(q)
+      _normTxt(item.name).includes(nq) || _normTxt(item.body).includes(nq)
     );
   } else {
     items = LEXIQUE[currentLexTab] || [];
@@ -2903,10 +2931,10 @@ function renderLexique() {
     return;
   }
 
+  // Surlignage tolérant : chaque lettre de la saisie accepte ses variantes accentuées (e → é è ê ë…)
+  const re = q ? _accentRegex(q) : null;
   function hl(text) {
-    if (!q) return text;
-    const re = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
-    return text.replace(re, '<span class="lex-highlight">$1</span>');
+    return re ? text.replace(re, '<span class="lex-highlight">$1</span>') : text;
   }
 
   container.innerHTML = items.map((item, i) => `
@@ -2961,14 +2989,14 @@ function showRecipe(recipeId, swipeList, animDir) {
   const userBadge = getRecipeHeader(recipe.id);
   container.innerHTML = userBadge + `
     <div class="recipe-header">
-      <div class="recipe-hero-img">${recipe.emoji}</div>
+      <div class="recipe-hero-img">${_esc(recipe.emoji)}</div>
       <div class="recipe-title-row">
-        <h1 class="recipe-big-title">${recipe.title}</h1>
+        <h1 class="recipe-big-title">${_esc(recipe.title)}</h1>
         <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap">
           <div class="recipe-badges">
-            <span class="tag diff-${recipe.diff}">${recipe.diff}</span>
-            <span class="tag">${recipe.origin}</span>
-            <span class="tag">${recipe.cat}</span>
+            <span class="tag diff-${_esc(recipe.diff)}">${_esc(recipe.diff)}</span>
+            <span class="tag">${_esc(recipe.origin)}</span>
+            <span class="tag">${_esc(recipe.cat)}</span>
             ${priceHtml(recipe.id)}
             ${vegHtml(recipe.id)}
           </div>
@@ -3004,8 +3032,8 @@ function showRecipe(recipeId, swipeList, animDir) {
         <ul class="ingredients-list" id="ingredients-list-${recipe.id}">
           ${recipe.ingredients.map(ing => `
             <li>
-              <span>${ing[0]}</span>
-              <span class="ing-qty" data-base-qty="${ing[1]}" data-unit="${ing[2]}">${ing[1]} ${pluralUnit(ing[2], ing[1])}</span>
+              <span>${_esc(ing[0])}</span>
+              <span class="ing-qty" data-base-qty="${ing[1]}" data-unit="${_esc(ing[2])}">${_esc(fmtIngQty(ing[1], ing[2], 1))}</span>
             </li>
           `).join('')}
         </ul>
@@ -3315,8 +3343,10 @@ function backupReminderLater() {
 
 function backupReminderNow() {
   closeBackupReminder();
-  exportData();   // télécharge le fichier et enregistre la date de sauvegarde
-  showUpdateToast('💾 Sauvegarde téléchargée');
+  // Sur téléphone : feuille de partage (Fichiers, mail…) si disponible ; sinon téléchargement.
+  // La date de sauvegarde n'est enregistrée que si elle a vraiment eu lieu.
+  const touch = window.matchMedia && matchMedia('(pointer: coarse)').matches;
+  exportData(touch, function(ok) { if (ok) showUpdateToast('💾 Sauvegarde effectuée'); });
 }
 
 // Appliquer toutes les préférences au démarrage
@@ -3540,7 +3570,17 @@ function collectUserData() {
 function _plural(n, one, many) { return n + ' ' + (n > 1 ? many : one); }
 
 // Télécharge un fichier JSON sur l'appareil
-function exportData() {
+// Le partage de fichier (feuille de partage du système : Fichiers, AirDrop, mail…) n'existe pas partout
+function _canShareBackup() {
+  try {
+    return !!(navigator.share && navigator.canShare &&
+      navigator.canShare({ files: [new File(['{}'], 'a.json', { type: 'application/json' })] }));
+  } catch (e) { return false; }
+}
+
+// share = true : feuille de partage du système si disponible, sinon téléchargement.
+// done(ok) est appelé une fois la sauvegarde réellement effectuée (ok = false si annulée ou impossible).
+function exportData(share, done) {
   var data = collectUserData();
   var recCount  = data.userRecipes.length;
   var favCount  = data.favorites.length;
@@ -3548,27 +3588,46 @@ function exportData() {
 
   if (recCount === 0 && favCount === 0 && noteCount === 0 && !data.menu) {
     showDataStatus('export-status', 'Aucune donnée à exporter (pas de création, de favori, de note ni de menu).', false);
+    if (done) done(false);
     return;
   }
 
   var json = JSON.stringify(data, null, 2);
-  var blob = new Blob([json], { type: 'application/json' });
-  var url  = URL.createObjectURL(blob);
   var date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-  var a = document.createElement('a');
-  a.href = url;
-  a.download = 'marecette-sauvegarde-' + date + '.json';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(function() { URL.revokeObjectURL(url); }, 2000);
-  _lsSet(BACKUP_LAST_KEY, Date.now());                    // date du dernier export (rappel des 30 jours)
-  try { localStorage.removeItem(BACKUP_SNOOZE_KEY); } catch (e) {}
+  var name = 'marecette-sauvegarde-' + date + '.json';
 
-  showDataStatus('export-status',
-    '✓ ' + _plural(recCount, 'création', 'créations') + ', ' +
-    _plural(favCount, 'favori', 'favoris') + ' et ' +
-    _plural(noteCount, 'note', 'notes') + ' exportés.' + (data.menu ? ' Menu et liste de courses inclus.' : ''), true);
+  var finish = function(verb) {
+    _lsSet(BACKUP_LAST_KEY, Date.now());                  // date du dernier export (rappel des 30 jours)
+    try { localStorage.removeItem(BACKUP_SNOOZE_KEY); } catch (e) {}
+    showDataStatus('export-status',
+      '✓ ' + _plural(recCount, 'création', 'créations') + ', ' +
+      _plural(favCount, 'favori', 'favoris') + ' et ' +
+      _plural(noteCount, 'note', 'notes') + ' ' + verb + '.' + (data.menu ? ' Menu et liste de courses inclus.' : ''), true);
+    if (done) done(true);
+  };
+
+  var download = function() {
+    var url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function() { URL.revokeObjectURL(url); }, 2000);
+    finish('exportés');
+  };
+
+  if (share === true && _canShareBackup()) {
+    navigator.share({ files: [new File([json], name, { type: 'application/json' })], title: 'Sauvegarde MaRecette' })
+      .then(function() { finish('partagés'); })
+      .catch(function(err) {
+        if (err && err.name === 'AbortError') { if (done) done(false); return; }   // annulé : rien n'est enregistré
+        download();                                                                // partage impossible : téléchargement
+      });
+    return;
+  }
+  download();
 }
 
 // Recette d'une sauvegarde → recette nettoyée (mêmes règles que l'import par lien, en mode « fidèle »)
@@ -3839,7 +3898,7 @@ function filterCloneResults(query) {
   filtered.forEach(r => {
     const btn = document.createElement('button');
     btn.className = 'btn';
-    btn.innerHTML = (r.emoji || '🍳') + ' ' + r.title;
+    btn.textContent = (r.emoji || '🍳') + ' ' + r.title;
     btn.onclick = () => cloneRecipe(r);
     results.appendChild(btn);
   });
@@ -3945,7 +4004,7 @@ function addStepRow(text = '') {
   const list = document.getElementById('step-list');
   const row = document.createElement('div');
   row.className = 'step-row';
-  row.innerHTML = `<textarea class="form-input" placeholder="Étape…">${text}</textarea>
+  row.innerHTML = `<textarea class="form-input" placeholder="Étape…">${_esc(text)}</textarea>
     <button type="button" class="step-remove" onclick="this.parentNode.remove()">×</button>`;
   list.appendChild(row);
 }
@@ -4045,11 +4104,18 @@ function pluralUnit(unit, q) {
   return (Number(q) > 1) ? cu.get(sing) + 's' : cu.get(sing);
 }
 
-// Quantité d'une fiche recalculée pour un nombre de portions : « 1 gousse » × 2 → « 2 gousses »
+// Nombre à la française : « 1,5 »
+function frNum(n) { return String(n).replace('.', ','); }
+
+// Quantité d'une fiche recalculée pour un nombre de portions, à la française :
+// « 1 gousse » × 2 → « 2 gousses », « 500 g » × 3 → « 1,5 kg », « 0,25 c.à.c » conservé (2 décimales sous 10, 1 au-delà)
 function fmtIngQty(qty, unit, ratio) {
-  const base = Number(qty) || 0;
-  const txt = ratio === 1 ? String(base) : (base * ratio).toFixed(1).replace(/\.?0+$/, '');
-  return txt + ' ' + pluralUnit(unit, parseFloat(txt));
+  let q = (Number(qty) || 0) * (ratio || 1);
+  let u = String(unit == null ? '' : unit).trim();
+  if (q > 0) { const qu = normalizeQtyUnit(q, u); q = qu[0]; u = qu[1]; }   // g → kg, ml → L, cl → ml…
+  const d = q < 10 ? 100 : 10;
+  const r = Math.round(q * d) / d;
+  return frNum(r) + ' ' + pluralUnit(u, r);
 }
 
 // [[nom, qté, unité], …] → même structure, normalisée (lignes sans nom retirées)
@@ -4255,7 +4321,7 @@ function getRecipeHeader(id) {
   const recipe = getUserRecipe(id);
   if (!recipe) return '';
   
-  const creator = recipe.creator ? ` de ${recipe.creator}` : '';
+  const creator = recipe.creator ? ` de ${_esc(recipe.creator)}` : '';
   return `<div style="margin-bottom:12px;"><span class="user-recipe-badge">✨ Création${creator}</span></div>`;
 }
 
@@ -4389,10 +4455,10 @@ function enterRecipeSoireeMode(id) {
   const ingHtml = recipe.ingredients.map(i => {
     let qtyStr = '';
     if (i[1]) {
-      qtyStr = ' <span style="color:var(--text2);font-size:.75em">' + fmtIngQty(i[1], i[2], ratio) + '</span>';
+      qtyStr = ' <span style="color:var(--text2);font-size:.75em">' + _esc(fmtIngQty(i[1], i[2], ratio)) + '</span>';
     }
     return '<li style="font-size:22px;color:var(--text);display:flex;align-items:baseline;gap:8px;line-height:1.3;border-bottom:1px solid var(--border);padding-bottom:14px">'
-      + i[0]
+      + _esc(i[0])
       + qtyStr
       + '</li>';
   }).join('');
@@ -4420,8 +4486,8 @@ function enterRecipeSoireeMode(id) {
     'border:1px solid var(--border);border-radius:20px;font-size:15px;cursor:pointer;box-shadow:var(--shadow)">← Retour</button>',
 
     '<div style="text-align:center;padding:48px 24px 24px">',
-    '<div style="font-size:80px;line-height:1;margin-bottom:16px">' + (recipe.emoji || '🍳') + '</div>',
-    '<div style="font-family:\'Playfair Display\',serif;font-size:32px;font-weight:700;color:var(--text);line-height:1.2">' + recipe.title + '</div>',
+    '<div style="font-size:80px;line-height:1;margin-bottom:16px">' + _esc(recipe.emoji || '🍳') + '</div>',
+    '<div style="font-family:\'Playfair Display\',serif;font-size:32px;font-weight:700;color:var(--text);line-height:1.2">' + _esc(recipe.title) + '</div>',
     (selectedPortions !== basePortions ? '<div style="font-size:14px;color:var(--accent);margin-top:8px">pour ' + selectedPortions + ' portions</div>' : ''),
     '</div>',
 
@@ -4495,7 +4561,6 @@ const _DUR_MIN_RE = /^\s*(?:et\s+)?(\d{1,2})(?:\s*(?:minutes?|mins?)(?![a-zà-ÿ
 
 function stepWithTimers(text, rid, idx, title, big) {
   text = String(text == null ? '' : text);
-  if (/[<>]/.test(text)) return text;           // étape contenant déjà du balisage : on n'y touche pas
   let out = '', last = 0, m;
   _DUR_RE.lastIndex = 0;
   while ((m = _DUR_RE.exec(text))) {
@@ -4517,14 +4582,14 @@ function stepWithTimers(text, rid, idx, title, big) {
     secs = Math.round(secs);
     if (secs < 5 || secs > 21600) continue;
     _DUR_RE.lastIndex = end;
-    out += text.slice(last, m.index)
+    out += _esc(text.slice(last, m.index))
       + '<button type="button" class="step-timer' + (big ? ' big' : '') + '" data-sec="' + secs
       + '" data-key="' + rid + ':' + idx + ':' + secs
       + '" data-label="' + _esc('Étape ' + (idx + 1) + ' · ' + title)
-      + '" onclick="startStepTimer(this)" title="Lancer un minuteur">⏱ ' + text.slice(m.index, end) + '</button>';
+      + '" onclick="startStepTimer(this)" title="Lancer un minuteur">⏱ ' + _esc(text.slice(m.index, end)) + '</button>';
     last = end;
   }
-  return out + text.slice(last);
+  return out + _esc(text.slice(last));   // texte de l'étape toujours échappé
 }
 
 const TIMERS_KEY = 'marecette_timers';
@@ -4550,6 +4615,7 @@ function startStepTimer(btn) {
     _audioCtx = _audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     if (_audioCtx.state === 'suspended') _audioCtx.resume();
   } catch (e) {}
+  _askTimerNotifications();
   const key = btn.dataset.key || (btn.dataset.label + '|' + secs);
   if (_timers.some(function(t) { return t.key === key && !t.done; })) {
     showUpdateToast('⏱ Ce minuteur est déjà lancé');
@@ -4566,6 +4632,43 @@ function dismissTimer(id) {
   _saveTimers();
   _renderTimers();
   _syncTimerLoop();
+}
+
+// +1 min : prolonge un minuteur en cours, ou relance d'une minute un minuteur terminé (et coupe la sonnerie)
+function addTimerMinute(id) {
+  const t = _timers.find(function(x) { return x.id === id; });
+  if (!t) return;
+  t.ringId = (t.ringId || 0) + 1;
+  if (t.done) { t.done = false; t.end = Date.now() + 60000; } else { t.end += 60000; }
+  _saveTimers();
+  _renderTimers();
+  _syncTimerLoop();
+}
+
+// Notification système à la fin d'un minuteur quand l'appli n'est pas au premier plan.
+// Permission demandée une seule fois, au premier minuteur lancé.
+const TIMER_NOTIF_KEY = 'marecette_timer_notif_asked';
+function _askTimerNotifications() {
+  try {
+    if (!('Notification' in window) || Notification.permission !== 'default') return;
+    if (localStorage.getItem(TIMER_NOTIF_KEY)) return;
+    localStorage.setItem(TIMER_NOTIF_KEY, '1');
+    Notification.requestPermission();
+  } catch (e) {}
+}
+function _notifyTimerDone(t) {
+  try {
+    if (document.visibilityState === 'visible') return;
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const opts = { body: t.label, tag: 'marecette-timer-' + t.id, icon: 'icon-192.png', vibrate: [300, 150, 300], requireInteraction: true };
+    const title = '⏱ Minuteur terminé';
+    const direct = function() { try { new Notification(title, opts); } catch (e) {} };   // repli quand aucun Service Worker n'est actif
+    if (navigator.serviceWorker && navigator.serviceWorker.getRegistration) {
+      navigator.serviceWorker.getRegistration().then(function(reg) {
+        if (reg && reg.showNotification) reg.showNotification(title, opts); else direct();
+      }).catch(direct);
+    } else { direct(); }
+  } catch (e) {}
 }
 
 function _renderTimers() {
@@ -4588,6 +4691,7 @@ function _renderTimers() {
     return '<div class="timer-chip' + (t.done ? ' done' : '') + '"' + (t.done ? ' onclick="dismissTimer(' + t.id + ')"' : '') + '>'
       + '<span aria-hidden="true">⏱</span><span class="tc-label">' + _esc(t.label) + '</span>'
       + '<span class="tc-time" data-tid="' + t.id + '">' + (t.done ? 'Terminé !' : _fmtTimer(t.end - Date.now())) + '</span>'
+      + '<button type="button" class="tc-plus" onclick="event.stopPropagation(); addTimerMinute(' + t.id + ')" aria-label="Ajouter une minute">+1 min</button>'
       + '<button type="button" class="tc-x" onclick="event.stopPropagation(); dismissTimer(' + t.id + ')" aria-label="'
       + (t.done ? 'Fermer' : 'Annuler le minuteur') + '">✕</button></div>';
   }).join('');
@@ -4599,7 +4703,7 @@ function _tickTimers() {
   let changed = false;
   _timers.forEach(function(t) {
     if (t.done) return;
-    if (t.end <= now) { t.done = true; changed = true; _ringTimer(t); return; }
+    if (t.end <= now) { t.done = true; changed = true; _ringTimer(t); _notifyTimerDone(t); return; }
     const el = document.querySelector('#timer-dock .tc-time[data-tid="' + t.id + '"]');
     if (el) el.textContent = _fmtTimer(t.end - now);
   });
@@ -4617,8 +4721,9 @@ function _syncTimerLoop() {
 // Sonnerie : séries de bips + vibration, répétées jusqu'à ce que le minuteur soit fermé (6 fois max)
 function _ringTimer(t) {
   let n = 0;
+  const ringId = t.ringId = (t.ringId || 0) + 1;
   (function loop() {
-    if (_timers.indexOf(t) === -1 || n++ >= 6) return;
+    if (_timers.indexOf(t) === -1 || t.ringId !== ringId || !t.done || n++ >= 6) return;
     try { if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 300]); } catch (e) {}
     try {
       if (_audioCtx) {
@@ -4646,7 +4751,7 @@ function restoreTimers() {
     return t && typeof t.end === 'number' && typeof t.label === 'string' && t.end > now - 30 * 60000;
   }).map(function(t) {
     _timerSeq = Math.max(_timerSeq, (parseInt(t.id, 10) || 0) + 1);
-    return { id: parseInt(t.id, 10) || _timerSeq++, key: String(t.key || ''), label: t.label.slice(0, 120), total: t.total || 0, end: t.end, done: t.end <= now };
+    return { id: parseInt(t.id, 10) || _timerSeq++, key: String(t.key || ''), label: t.label.slice(0, 120), total: t.total || 0, end: t.end, done: t.end <= now, ringId: 0 };
   });
   _saveTimers();
   _renderTimers();
@@ -4717,6 +4822,8 @@ let _pantryOpen = false;   // bloc Placard déplié (non conservé)
 let _menuTab = 'menu';
 let _storeMode = false;    // mode magasin actif (non conservé)
 const _foldedAisles = new Set();   // rayons repliés (non conservé)
+const _autoFolded = new Set();     // rayons repliés automatiquement (mode magasin)
+const _aisleWasTodo = new Map();   // rayon → avait encore des articles à acheter au dernier affichage
 let _menuSheet = null;     // état de la fenêtre « Ajouter à la liste »
 let _shopRendered = [];    // lignes actuellement affichées (index utilisé par les clics)
 let _undo = [];            // pile d'annulation : { label, key, snap } — un instantané avant chaque modification
@@ -4896,7 +5003,7 @@ function _unitInfo(u) {
   return { key: sing, mult: 1, count: _UNIT_COUNT.indexOf(sing) !== -1 };
 }
 
-function _fmtNum(n) { return String(Math.round(n * 100) / 100); }
+function _fmtNum(n) { return frNum(Math.round(n * 100) / 100); }
 
 // Arrondis pensés pour les courses : g/ml aux 5 près, pièces (sans unité ou gousses, branches…) à l'entier supérieur
 function _fmtTotal(u, total) {
@@ -4909,7 +5016,7 @@ function _fmtTotal(u, total) {
     const n = Math.max(1, Math.ceil(total - 0.05));
     return !u.key ? String(n) : n + ' ' + (n > 1 && u.count ? u.key + 's' : u.key);
   }
-  return String(Math.round(total * 10) / 10) + ' ' + u.key;   // cuillères etc. : une décimale suffit pour les courses
+  return frNum(Math.round(total * 10) / 10) + ' ' + u.key;   // cuillères etc. : une décimale suffit pour les courses
 }
 
 function _fmtAmount(qty, unit) {
@@ -5158,13 +5265,18 @@ function _applyStoreMode() {
   if (h) h.textContent = !_storeMode ? '' : ('wakeLock' in navigator ? '🔆 Écran maintenu allumé' : 'Maintien de l\u2019écran allumé non pris en charge par ce navigateur');
 }
 function toggleStoreMode() {
-  _storeMode = !_storeMode;
-  if (_storeMode) acquireWake('store'); else releaseWake('store');
+  if (_storeMode) { stopStoreMode(); _renderShopList(_shopRendered); return; }
+  _storeMode = true;
+  _aisleWasTodo.clear();
+  acquireWake('store');
   _applyStoreMode();
+  _renderShopList(_shopRendered);   // mémorise l'état de chaque rayon pour détecter ceux qu'on termine
 }
 function stopStoreMode() {
   if (!_storeMode) return;
   _storeMode = false;
+  _autoFolded.forEach(function(id) { _foldedAisles.delete(id); });   // à la sortie, les rayons repliés automatiquement se rouvrent
+  _autoFolded.clear();
   releaseWake('store');
   _applyStoreMode();
 }
@@ -5416,6 +5528,10 @@ function _renderShopList(items) {
       const idx = main.filter(function(i) { return all[i].aisle === a.id; });
       if (!idx.length) return;
       const todo = idx.filter(function(i) { return !all[i].checked; }).length;
+      // Mode magasin : un rayon qu'on vient de terminer se replie tout seul ; il se rouvre si un article y redevient « à acheter »
+      if (_storeMode && _aisleWasTodo.get(a.id) === true && todo === 0) { _foldedAisles.add(a.id); _autoFolded.add(a.id); }
+      else if (_autoFolded.has(a.id) && todo > 0) { _foldedAisles.delete(a.id); _autoFolded.delete(a.id); }
+      _aisleWasTodo.set(a.id, todo > 0);
       const folded = _foldedAisles.has(a.id);
       html += `<div class="shop-sep" role="button" tabindex="0" data-aisle="${a.id}" aria-expanded="${!folded}" onclick="shopToggleAisle('${a.id}')"
           onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); shopToggleAisle('${a.id}'); }">
@@ -5696,7 +5812,7 @@ function restoreMenuFromBackup(m, mapId) {
 // « Effacer toutes mes données » : les clés marecette_* sont supprimées, on vide aussi la mémoire de l'appli
 function menuResetMemory() {
   _menu = null; _shop = null; _menuOpts = null;
-  stopStoreMode(); _foldedAisles.clear();
+  stopStoreMode(); _foldedAisles.clear(); _autoFolded.clear(); _aisleWasTodo.clear();
   _pantryOpen = false; _menuTab = 'menu'; _menuSheet = null; _shopRendered = []; _undo = [];
   updateMenuBadges();
 }
@@ -5710,6 +5826,8 @@ window.onload = function() {
   maybeShowWelcome();
   maybeShowBackupReminder();   // ne s'affiche pas tant que la bienvenue est ouverte
   restoreTimers();             // minuteurs en cours avant un rechargement
+  const shareBtn = document.getElementById('export-share-btn');
+  if (shareBtn && _canShareBackup()) shareBtn.style.display = '';   // bouton « Partager » seulement si le système le permet
   // Formulaire de création : correction à la sortie des champs ingrédient et titre
   const ingList = document.getElementById('ing-list');
   if (ingList) ingList.addEventListener('change', onIngredientFieldChange);

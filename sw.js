@@ -15,7 +15,7 @@
    Pour déclencher une mise à jour : il suffit de changer CACHE_VERSION.
    ════════════════════════════════════════════════════════════════════════ */
 
-const CACHE_VERSION = 'marecette-v2.6.0';
+const CACHE_VERSION = 'marecette-v2.7.0';
 
 function getAssets() {
   const base = self.registration.scope;
@@ -120,6 +120,19 @@ self.addEventListener('fetch', function(event) {
           { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
         );
       });
+    })
+  );
+});
+
+// Clic sur une notification (fin de minuteur) : ramener l'appli au premier plan
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(list) {
+      for (var i = 0; i < list.length; i++) {
+        if ('focus' in list[i]) return list[i].focus();
+      }
+      return self.clients.openWindow(self.registration.scope);
     })
   );
 });
