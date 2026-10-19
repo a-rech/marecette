@@ -158,6 +158,27 @@
       border: 1px solid rgba(192,57,43,.35); background: rgba(192,57,43,.10); color: #C0392B;
       font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
     }
+    /* Recherche filtrante + vue par catégories (page Recherche par ingrédients) */
+    .ing-search-sticky { position: sticky; top: 58px; z-index: 50; background: var(--bg); padding: 6px 0 10px; margin: -6px 0 6px; }
+    .ing-search-sticky .lex-search-wrap { margin-bottom: 0; }
+    .ing-hide { display: none !important; }
+    #ing-search { -webkit-appearance: none; appearance: none; font-size: 16px; }
+    #ing-search::-webkit-search-cancel-button { display: none; }
+    .ing-empty { display: none; padding: 22px 8px; text-align: center; color: var(--text2); font-size: 14px; margin-bottom: 20px; }
+    .view-mode-btn { border-color: var(--border); background: var(--surface); color: var(--text2); }
+    .families-grid.cat-view { grid-template-columns: 1fr; gap: 8px; }
+    .cat-view .family-block { padding: 0; overflow: hidden; }
+    .cat-view .family-label { margin: 0; padding: 13px 14px; font-size: 13px; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+    .cat-view .family-label:hover { background: var(--surface2); }
+    .cat-view .ingredient-chips { display: none; padding: 2px 12px 12px; }
+    .cat-view .family-block.open .ingredient-chips { display: block; }
+    .fam-meta { display: none; margin-left: auto; align-items: center; gap: 6px; text-transform: none; letter-spacing: 0; }
+    .cat-view .fam-meta { display: inline-flex; }
+    .fam-count { font-size: 12px; color: var(--text3); font-weight: 400; }
+    .fam-badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: var(--accent); color: white; }
+    .fam-badge.excl { background: #C0392B; }
+    .fam-chev { font-size: 12px; color: var(--text3); transition: transform .2s; display: inline-block; }
+    .family-block.open .fam-chev { transform: rotate(90deg); }
     .live-count { margin-left: 8px; font-size: 12px; font-weight: 500; opacity: .9; white-space: nowrap; }
 
     .search-actions { display: flex; gap: 12px; align-items: center; margin-bottom: 28px; flex-wrap: wrap; }
@@ -1368,13 +1389,23 @@
   </div>
   <div class="section-title">Recherche par ingrédients</div>
   <p class="section-sub">Sélectionnez les ingrédients que vous avez à la maison</p>
+  <div class="ing-search-sticky">
+    <div class="lex-search-wrap">
+      <span class="lex-search-ico">🔍</span>
+      <input class="lex-search-input" id="ing-search" type="search" placeholder="Rechercher un ingrédient…" oninput="filterIngredients(this.value)" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+      <button class="lex-search-clear" id="ing-search-clear" onclick="clearIngSearch()" aria-label="Effacer la recherche">✕</button>
+    </div>
+  </div>
   <div class="chip-mode-bar">
     <button class="chip-mode-btn" onclick="toggleChipMode()">✔ Sélection</button>
+    <button class="chip-mode-btn view-mode-btn" onclick="toggleIngView()" title="Changer l'affichage des ingrédients">▦ Pastilles</button>
     <span class="chip-mode-hint" id="chip-mode-hint">Mode ✔ Sélection actif - Basculer en mode ✕ pour exclure</span>
   </div>
   <div class="families-grid" id="families-container"></div>
+  <div class="ing-empty" id="ing-empty"></div>
   <div class="search-actions-top">
     <button class="chip-mode-btn" onclick="toggleChipMode()">✔ Sélection</button>
+    <button class="chip-mode-btn view-mode-btn" onclick="toggleIngView()" title="Changer l'affichage des ingrédients">▦ Pastilles</button>
     <button id="btn-reset-excl" onclick="resetExclusions()" style="display:none">✕ Effacer les exclusions</button>
   </div>
   <div class="search-actions">
@@ -1788,7 +1819,40 @@
 <!-- Bibliothèques QR intégrées : fonctionnent hors ligne (mises en cache avec index.html) -->
 <script src="lib/qrcode.min.js"></script>
 <script src="lib/jsqr.min.js"></script>
-<script src="recipes.js" charset="utf-8" onerror="document.addEventListener('DOMContentLoaded',function(){document.body.innerHTML='<p style=&quot;padding:24px;font:16px sans-serif&quot;>Impossible de charger <b>recipes.js</b>. Vérifiez que le fichier est bien à côté de index.html (ou rechargez la page).</p>';});"></script>
+<script src="recipes.js" charset="utf-8"></script>
+<script>
+/* ── Mode test : recette factice ───────────────────────────────────────────
+   Si recipes.js est introuvable (index.html lancé seul, sans le catalogue), on charge une
+   seule recette factice pour tester l'interface rapidement, sans pousser sur GitHub.
+   Aucun effet quand recipes.js est présent. Affectations via window.* : un « const »/« var »
+   entrerait en conflit avec les constantes de recipes.js quand il est chargé. */
+if (typeof RECIPES === 'undefined') {
+  window.__MARECETTE_DUMMY = true;
+  window.RECIPES = [{
+    id: 9999, title: 'Recette factice (test)', emoji: '🧪', cat: 'Plats principaux', origin: 'Internationale',
+    diff: 'facile', prep: 10, cook: 20, portions: 4,
+    ingredients: [['Farine', 200, 'g'], ['Œuf', 4, ''], ['Lait', 500, 'ml'], ['Beurre', 50, 'g'],
+                  ['Sucre', 2, 'c.à.s'], ['Levure boulangère', 1, 'c.à.c'], ['Sel', 1, 'pincée']],
+    tags: ['Farine', 'Œuf', 'Lait', 'Beurre', 'Sucre'],
+    steps: ['Mélangez la farine, le sucre, la levure et le sel dans un saladier.',
+            'Ajoutez les œufs, puis le lait petit à petit en fouettant.',
+            'Incorporez le beurre fondu et laissez reposer 10 minutes.',
+            'Faites cuire à la poêle, 2 minutes de chaque côté.'],
+    price: 1, vegetarian: true
+  }];
+  window.ACCOMPAGNEMENTS = { 9999: ['Salade verte', 'Fruits frais', 'Sirop d\'érable'] };
+  window.PRICE_MAP = { 9999: 1 };
+  window.VEG_SET = new Set([9999]);
+  document.addEventListener('DOMContentLoaded', function() {
+    const b = document.createElement('div');
+    b.textContent = '🧪 Mode test : recipes.js introuvable, recette factice affichée';
+    b.style.cssText = 'position:fixed;left:8px;bottom:max(8px,env(safe-area-inset-bottom));z-index:9999;'
+      + 'padding:4px 10px;border-radius:12px;background:#C0392B;color:#fff;font:600 11px sans-serif;'
+      + 'opacity:.92;pointer-events:none;max-width:calc(100% - 16px)';
+    document.body.appendChild(b);
+  });
+}
+</script>
 <script>
 // ===================== DONNÉES =====================
 const FAMILIES = [
@@ -2128,10 +2192,11 @@ function loadIngredientFamilies() {
     <div class="family-block">
       <div class="family-label">
         <span class="ficon">${family.icon}</span> ${family.label}
+        <span class="fam-meta"><span class="fam-count"></span><span class="fam-badge" style="display:none"></span><span class="fam-badge excl" style="display:none"></span><span class="fam-chev">▸</span></span>
       </div>
       <div class="ingredient-chips">
         ${family.items.map(item => `
-          <span class="ingredient-chip" data-item="${item.replace(/"/g, '&quot;')}">${item}</span>
+          <span class="ingredient-chip" data-item="${item.replace(/"/g, '&quot;')}" data-n="${_ingNorm(item).replace(/"/g, '&quot;')}">${item}</span>
         `).join('')}
       </div>
     </div>
@@ -2140,6 +2205,12 @@ function loadIngredientFamilies() {
   // Délégation d'événement sur le conteneur : un seul listener pour tous les chips.
   // Évite le bug des apostrophes dans les onclick inline (ex: "Huile d'olive").
   container.addEventListener('click', function(e) {
+    // Vue par catégories : un clic sur l'en-tête déplie / replie la catégorie
+    const head = e.target.closest('.family-label');
+    if (head && container.classList.contains('cat-view')) {
+      head.parentNode.classList.toggle('open');
+      return;
+    }
     const chip = e.target.closest('.ingredient-chip');
     if (!chip) return;
     const item = chip.dataset.item || chip.textContent.trim();
@@ -2175,6 +2246,105 @@ function loadIngredientFamilies() {
     if (chip) { chip.classList.remove('selected'); chip.classList.add('excluded'); }
   });
   syncExclBtn();
+  applyIngView(_getIngView(), true);   // vue mémorisée (pastilles par défaut)
+  updateFamBadges();
+}
+
+// ── Recherche filtrante + vue par catégories ─────────────────────────────
+const ING_VIEW_KEY = 'marecette_ing_view_v1';
+let _ingQuery = '';            // saisie normalisée courante
+let _catOpenBefore = null;     // catégories ouvertes avant le début d'une recherche
+
+// Minuscules, sans accents, « œ » → « oe », apostrophes typographiques → '
+function _ingNorm(str) {
+  return String(str == null ? '' : str).toLowerCase()
+    .replace(/œ/g, 'oe').replace(/æ/g, 'ae').replace(/[’‘`]/g, "'")
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
+function _getIngView() {
+  try { return localStorage.getItem(ING_VIEW_KEY) === 'cats' ? 'cats' : 'chips'; } catch (e) { return 'chips'; }
+}
+function applyIngView(view, silent) {
+  const container = document.getElementById('families-container');
+  if (!container) return;
+  container.classList.toggle('cat-view', view === 'cats');
+  document.querySelectorAll('.view-mode-btn').forEach(function(b) {
+    b.textContent = view === 'cats' ? '☰ Catégories' : '▦ Pastilles';
+  });
+  if (!silent) { try { localStorage.setItem(ING_VIEW_KEY, view); } catch (e) {} }
+  if (view === 'cats' && _ingQuery) openMatchingFamilies();
+}
+function toggleIngView() {
+  const container = document.getElementById('families-container');
+  if (!container) return;
+  applyIngView(container.classList.contains('cat-view') ? 'chips' : 'cats');
+}
+function openMatchingFamilies() {
+  document.querySelectorAll('#families-container .family-block').forEach(function(b) {
+    if (!b.classList.contains('ing-hide')) b.classList.add('open');
+  });
+}
+
+// Filtre instantané : masque les pastilles et catégories sans correspondance (sans reconstruire le DOM,
+// donc sélections et exclusions sont conservées). Tous les mots saisis doivent être présents.
+function filterIngredients(raw) {
+  const container = document.getElementById('families-container');
+  if (!container || !container.dataset.loaded) return;
+  const q = _ingNorm(raw);
+  const clear = document.getElementById('ing-search-clear');
+  if (clear) clear.style.display = q ? 'block' : 'none';
+  const tokens = q ? q.split(/\s+/) : [];
+
+  // Début de recherche : on mémorise les catégories ouvertes pour les restaurer ensuite
+  const blocks = container.querySelectorAll('.family-block');
+  if (q && !_ingQuery) {
+    _catOpenBefore = new Set();
+    blocks.forEach(function(b, i) { if (b.classList.contains('open')) _catOpenBefore.add(i); });
+  }
+  const wasSearching = !!_ingQuery;
+  _ingQuery = q;
+
+  let total = 0;
+  blocks.forEach(function(block, i) {
+    let n = 0;
+    block.querySelectorAll('.ingredient-chip').forEach(function(chip) {
+      const hit = !tokens.length || tokens.every(function(t) { return chip.dataset.n.indexOf(t) !== -1; });
+      chip.classList.toggle('ing-hide', !hit);
+      if (hit) n++;
+    });
+    total += n;
+    block.classList.toggle('ing-hide', n === 0);
+    if (q) { if (n > 0) block.classList.add('open'); }
+    else if (wasSearching && _catOpenBefore) block.classList.toggle('open', _catOpenBefore.has(i));
+  });
+  if (!q) _catOpenBefore = null;
+
+  const empty = document.getElementById('ing-empty');
+  if (empty) {
+    empty.style.display = (q && total === 0) ? 'block' : 'none';
+    if (q && total === 0) empty.textContent = 'Aucun ingrédient trouvé pour “' + String(raw).trim() + '”.';
+  }
+  updateFamBadges();
+}
+function clearIngSearch() {
+  const input = document.getElementById('ing-search');
+  if (input) { input.value = ''; input.focus(); }
+  filterIngredients('');
+}
+
+// En-têtes de catégories : nombre d'ingrédients (ou de résultats) + badges sélectionnés / exclus
+function updateFamBadges() {
+  document.querySelectorAll('#families-container .family-block').forEach(function(block) {
+    const chips = block.querySelectorAll('.ingredient-chip');
+    const shown = block.querySelectorAll('.ingredient-chip:not(.ing-hide)').length;
+    const sel = block.querySelectorAll('.ingredient-chip.selected').length;
+    const exc = block.querySelectorAll('.ingredient-chip.excluded').length;
+    const cnt = block.querySelector('.fam-count');
+    if (cnt) cnt.textContent = _ingQuery ? shown + ' / ' + chips.length : String(chips.length);
+    const badges = block.querySelectorAll('.fam-badge');
+    if (badges[0]) { badges[0].style.display = sel ? 'inline-block' : 'none'; badges[0].textContent = sel + ' ✓'; }
+    if (badges[1]) { badges[1].style.display = exc ? 'inline-block' : 'none'; badges[1].textContent = exc + ' ✕'; }
+  });
 }
 
 // ── Exclusions d'ingrédients (persistées dans localStorage) ───────────────
@@ -2227,6 +2397,7 @@ function isRecipeExcluded(recipe, excluded) {
 
 // Mise à jour du bouton de recherche
 function updateSearchButton() {
+  updateFamBadges();
   const selected = document.querySelectorAll('.ingredient-chip.selected');
   const btn = document.getElementById('btn-search');
   const fab = document.getElementById('fab-search');
