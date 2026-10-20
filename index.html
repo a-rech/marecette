@@ -1843,11 +1843,9 @@ if (typeof RECIPES === 'undefined') {
             'Ajoutez les œufs, puis le lait petit à petit en fouettant.',
             'Incorporez le beurre fondu et laissez reposer 10 minutes.',
             'Faites cuire à la poêle, 2 minutes de chaque côté.'],
-    price: 1, vegetarian: true
+    price: 1, vegetarian: true, creator: '',
+    acc: ['Salade verte', 'Fruits frais', 'Sirop d\'érable'], userCreated: false
   }];
-  window.ACCOMPAGNEMENTS = { 9999: ['Salade verte', 'Fruits frais', 'Sirop d\'érable'] };
-  window.PRICE_MAP = { 9999: 1 };
-  window.VEG_SET = new Set([9999]);
   document.addEventListener('DOMContentLoaded', function() {
     const b = document.createElement('div');
     b.textContent = '🧪 Mode test : recipes.js introuvable, recette factice affichée';
@@ -2000,23 +1998,49 @@ const ORIGIN_FLAGS = {
   'Moyen-Orient':'🌙', 'Anglo-Saxonne':'🇬🇧'
 };
 
-// Données du catalogue (RECIPES, ACCOMPAGNEMENTS, PRICE_MAP, VEG_SET) : voir recipes.js, chargé avant ce script.
+// Données du catalogue (RECIPES) : voir recipes.js, chargé avant ce script.
 
 // ── Modèle commun catalogue / créations ─────────────────────────────────
-// Une recette (classique ou création) porte les mêmes champs :
-//   id, title, emoji, cat, origin, diff, prep, cook, portions, ingredients, steps, tags,
-//   price (1 = €, 2 = €€, 3 = €€€), vegetarian (booléen), creator (texte), userCreated (booléen).
-// Pour les classiques déjà présents, price et vegetarian viennent de PRICE_MAP / VEG_SET
-// tant que la fiche ne les porte pas elle-même. Une nouvelle fiche ajoutée à RECIPES (recipes.js)
-// (par exemple une création promue) peut donc contenir directement price et vegetarian,
-// sans rien ajouter dans PRICE_MAP ni VEG_SET.
+// Une recette (classique ou création) est écrite EXACTEMENT de la même façon, dans recipes.js comme
+// dans le fichier de sauvegarde : un objet JSON compact, une recette par ligne, mêmes champs, même ordre :
+//   id, title, emoji, cat, origin, diff, prep, cook, portions,
+//   price (1 = €, 2 = €€, 3 = €€€), vegetarian (booléen), creator (texte),
+//   ingredients, tags (4 ingrédients principaux au plus), steps,
+//   acc (accompagnements ; vide pour une création), userCreated (false = catalogue, true = création).
+// Une création se copie donc telle quelle de la sauvegarde vers recipes.js.
+function canonRecipe(r, isUser) {
+  const price = Math.round(Number(r.price));
+  return {
+    id: r.id, title: r.title, emoji: r.emoji, cat: r.cat, origin: r.origin, diff: r.diff,
+    prep: r.prep, cook: r.cook, portions: r.portions,
+    price: (price >= 1 && price <= 3) ? price : 1,
+    vegetarian: !!r.vegetarian,
+    creator: r.creator == null ? '' : r.creator,
+    ingredients: r.ingredients,
+    tags: Array.isArray(r.tags) ? r.tags : deriveTags(r.ingredients),
+    steps: r.steps,
+    acc: Array.isArray(r.acc) ? r.acc : [],
+    userCreated: !!isUser
+  };
+}
+
+// Tags d'une création : 4 ingrédients principaux au plus, comme dans le catalogue.
+// Sel, huile, herbes, épices, ail, vin, bouillon… ne passent qu'en dernier, pour compléter.
+const TAGS_MAX = 4;
+const _TAG_SECONDARY = /^(sel|poivre|eau|glacon|huile|vinaigre|ail|vin|bouillon|fond|cube|moutarde|jus de citron|zeste|bicarbonate|levure|thym|laurier|persil|ciboulette|basilic|coriandre|menthe|aneth|estragon|romarin|origan|sauge|cumin|paprika|piment|curry|cannelle|muscade|noix de muscade|sauce soja|gingembre|safran|curcuma|clou de girofle|herbes|epice|bouquet garni|vanille|colorant)( |$)/;
+function _tagKey(s) {
+  return String(s).toLowerCase().replace(/œ/g, 'oe').replace(/æ/g, 'ae')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[’'`´]/g, ' ').trim();
+}
+function deriveTags(ingredients) {
+  const names = (ingredients || []).map(function(i) { return i && i[0]; }).filter(Boolean);
+  const main = names.filter(function(n) { return !_TAG_SECONDARY.test(_tagKey(n)); });
+  const rest = names.filter(function(n) { return _TAG_SECONDARY.test(_tagKey(n)); });
+  return main.concat(rest).slice(0, TAGS_MAX);
+}
+
 (function normalizeCatalogue() {
-  RECIPES.forEach(function(r) {
-    if (r.price == null) r.price = PRICE_MAP[r.id] || 1;
-    r.vegetarian = (r.vegetarian == null) ? VEG_SET.has(r.id) : !!r.vegetarian;
-    if (r.creator == null) r.creator = '';
-    r.userCreated = false;
-  });
+  RECIPES.forEach(function(r, i) { RECIPES[i] = canonRecipe(r, false); });
 })();
 
 // Retourne le HTML du badge prix (€ / €€ / €€€)
@@ -2034,13 +2058,13 @@ function vegHtml(id) {
 }
 
 // Retourne le HTML du bloc accompagnements pour une fiche recette
-function buildAccompagnement(id) {
-  const acc = ACCOMPAGNEMENTS[id];
+function buildAccompagnement(recipe) {
+  const acc = recipe && recipe.acc;
   if (!acc || !acc.length) return '';
   return `<div class="accompagnement-block">
     <div class="accompagnement-title">Se marie bien avec</div>
     <div class="accompagnement-list">
-      ${acc.map(a => `<span class="accompagnement-chip">${a}</span>`).join('')}
+      ${acc.map(a => `<span class="accompagnement-chip">${_esc(a)}</span>`).join('')}
     </div>
   </div>`;
 }
@@ -3237,7 +3261,7 @@ function showRecipe(recipeId, swipeList, animDir) {
 
     ${getRecipeActions(recipe.id)}
 
-    ${buildAccompagnement(recipe.id)}
+    ${buildAccompagnement(recipe)}
 
     <div class="recipe-notes-section">
       <div class="recipe-section-title">📝 MES NOTES</div>
@@ -3748,11 +3772,21 @@ function collectUserData() {
   try { data.favorites   = JSON.parse(localStorage.getItem('marecette_favs') || '[]'); } catch(e) {}
   try { data.notes       = JSON.parse(localStorage.getItem('marecette_notes') || '{}'); } catch(e) {}
   if (!Array.isArray(data.userRecipes)) data.userRecipes = [];
+  data.userRecipes = data.userRecipes.map(function(r) { return canonRecipe(r, true); });
   if (!Array.isArray(data.favorites)) data.favorites = [];
   if (!data.notes || typeof data.notes !== 'object' || Array.isArray(data.notes)) data.notes = {};
   var menuData = collectMenuBackup();   // menu + liste de courses (champ facultatif : les anciens fichiers restent valides)
   if (menuData) data.menu = menuData;
   return data;
+}
+
+// Sauvegarde en JSON compact, une recette par ligne : chaque ligne est identique à une ligne de recipes.js
+function _backupJson(data) {
+  var recs = data.userRecipes.map(function(r) { return JSON.stringify(r); });
+  var rest = Object.assign({}, data);
+  delete rest.userRecipes; delete rest.version; delete rest.exportedAt; delete rest.app;
+  var head = JSON.stringify({ version: data.version, exportedAt: data.exportedAt, app: data.app });
+  return head.slice(0, -1) + ',\n"userRecipes":[\n' + recs.join(',\n') + '\n],\n' + JSON.stringify(rest).slice(1) + '\n';
 }
 
 function _plural(n, one, many) { return n + ' ' + (n > 1 ? many : one); }
@@ -3780,7 +3814,7 @@ function exportData(share, done) {
     return;
   }
 
-  var json = JSON.stringify(data, null, 2);
+  var json = _backupJson(data);
   var date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
   var name = 'marecette-sauvegarde-' + date + '.json';
 
@@ -3865,9 +3899,9 @@ function restoreBackup(data) {
     var taken = function(t) { return local.some(function(l) { return String(l.title).toLowerCase() === t.toLowerCase(); }); };
     while (taken(title)) { title = clean.title + ' (' + (n++) + ')'; }
 
-    local.push(Object.assign({}, clean, {
-      id: newId, title: title, tags: clean.ingredients.map(function(i) { return i[0]; }), userCreated: true
-    }));
+    local.push(canonRecipe(Object.assign({}, clean, {
+      id: newId, title: title, tags: deriveTags(clean.ingredients)
+    }), true));
     idMap[oldId] = newId;
     created++;
   });
@@ -4014,15 +4048,15 @@ let _lastFilteredPool = []; // Cache de la dernière liste filtrée (pour cohér
 // Charger les recettes utilisateur au démarrage
 function loadUserRecipes() {
   try {
-    userRecipes = JSON.parse(localStorage.getItem(USER_RECIPES_STORAGE_KEY) || '[]').map(function(r) {
-      // Même forme que les recettes du catalogue (voir « Modèle commun » plus haut)
-      r.price = Number(r.price) || 0;
-      r.vegetarian = !!r.vegetarian;
-      if (r.creator == null) r.creator = '';
-      if (!Array.isArray(r.tags)) r.tags = (r.ingredients || []).map(function(i) { return i[0]; });
-      r.userCreated = true;
-      return r;
+    const raw = localStorage.getItem(USER_RECIPES_STORAGE_KEY) || '[]';
+    userRecipes = JSON.parse(raw).map(function(r) {
+      // Même forme que le catalogue (voir « Modèle commun » plus haut) : mêmes champs, même ordre, 4 tags au plus
+      if (!Array.isArray(r.tags) || r.tags.length > TAGS_MAX) r.tags = deriveTags(r.ingredients);
+      return canonRecipe(r, true);
     });
+    // Données enregistrées dans un ancien format : réécrites une fois au format commun
+    const canon = JSON.stringify(userRecipes);
+    if (raw !== '[]' && canon !== raw) { try { localStorage.setItem(USER_RECIPES_STORAGE_KEY, canon); } catch (e) {} }
     if (userRecipes.length > 0) {
       nextUserId = Math.max(...userRecipes.map(r => r.id), 999) + 1;
     }
@@ -4031,9 +4065,9 @@ function loadUserRecipes() {
   }
 }
 
-// Sauvegarder les recettes
+// Sauvegarder les recettes (toujours au format commun)
 function saveUserRecipes() {
-  localStorage.setItem(USER_RECIPES_STORAGE_KEY, JSON.stringify(userRecipes));
+  localStorage.setItem(USER_RECIPES_STORAGE_KEY, JSON.stringify(userRecipes.map(function(r) { return canonRecipe(r, true); })));
 }
 
 // Vérifier si une recette est créée par l'utilisateur
@@ -4402,7 +4436,7 @@ function saveRecipe() {
   const portions = parseInt(document.getElementById('f-portions').value) || 4;
   const priceSelect = document.getElementById('f-price').value;
   // Convertir le symbole € en nombre (€=1, €€=2, €€€=3)
-  const price = priceSelect === '€' ? 1 : priceSelect === '€€' ? 2 : priceSelect === '€€€' ? 3 : 0;
+  const price = priceSelect === '€€' ? 2 : priceSelect === '€€€' ? 3 : 1;   // prix non précisé = €, comme le catalogue
   const veg = document.getElementById('f-veg').checked;
   const creator = document.getElementById('f-creator').value.trim();
   
@@ -4435,7 +4469,8 @@ function saveRecipe() {
   if (dupe.length) { showError('Nom déjà utilisé'); return; }
   
   const id = currentEditingId || nextUserId++;
-  const recipe = {
+  const existing = currentEditingId ? userRecipes.find(r => r.id === currentEditingId) : null;
+  const recipe = canonRecipe({
     id: id,
     title: title,
     emoji: emoji,
@@ -4449,10 +4484,10 @@ function saveRecipe() {
     vegetarian: veg,
     creator: creator,
     ingredients: ingredients,
+    tags: deriveTags(ingredients),
     steps: steps,
-    tags: ingredients.map(i => i[0]),
-    userCreated: true
-  };
+    acc: existing ? existing.acc : []
+  }, true);
   
   if (currentEditingId) {
     userRecipes = userRecipes.map(r => r.id === currentEditingId ? recipe : r);
@@ -6087,7 +6122,7 @@ function findRecipeAny(id) {
 
 // Données minimales transmises (clés courtes pour garder un QR code peu dense)
 function buildSharePayload(recipe) {
-  const price = recipe.price || 0;
+  const price = recipe.price || 1;
   const veg = !!recipe.vegetarian;
   const d = {
     v: 1, t: recipe.title, e: recipe.emoji, c: recipe.cat, o: recipe.origin, d: recipe.diff,
@@ -6443,7 +6478,7 @@ function normalizeImportedRecipe(d, lenient) {
     prep: int(d.p, 0, 1440, 10),
     cook: int(d.k, 0, 1440, 10),
     portions: int(d.n, 1, 50, 4),
-    price: int(d.pr, 0, 3, 0),
+    price: int(d.pr, 1, 3, 1),
     vegetarian: !!d.vg,
     creator: _sanitizeText(d.cr, 40),
     ingredients: ingredients,
@@ -6533,12 +6568,11 @@ function closeImportPreview() {
 
 function commitImport(recipe) {
   const id = nextUserId++;
-  const stored = Object.assign({}, recipe, {
+  const stored = canonRecipe(Object.assign({}, recipe, {
     id: id,
     title: _uniqueUserTitle(recipe.title),
-    tags: recipe.ingredients.map(i => i[0]),
-    userCreated: true
-  });
+    tags: deriveTags(recipe.ingredients)
+  }), true);
   userRecipes.push(stored);
   saveUserRecipes();
   closeImportPreview();
