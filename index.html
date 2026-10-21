@@ -203,14 +203,17 @@
     .ing-search-sticky .lex-search-wrap { margin-bottom: 0; }
     .ing-search-sticky + .chip-mode-bar { margin-top: 0; }
     .ing-hide { display: none !important; }
+    .veg-hide { display: none !important; }
+    #search-results { scroll-margin-top: 132px; }   /* barre du haut (58px) + recherche d'ingrédient flottante */
     #ing-search { -webkit-appearance: none; appearance: none; font-size: 16px; }
     #ing-search::-webkit-search-cancel-button { display: none; }
     .ing-empty { display: none; padding: 22px 8px; text-align: center; color: var(--text2); font-size: 14px; margin-bottom: 20px; }
-    .view-mode-btn {
+    .veg-mode-btn {
       padding: 6px 14px; border-radius: 20px; cursor: pointer; white-space: nowrap;
       border: 1.5px solid var(--border); background: var(--surface); color: var(--text2);
       font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; transition: all .2s;
     }
+    .veg-mode-btn.active { border-color: var(--accent2); background: rgba(122,158,111,.16); color: var(--accent2); }
     .families-grid.cat-view { grid-template-columns: 1fr; gap: 8px; }
     .cat-view .family-block { padding: 0; overflow: hidden; }
     .cat-view .family-label { margin: 0; padding: 13px 14px; font-size: 13px; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
@@ -1470,14 +1473,14 @@
   </div>
   <div class="chip-mode-bar">
     <button class="chip-mode-btn" onclick="toggleChipMode()">✔ Sélection</button>
-    <button class="view-mode-btn" onclick="toggleIngView()" title="Changer l'affichage des ingrédients">▦ Pastilles</button>
+    <button class="veg-mode-btn" onclick="toggleVegMode()" title="Masquer les viandes, poissons et autres ingrédients non végétariens (œufs et laitages conservés)">🥦 Mode végé</button>
     <span class="chip-mode-hint" id="chip-mode-hint">Mode ✔ Sélection actif - Basculer en mode ✕ pour exclure</span>
   </div>
-  <div class="families-grid" id="families-container"></div>
+  <div class="families-grid cat-view" id="families-container"></div>
   <div class="ing-empty" id="ing-empty"></div>
   <div class="search-actions-top">
     <button class="chip-mode-btn" onclick="toggleChipMode()">✔ Sélection</button>
-    <button class="view-mode-btn" onclick="toggleIngView()" title="Changer l'affichage des ingrédients">▦ Pastilles</button>
+    <button class="veg-mode-btn" onclick="toggleVegMode()" title="Masquer les viandes, poissons et autres ingrédients non végétariens (œufs et laitages conservés)">🥦 Mode végé</button>
     <button id="btn-reset-excl" onclick="resetExclusions()" style="display:none">✕ Effacer les exclusions</button>
   </div>
   <div class="search-actions">
@@ -2360,7 +2363,7 @@ function loadIngredientFamilies() {
   container.dataset.loaded = '1';
 
   container.innerHTML = FAMILIES.map(family => `
-    <div class="family-block">
+    <div class="family-block" data-fam="${family.id}">
       <div class="family-label">
         <span class="ficon">${family.icon}</span> ${family.label}
         <span class="fam-meta"><span class="fam-count"></span><span class="fam-badge" style="display:none"></span><span class="fam-badge excl" style="display:none"></span><span class="fam-chev">▸</span></span>
@@ -2417,12 +2420,11 @@ function loadIngredientFamilies() {
     if (chip) { chip.classList.remove('selected'); chip.classList.add('excluded'); }
   });
   syncExclBtn();
-  applyIngView(_getIngView(), true);   // vue mémorisée (catégories par défaut)
+  applyVegMode(_getVegMode(), true);   // mode végé mémorisé
   updateFamBadges();
 }
 
 // ── Recherche filtrante + vue par catégories ─────────────────────────────
-const ING_VIEW_KEY = 'marecette_ing_view_v1';
 let _ingQuery = '';            // saisie normalisée courante
 let _catOpenBefore = null;     // catégories ouvertes avant le début d'une recherche
 
@@ -2432,29 +2434,37 @@ function _ingNorm(str) {
     .replace(/œ/g, 'oe').replace(/æ/g, 'ae').replace(/[’‘`]/g, "'")
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 }
-function _getIngView() {
-  try { return localStorage.getItem(ING_VIEW_KEY) === 'chips' ? 'chips' : 'cats'; } catch (e) { return 'cats'; }
+// ── Mode végé : masque viandes, poissons et ingrédients non végétariens ────
+// Végétarien (pas végane) : œufs, lait, fromages et miel restent affichés.
+const VEG_KEY = 'marecette_veg_mode_v1';
+const VEG_HIDDEN_FAMILIES = ['viandes', 'poissons'];
+const VEG_HIDDEN_ITEMS = ['Sauce poisson', 'Worcestershire sauce', 'Bouillon de bœuf', 'Bouillon de poulet'];
+function _getVegMode() {
+  try { return localStorage.getItem(VEG_KEY) === '1'; } catch (e) { return false; }
 }
-function applyIngView(view, silent) {
+function applyVegMode(on, silent) {
   const container = document.getElementById('families-container');
   if (!container) return;
-  container.classList.toggle('cat-view', view === 'cats');
-  document.querySelectorAll('.view-mode-btn').forEach(function(b) {
-    b.textContent = view === 'cats' ? '☰ Catégories' : '▦ Pastilles';
+  container.querySelectorAll('.family-block').forEach(function(b) {
+    b.classList.toggle('veg-hide', on && VEG_HIDDEN_FAMILIES.indexOf(b.dataset.fam) !== -1);
   });
-  if (!silent) { try { localStorage.setItem(ING_VIEW_KEY, view); } catch (e) {} }
-  if (view === 'cats' && _ingQuery) openMatchingFamilies();
-}
-function toggleIngView() {
-  const container = document.getElementById('families-container');
-  if (!container) return;
-  applyIngView(container.classList.contains('cat-view') ? 'chips' : 'cats');
-}
-function openMatchingFamilies() {
-  document.querySelectorAll('#families-container .family-block').forEach(function(b) {
-    if (!b.classList.contains('ing-hide')) b.classList.add('open');
+  container.querySelectorAll('.ingredient-chip').forEach(function(chip) {
+    const famHidden = on && VEG_HIDDEN_FAMILIES.indexOf(chip.closest('.family-block').dataset.fam) !== -1;
+    const itemHidden = on && VEG_HIDDEN_ITEMS.indexOf(chip.dataset.item) !== -1;
+    chip.classList.toggle('veg-hide', itemHidden);          // les familles masquées le sont déjà en bloc
+    if (famHidden || itemHidden) chip.classList.remove('selected');   // pas de sélection invisible
   });
+  document.querySelectorAll('.veg-mode-btn').forEach(function(btn) {
+    btn.classList.toggle('active', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.textContent = on ? '🥦 Mode végé ✓' : '🥦 Mode végé';
+  });
+  if (!silent) { try { localStorage.setItem(VEG_KEY, on ? '1' : '0'); } catch (e) {} }
+  const input = document.getElementById('ing-search');
+  filterIngredients(input ? input.value : '');   // recalcule aussi les compteurs
+  if (typeof updateSearchButton === 'function') updateSearchButton();
 }
+function toggleVegMode() { applyVegMode(!_getVegMode()); }
 
 // Filtre instantané : masque les pastilles et catégories sans correspondance (sans reconstruire le DOM,
 // donc sélections et exclusions sont conservées). Tous les mots saisis doivent être présents.
@@ -2478,10 +2488,11 @@ function filterIngredients(raw) {
   let total = 0;
   blocks.forEach(function(block, i) {
     let n = 0;
+    const blockVeg = block.classList.contains('veg-hide');
     block.querySelectorAll('.ingredient-chip').forEach(function(chip) {
       const hit = !tokens.length || tokens.every(function(t) { return chip.dataset.n.indexOf(t) !== -1; });
       chip.classList.toggle('ing-hide', !hit);
-      if (hit) n++;
+      if (hit && !blockVeg && !chip.classList.contains('veg-hide')) n++;
     });
     total += n;
     block.classList.toggle('ing-hide', n === 0);
@@ -2506,8 +2517,8 @@ function clearIngSearch() {
 // En-têtes de catégories : nombre d'ingrédients (ou de résultats) + badges sélectionnés / exclus
 function updateFamBadges() {
   document.querySelectorAll('#families-container .family-block').forEach(function(block) {
-    const chips = block.querySelectorAll('.ingredient-chip');
-    const shown = block.querySelectorAll('.ingredient-chip:not(.ing-hide)').length;
+    const chips = block.querySelectorAll('.ingredient-chip:not(.veg-hide)');
+    const shown = block.querySelectorAll('.ingredient-chip:not(.ing-hide):not(.veg-hide)').length;
     const sel = block.querySelectorAll('.ingredient-chip.selected').length;
     const exc = block.querySelectorAll('.ingredient-chip.excluded').length;
     const cnt = block.querySelector('.fam-count');
