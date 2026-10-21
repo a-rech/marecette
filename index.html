@@ -1162,6 +1162,8 @@
     
     .ing-section-hint { font-size: 11px; color: var(--text3); margin-bottom: 12px; }
     #ing-list, #step-list { margin-bottom: 16px; }
+    .f-acc { margin-bottom: 8px; }
+    .form-hint { font-size: 12px; color: var(--text2); margin: -8px 0 12px; line-height: 1.4; }
     .ing-row, .step-row { display: flex; gap: 10px; margin-bottom: 12px; align-items: flex-end; }
     .ing-row .form-group { flex: 1; }
     .ing-row { gap: 6px; align-items: center; }
@@ -2038,6 +2040,70 @@ function deriveTags(ingredients) {
   const rest = names.filter(function(n) { return _TAG_SECONDARY.test(_tagKey(n)); });
   return main.concat(rest).slice(0, TAGS_MAX);
 }
+
+// Contrôle du format de recipes.js : champs et ordre du format commun, id unique, prix 1 à 3, 2 à 5 tags,
+// 1 à 3 accompagnements, etc. Renvoie la liste des anomalies (vide = conforme).
+const RECIPE_FIELDS = ['id', 'title', 'emoji', 'cat', 'origin', 'diff', 'prep', 'cook', 'portions',
+  'price', 'vegetarian', 'creator', 'ingredients', 'tags', 'steps', 'acc', 'userCreated'];
+function checkCatalogueFormat(list) {
+  const issues = [], ids = new Set();
+  const isStr = function(v) { return typeof v === 'string'; };
+  const isNum = function(v) { return typeof v === 'number' && isFinite(v); };
+  const strList = function(a) { return Array.isArray(a) && a.every(function(x) { return isStr(x) && x.trim() !== ''; }); };
+  list.forEach(function(r, i) {
+    if (!r || typeof r !== 'object') { issues.push('ligne ' + (i + 1) + ' : pas une recette'); return; }
+    const w = '#' + (r.id != null ? r.id : 'ligne ' + (i + 1)) + (isStr(r.title) ? ' ' + r.title.slice(0, 28) : '');
+    const keys = Object.keys(r);
+    const missing = RECIPE_FIELDS.filter(function(k) { return !(k in r); });
+    const extra = keys.filter(function(k) { return RECIPE_FIELDS.indexOf(k) === -1; });
+    if (missing.length) issues.push(w + ' : champ(s) manquant(s) : ' + missing.join(', '));
+    if (extra.length) issues.push(w + ' : champ(s) inconnu(s) : ' + extra.join(', '));
+    if (!missing.length && !extra.length && keys.join() !== RECIPE_FIELDS.join()) issues.push(w + ' : champs dans un autre ordre que le format commun');
+    if (!Number.isInteger(r.id) || r.id < 1 || r.id >= 1000) issues.push(w + ' : id invalide (entier de 1 à 999)');
+    else if (ids.has(r.id)) issues.push(w + ' : id en double');
+    ids.add(r.id);
+    if (!isStr(r.title) || !r.title.trim()) issues.push(w + ' : titre vide');
+    ['emoji', 'cat', 'origin'].forEach(function(k) { if (!isStr(r[k]) || !r[k].trim()) issues.push(w + ' : ' + k + ' vide ou invalide'); });
+    if (['facile', 'moyen', 'difficile'].indexOf(r.diff) === -1) issues.push(w + ' : diff doit être facile, moyen ou difficile');
+    if (!isNum(r.prep) || r.prep < 0) issues.push(w + ' : prep invalide');
+    if (!isNum(r.cook) || r.cook < 0) issues.push(w + ' : cook invalide');
+    if (!Number.isInteger(r.portions) || r.portions < 1) issues.push(w + ' : portions invalide');
+    if (!Number.isInteger(r.price) || r.price < 1 || r.price > 3) issues.push(w + ' : price doit valoir 1, 2 ou 3');
+    if (typeof r.vegetarian !== 'boolean') issues.push(w + ' : vegetarian doit être true ou false');
+    if (!isStr(r.creator)) issues.push(w + ' : creator doit être un texte');
+    if (!Array.isArray(r.ingredients) || !r.ingredients.length || !r.ingredients.every(function(x) {
+      return Array.isArray(x) && x.length === 3 && isStr(x[0]) && x[0].trim() !== '' && isNum(x[1]) && x[1] >= 0 && isStr(x[2]);
+    })) issues.push(w + ' : ingredients invalides (attendu [nom, quantité, unité])');
+    if (!strList(r.tags) || r.tags.length < 2 || r.tags.length > 5) issues.push(w + ' : tags attendus : 2 à 5 (trouvé ' + (Array.isArray(r.tags) ? r.tags.length : 'aucun') + ')');
+    if (!strList(r.steps) || !r.steps.length) issues.push(w + ' : steps vides ou invalides');
+    if (!strList(r.acc) || r.acc.length < 1 || r.acc.length > 3) issues.push(w + ' : acc attendu : 1 à 3 accompagnements (trouvé ' + (Array.isArray(r.acc) ? r.acc.length : 'aucun') + ')');
+    if (r.userCreated !== false) issues.push(w + ' : userCreated doit être false dans le catalogue');
+  });
+  return issues;
+}
+
+// Mode local (localhost, réseau local ou fichier) : signale les lignes non conformes de recipes.js.
+// Exécuté avant la normalisation, qui masquerait les champs manquants.
+(function reportCatalogueFormat() {
+  if (window.__MARECETTE_DUMMY) return;
+  const h = location.hostname;
+  const local = location.protocol === 'file:' || h === 'localhost' || /^(127\.|192\.168\.|10\.)/.test(h) || h === '[::1]';
+  if (!local) return;
+  const issues = checkCatalogueFormat(RECIPES);
+  if (!issues.length) { console.info('[MaRecette] recipes.js : ' + RECIPES.length + ' recettes, format conforme.'); return; }
+  console.warn('[MaRecette] recipes.js : ' + issues.length + ' anomalie(s)\n' + issues.join('\n'));
+  document.addEventListener('DOMContentLoaded', function() {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = '⚠️ recipes.js : ' + issues.length + ' anomalie' + (issues.length > 1 ? 's' : '') + ' (toucher pour voir)';
+    b.style.cssText = 'position:fixed;left:8px;bottom:max(8px,env(safe-area-inset-bottom));z-index:9999;border:0;'
+      + 'padding:6px 12px;border-radius:12px;background:#C0392B;color:#fff;font:600 11px sans-serif;max-width:calc(100% - 16px)';
+    b.onclick = function() {
+      alert('recipes.js : ' + issues.length + ' anomalie(s)\n\n' + issues.slice(0, 25).join('\n') + (issues.length > 25 ? '\n… (suite dans la console)' : ''));
+    };
+    document.body.appendChild(b);
+  });
+})();
 
 (function normalizeCatalogue() {
   RECIPES.forEach(function(r, i) { RECIPES[i] = canonRecipe(r, false); });
@@ -3858,7 +3924,7 @@ function _backupRecipeToStored(r) {
   return normalizeImportedRecipe({
     t: r.title, e: r.emoji, c: r.cat, o: r.origin, d: r.diff,
     p: r.prep, k: r.cook, n: r.portions, i: r.ingredients, s: r.steps,
-    pr: r.price, vg: r.vegetarian ? 1 : 0, cr: r.creator
+    pr: r.price, vg: r.vegetarian ? 1 : 0, cr: r.creator, a: r.acc
   }, true);
 }
 
@@ -4138,6 +4204,81 @@ function cloneRecipe(recipe) {
 // GESTION DU FORMULAIRE
 // ════════════════════════════════════════════════════════════
 
+// Accompagnements (3 champs facultatifs) : suggestions = accompagnements déjà utilisés dans le catalogue et les créations
+let _accSuggestN = -1;
+function ensureAccDatalist() {
+  const n = userRecipes ? userRecipes.length : 0;
+  let dl = document.getElementById('acc-suggest');
+  if (dl && _accSuggestN === n) return;
+  if (!dl) { dl = document.createElement('datalist'); dl.id = 'acc-suggest'; document.body.appendChild(dl); }
+  const count = new Map(), label = new Map();
+  RECIPES.concat(userRecipes || []).forEach(r => (r.acc || []).forEach(function(a) {
+    const t = _tidyText(a), k = t.toLowerCase();
+    if (!t) return;
+    count.set(k, (count.get(k) || 0) + 1);
+    if (!label.has(k)) label.set(k, t);
+  }));
+  const frag = document.createDocumentFragment();
+  Array.from(count.keys()).sort((a, b) => count.get(b) - count.get(a) || a.localeCompare(b, 'fr')).forEach(function(k) {
+    const o = document.createElement('option');
+    o.value = label.get(k);
+    frag.appendChild(o);
+  });
+  dl.innerHTML = '';
+  dl.appendChild(frag);
+  _accSuggestN = n;
+}
+function setAccFields(list) {
+  ensureAccDatalist();
+  document.querySelectorAll('.f-acc').forEach(function(el, i) { el.value = (list && list[i]) || ''; });
+}
+function readAccFields() {
+  const seen = new Set(), out = [];
+  document.querySelectorAll('.f-acc').forEach(function(el) {
+    let v = _sanitizeText(_tidyApos(el.value), 40);
+    v = v.charAt(0).toUpperCase() + v.slice(1);
+    const k = v.toLowerCase();
+    if (v && !seen.has(k)) { seen.add(k); out.push(v); }
+  });
+  return out.slice(0, 3);
+}
+
+// Tags de recherche : proposés d'après les ingrédients tant que l'utilisateur ne les modifie pas lui-même
+let _tagsTouched = false, _tagsTimer = null;
+function suggestTagsFromForm() {
+  const rows = [];
+  document.querySelectorAll('#ing-list .ing-row .ing-name').forEach(function(inp) {
+    const n = canonIngredientName(inp.value);
+    if (n) rows.push([n, 1, '']);
+  });
+  return deriveTags(rows);
+}
+function refreshAutoTags() {
+  if (_tagsTouched) return;
+  const f = document.getElementById('f-tags');
+  if (f) f.value = suggestTagsFromForm().join(', ');
+}
+function scheduleAutoTags() {
+  clearTimeout(_tagsTimer);
+  _tagsTimer = setTimeout(refreshAutoTags, 200);
+}
+function resetTagsAuto() {
+  _tagsTouched = false;
+  refreshAutoTags();
+}
+// Tags à enregistrer : ceux du champ s'ils ont été modifiés (null si plus de TAGS_MAX), sinon la proposition automatique
+function readTagsField(ingredients) {
+  const f = document.getElementById('f-tags');
+  if (!_tagsTouched || !f) return deriveTags(ingredients);
+  const seen = new Set(), list = [];
+  String(f.value).split(/[,;\n]/).forEach(function(t) {
+    const v = canonIngredientName(_sanitizeText(_tidyApos(t), 60));
+    if (v && !seen.has(v.toLowerCase())) { seen.add(v.toLowerCase()); list.push(v); }
+  });
+  if (list.length > TAGS_MAX) return null;
+  return list.length ? list : deriveTags(ingredients);
+}
+
 function resetFormContent() {
   document.getElementById('f-emoji').value = '🍳';
   document.getElementById('f-title').value = '';
@@ -4155,6 +4296,9 @@ function resetFormContent() {
   document.getElementById('step-list').innerHTML = '';
   addIngredientRow();
   addStepRow();
+  setAccFields([]);
+  _tagsTouched = false;
+  refreshAutoTags();
   clearError();
 }
 
@@ -4204,6 +4348,11 @@ function populateFormFromRecipe(recipe, mode) {
   } else {
     addStepRow();
   }
+
+  setAccFields(recipe.acc);
+  const tags = Array.isArray(recipe.tags) ? recipe.tags : [];
+  _tagsTouched = JSON.stringify(tags) !== JSON.stringify(deriveTags(recipe.ingredients));   // tags choisis à la main : conservés
+  document.getElementById('f-tags').value = tags.join(', ');
 }
 
 function addIngredientRow(name = '', qty = '', unit = '') {
@@ -4464,12 +4613,14 @@ function saveRecipe() {
   });
   if (!steps.length) { showError('Au moins 1 étape'); return; }
   
+  const tagsList = readTagsField(ingredients);
+  if (!tagsList) { showError('4 tags au plus'); return; }
+  
   const titleLower = title.toLowerCase();
   const dupe = userRecipes.filter(r => _tidyApos(r.title).toLowerCase() === titleLower && r.id !== currentEditingId);
   if (dupe.length) { showError('Nom déjà utilisé'); return; }
   
   const id = currentEditingId || nextUserId++;
-  const existing = currentEditingId ? userRecipes.find(r => r.id === currentEditingId) : null;
   const recipe = canonRecipe({
     id: id,
     title: title,
@@ -4484,9 +4635,9 @@ function saveRecipe() {
     vegetarian: veg,
     creator: creator,
     ingredients: ingredients,
-    tags: deriveTags(ingredients),
+    tags: tagsList,
     steps: steps,
-    acc: existing ? existing.acc : []
+    acc: readAccFields()
   }, true);
   
   if (currentEditingId) {
@@ -4537,6 +4688,26 @@ function adaptRecipe(id) {
   showPage('add-form');
 }
 
+// Ligne prête à coller dans recipes.js : même format que le catalogue, id libre (max + 1), userCreated = false
+function nextCatalogueId() {
+  return Math.max.apply(null, RECIPES.map(function(r) { return r.id; })) + 1;
+}
+function catalogueLine(recipe) {
+  return JSON.stringify(canonRecipe(Object.assign({}, recipe, { id: nextCatalogueId() }), false)) + ',';
+}
+function copyCatalogueLine(id) {
+  const recipe = getUserRecipe(id);
+  if (!recipe) return;
+  const line = catalogueLine(recipe);
+  const done = function() {
+    showUpdateToast('📋 Ligne copiée pour recipes.js (id ' + nextCatalogueId() + ')'
+      + ((recipe.acc && recipe.acc.length) ? '' : ' : pensez aux accompagnements'));
+  };
+  const fallback = function() { window.prompt('Copiez cette ligne pour recipes.js :', line); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(line).then(done, fallback);
+  else fallback();
+}
+
 function deleteRecipe(id) {
   const recipe = getUserRecipe(id);
   if (!recipe) return;
@@ -4583,6 +4754,9 @@ function getRecipeActions(id) {
     html += `<div style="display: flex; gap: 8px;">
       <button onclick="editRecipe(${id})" style="flex: 1;">✏️ Modifier</button>
       <button class="delete" onclick="deleteRecipe(${id})" style="flex: 1;">🗑 Supprimer</button>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button onclick="copyCatalogueLine(${id})" style="flex: 1;">📋 Copier pour le catalogue</button>
     </div>`;
   }
   
@@ -6070,7 +6244,13 @@ window.onload = function() {
   if (shareBtn && _canShareBackup()) shareBtn.style.display = '';   // bouton « Partager » seulement si le système le permet
   // Formulaire de création : correction à la sortie des champs ingrédient et titre
   const ingList = document.getElementById('ing-list');
-  if (ingList) ingList.addEventListener('change', onIngredientFieldChange);
+  if (ingList) {
+    ingList.addEventListener('change', onIngredientFieldChange);
+    ingList.addEventListener('input', scheduleAutoTags);     // tags proposés d'après les ingrédients
+    ingList.addEventListener('click', scheduleAutoTags);     // (bouton × d'une ligne)
+  }
+  const fTags = document.getElementById('f-tags');
+  if (fTags) fTags.addEventListener('input', function() { _tagsTouched = true; });
   const fTitle = document.getElementById('f-title');
   if (fTitle) fTitle.addEventListener('change', function() { fTitle.value = _tidyTitle(fTitle.value); });
   // Initialise l'état History API pour que le premier popstate soit intercepté
@@ -6132,6 +6312,7 @@ function buildSharePayload(recipe) {
   if (price) d.pr = price;
   if (veg) d.vg = 1;
   if (recipe.creator) d.cr = recipe.creator;
+  if (recipe.acc && recipe.acc.length) d.a = recipe.acc;
   return d;
 }
 
@@ -6156,6 +6337,7 @@ function buildRecipeShareText(recipe) {
   });
   t += '\n' + line + '\nPRÉPARATION\n' + line + '\n';
   (recipe.steps || []).forEach((st, i) => { t += (i + 1) + '. ' + st + '\n'; });
+  if (recipe.acc && recipe.acc.length) t += '\n🍽️ Se marie bien avec : ' + recipe.acc.join(', ') + '\n';
   // Création personnelle : on ajoute l'adresse de l'app pour un destinataire qui ne l'a pas encore
   if (!isCatalogue) t += '\n🍳 Partagé depuis MaRecette : ' + SHARE_BASE_URL;
   return t;
@@ -6482,7 +6664,8 @@ function normalizeImportedRecipe(d, lenient) {
     vegetarian: !!d.vg,
     creator: _sanitizeText(d.cr, 40),
     ingredients: ingredients,
-    steps: steps
+    steps: steps,
+    acc: (Array.isArray(d.a) ? d.a : []).slice(0, 3).map(function(x) { return _sanitizeText(_tidyApos(x), 40); }).filter(Boolean)
   };
 }
 
@@ -6951,9 +7134,24 @@ function showUpdateToast(msg) {
   </div>
 
   <div class="form-section">
+    <div class="form-section-title">🍽️ Se marie bien avec</div>
+    <div class="form-hint">Jusqu'à 3 suggestions d'accompagnement, facultatif.</div>
+    <input class="form-input f-acc" type="text" list="acc-suggest" placeholder="Accompagnement 1" maxlength="40" autocomplete="off" autocapitalize="sentences">
+    <input class="form-input f-acc" type="text" list="acc-suggest" placeholder="Accompagnement 2" maxlength="40" autocomplete="off" autocapitalize="sentences">
+    <input class="form-input f-acc" type="text" list="acc-suggest" placeholder="Accompagnement 3" maxlength="40" autocomplete="off" autocapitalize="sentences">
+  </div>
+
+  <div class="form-section">
     <div class="form-section-title">👨‍🍳 Étapes *</div>
     <div id="step-list"></div>
     <button type="button" class="step-add-btn" onclick="addStepRow()">+ Ajouter</button>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-title">🏷️ Tags de recherche</div>
+    <div class="form-hint">Ils servent à la recherche par ingrédients et s'affichent sur les cartes. 4 au plus, séparés par des virgules ; proposés d'après vos ingrédients tant que vous ne les modifiez pas.</div>
+    <input class="form-input" id="f-tags" type="text" placeholder="Poulet, Poivron, Tomate" autocomplete="off" autocapitalize="sentences">
+    <button type="button" class="ing-add-btn" onclick="resetTagsAuto()" style="margin-top:8px">↻ Proposer automatiquement</button>
   </div>
 
   <div class="form-save-bar">
