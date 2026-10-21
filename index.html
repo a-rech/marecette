@@ -491,6 +491,8 @@
 
     .recipe-notes-section { margin-top: 32px; }
     .recipe-notes-section .recipe-section-title { margin-bottom: 10px; }
+    .user-tools-section { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border); }
+    .user-tools-section .recipe-section-title { margin-bottom: 10px; }
     .notes-textarea {
       width: 100%; min-height: 90px; padding: 12px 14px;
       border: 1px solid var(--border); border-radius: 10px;
@@ -3334,6 +3336,8 @@ function showRecipe(recipeId, swipeList, animDir) {
       <textarea class="notes-textarea" id="notes-${recipe.id}" placeholder="Vos astuces, variantes, retours d'expérience…" oninput="saveNote(${recipe.id}, this.value)">${_esc(noteText)}</textarea>
       <div class="notes-saved" id="notes-saved-${recipe.id}">✓ Sauvegardé</div>
     </div>
+
+    ${getUserRecipeTools(recipe.id)}
   `;
   
   // État initial du sélecteur de portions (désactive − à 1, + à 50)
@@ -4749,19 +4753,25 @@ function getRecipeActions(id) {
       <button id="btn-menu-${id}" onclick="openMenuSheet(${id})" style="flex: 1;">${menuButtonLabel(id)}</button>
     </div>`;
   
-  // Deuxième ligne : Modifier + Supprimer (uniquement pour les créations)
-  if (isUserRecipe(id)) {
-    html += `<div style="display: flex; gap: 8px;">
-      <button onclick="editRecipe(${id})" style="flex: 1;">✏️ Modifier</button>
-      <button class="delete" onclick="deleteRecipe(${id})" style="flex: 1;">🗑 Supprimer</button>
-    </div>
-    <div style="display: flex; gap: 8px;">
-      <button onclick="copyCatalogueLine(${id})" style="flex: 1;">📋 Copier pour le catalogue</button>
-    </div>`;
-  }
-  
   html += `</div>`;
   return html;
+}
+
+// Outils réservés aux créations (Modifier, Supprimer, Copier pour le catalogue) : affichés tout en bas de la fiche
+function getUserRecipeTools(id) {
+  if (!isUserRecipe(id)) return '';
+  return `<div class="user-tools-section">
+    <div class="recipe-section-title">✨ OUTILS DE CRÉATION</div>
+    <div class="user-recipe-actions" style="display: flex; flex-direction: column; gap: 8px; margin-top: 0;">
+      <div style="display: flex; gap: 8px;">
+        <button onclick="editRecipe(${id})" style="flex: 1;">✏️ Modifier</button>
+        <button class="delete" onclick="deleteRecipe(${id})" style="flex: 1;">🗑 Supprimer</button>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button onclick="copyCatalogueLine(${id})" style="flex: 1;">📋 Copier pour le catalogue</button>
+      </div>
+    </div>
+  </div>`;
 }
 
 // ════════════════════════════════════════════════════════════
