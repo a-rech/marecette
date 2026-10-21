@@ -2004,6 +2004,14 @@ const ORIGIN_FLAGS = {
 
 // Données du catalogue (RECIPES) : voir recipes.js, chargé avant ce script.
 
+// ── Numérotation des recettes ───────────────────────────────────────────
+// Catalogue : ids 1 à 9999 (recipes.js). Créations : ids à partir de 10000.
+// Avant la version 2.13, les créations commençaient à 1000 : elles sont renumérotées une seule fois (+9000).
+const USER_ID_MIN = 10000;
+const LEGACY_USER_ID_MIN = 1000;
+const LEGACY_USER_ID_SHIFT = USER_ID_MIN - LEGACY_USER_ID_MIN;   // 9000 : 1002 → 10002
+const BACKUP_VERSION = 3;   // 3 = créations numérotées à partir de 10000 ; 1 et 2 = anciennes sauvegardes (créations dès 1000)
+
 // ── Modèle commun catalogue / créations ─────────────────────────────────
 // Une recette (classique ou création) est écrite EXACTEMENT de la même façon, dans recipes.js comme
 // dans le fichier de sauvegarde : un objet JSON compact, une recette par ligne, mêmes champs, même ordre :
@@ -2061,7 +2069,7 @@ function checkCatalogueFormat(list) {
     if (missing.length) issues.push(w + ' : champ(s) manquant(s) : ' + missing.join(', '));
     if (extra.length) issues.push(w + ' : champ(s) inconnu(s) : ' + extra.join(', '));
     if (!missing.length && !extra.length && keys.join() !== RECIPE_FIELDS.join()) issues.push(w + ' : champs dans un autre ordre que le format commun');
-    if (!Number.isInteger(r.id) || r.id < 1 || r.id >= 1000) issues.push(w + ' : id invalide (entier de 1 à 999)');
+    if (!Number.isInteger(r.id) || r.id < 1 || r.id >= USER_ID_MIN) issues.push(w + ' : id invalide (entier de 1 à ' + (USER_ID_MIN - 1) + ')');
     else if (ids.has(r.id)) issues.push(w + ' : id en double');
     ids.add(r.id);
     if (!isStr(r.title) || !r.title.trim()) issues.push(w + ' : titre vide');
@@ -3792,7 +3800,7 @@ function shareInstallLink() {
 }
 
 // Génère le HTML du bouton favori pour les cartes
-// Badge « ✨ Création » pour les recettes personnelles (id >= 1000), sinon rien
+// Badge « ✨ Création » pour les recettes personnelles (id >= 10000), sinon rien
 function cardCreationBadge(id) {
   return isUserRecipe(id) ? '<span class="card-creation-badge">✨ Création</span>' : '';
 }
@@ -3831,7 +3839,7 @@ function toggleCardFav(id, btn) {
 // créations, favoris et notes personnelles (format v2 ; les fichiers v1 restent importables)
 function collectUserData() {
   var data = {
-    version: 2,
+    version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
     app: 'MaRecette',
     userRecipes: [],
@@ -3946,19 +3954,22 @@ function _sameRecipeContent(a, b) {
 //  • notes : si une note différente existe déjà, les deux sont conservées.
 function restoreBackup(data) {
   var idMap = {};                       // identifiant du fichier → identifiant sur cet appareil
+  // Anciennes sauvegardes (versions 1 et 2) : créations numérotées dès 1000 → +9000 (1002 → 10002) ; version 3 : ids tels quels
+  var legacy = data.version !== BACKUP_VERSION;
+  var toNew = function(id) { return (legacy && id >= LEGACY_USER_ID_MIN && id < USER_ID_MIN) ? id + LEGACY_USER_ID_SHIFT : id; };
   var created = 0, already = 0, invalid = 0;
 
   // 1. Créations
   var incoming = Array.isArray(data.userRecipes) ? data.userRecipes : [];
   var local = userRecipes.slice();
-  var maxId = Math.max.apply(null, [999]
+  var maxId = Math.max.apply(null, [USER_ID_MIN - 1]
     .concat(local.map(function(l) { return l.id; }))
-    .concat(incoming.map(function(r) { return parseInt(r && r.id) || 0; })));
+    .concat(incoming.map(function(r) { return toNew(parseInt(r && r.id) || 0); })));
 
   incoming.forEach(function(raw) {
-    var oldId = parseInt(raw && raw.id);
+    var oldId = toNew(parseInt(raw && raw.id));
     var clean = _backupRecipeToStored(raw);
-    if (!clean || !isFinite(oldId) || oldId < 1000) { invalid++; return; }
+    if (!clean || !isFinite(oldId) || oldId < USER_ID_MIN) { invalid++; return; }
 
     // Déjà présente (même contenu), quel que soit son identifiant
     var same = local.filter(function(l) { return _sameRecipeContent(clean, _backupRecipeToStored(l)); })[0];
@@ -3979,7 +3990,7 @@ function restoreBackup(data) {
   if (created > 0) {
     userRecipes = local;
     saveUserRecipes();
-    nextUserId = Math.max.apply(null, [999].concat(userRecipes.map(function(r) { return r.id; }))) + 1;
+    nextUserId = Math.max.apply(null, [USER_ID_MIN - 1].concat(userRecipes.map(function(r) { return r.id; }))) + 1;
   }
 
   // Identifiant du fichier → identifiant local (null = recette inconnue, on ignore)
@@ -3990,7 +4001,9 @@ function restoreBackup(data) {
   var mapId = function(id) {
     id = parseInt(id);
     if (!isFinite(id)) return null;
-    if (id < 1000) return catalogueIds[id] ? id : null;
+    // Ancienne sauvegarde : les ids 1000 à 9999 désignent des créations ; version 3 : ils désignent le catalogue
+    if (legacy && id >= LEGACY_USER_ID_MIN && id < USER_ID_MIN) id += LEGACY_USER_ID_SHIFT;
+    if (id < USER_ID_MIN) return catalogueIds[id] ? id : null;
     if (idMap[id] !== undefined) return idMap[id];
     return localIds[id] ? id : null;
   };
@@ -4052,7 +4065,7 @@ function importData(input) {
     try {
       var data = JSON.parse(e.target.result);
       // Validation minimale (v1 = favoris/notes ; v2 = + créations)
-      if (!data || data.app !== 'MaRecette' || (data.version !== 1 && data.version !== 2)) {
+      if (!data || data.app !== 'MaRecette' || (data.version !== 1 && data.version !== 2 && data.version !== 3)) {
         showDataStatus('import-status', '✗ Fichier invalide ou incompatible.', false);
       } else {
         showDataStatus('import-status', restoreBackup(data), true);
@@ -4079,7 +4092,7 @@ function resetAllData() {
   menuResetMemory();   // menu et liste de courses en mémoire
   // Les créations sont aussi en mémoire : on les vide et on rafraîchit le catalogue
   userRecipes = [];
-  nextUserId = 1000;
+  nextUserId = USER_ID_MIN;
   loadCatalogueTabs();
   showDataStatus('reset-status', '✓ Toutes les données ont été effacées.', true);
   // Réinitialiser les préférences visuelles
@@ -4106,7 +4119,7 @@ function showDataStatus(id, msg, ok) {
 // ════════════════════════════════════════════════════════════
 const USER_RECIPES_STORAGE_KEY = 'marecette_user_recipes';
 let userRecipes = [];
-let nextUserId = 1000;
+let nextUserId = USER_ID_MIN;
 let currentEditingId = null;
 let currentRecipeId = null; // ID de la recette actuellement affichée
 
@@ -4116,7 +4129,54 @@ let _swipeIdx = -1;  // Index actuel dans la liste
 let _lastFilteredPool = []; // Cache de la dernière liste filtrée (pour cohérence)
 
 // Charger les recettes utilisateur au démarrage
+// Migration unique : les créations numérotées de 1000 à 9999 passent à 10000+ (+9000), avec leurs favoris, notes et menu.
+// Les anciennes valeurs sont gardées dans « marecette_pre10000_backup » (supprimée par « Effacer toutes les données »).
+function migrateUserIds() {
+  const FLAG = 'marecette_id_scheme';
+  try {
+    if (localStorage.getItem(FLAG) === String(USER_ID_MIN)) return;
+    const raw = localStorage.getItem(USER_RECIPES_STORAGE_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    const map = {};
+    (Array.isArray(list) ? list : []).forEach(function(r) {
+      if (r && Number.isInteger(r.id) && r.id >= LEGACY_USER_ID_MIN && r.id < USER_ID_MIN) map[r.id] = r.id + LEGACY_USER_ID_SHIFT;
+    });
+    if (Object.keys(map).length) {
+      const KEYS = [USER_RECIPES_STORAGE_KEY, 'marecette_favs', 'marecette_notes', 'marecette_menu'];
+      const saved = {};
+      KEYS.forEach(function(k) { const v = localStorage.getItem(k); if (v !== null) saved[k] = v; });
+      localStorage.setItem('marecette_pre10000_backup', JSON.stringify(saved));
+      const conv = function(id) { return Object.prototype.hasOwnProperty.call(map, id) ? map[id] : id; };
+
+      list.forEach(function(r) { if (r && map[r.id] !== undefined) r.id = map[r.id]; });
+      localStorage.setItem(USER_RECIPES_STORAGE_KEY, JSON.stringify(list));
+
+      try {
+        const favs = JSON.parse(localStorage.getItem('marecette_favs') || '[]');
+        if (Array.isArray(favs)) localStorage.setItem('marecette_favs', JSON.stringify(favs.map(function(f) { return typeof f === 'number' ? conv(f) : f; })));
+      } catch (e) {}
+      try {
+        const notes = JSON.parse(localStorage.getItem('marecette_notes') || '{}');
+        if (notes && typeof notes === 'object' && !Array.isArray(notes)) {
+          const out = {};
+          Object.keys(notes).forEach(function(k) { out[/^\d+$/.test(k) ? String(conv(parseInt(k, 10))) : k] = notes[k]; });
+          localStorage.setItem('marecette_notes', JSON.stringify(out));
+        }
+      } catch (e) {}
+      try {
+        const menu = JSON.parse(localStorage.getItem('marecette_menu') || '[]');
+        if (Array.isArray(menu)) {
+          menu.forEach(function(x) { if (x && typeof x.rid === 'number') x.rid = conv(x.rid); });
+          localStorage.setItem('marecette_menu', JSON.stringify(menu));
+        }
+      } catch (e) {}
+    }
+    localStorage.setItem(FLAG, String(USER_ID_MIN));
+  } catch (e) {}
+}
+
 function loadUserRecipes() {
+  migrateUserIds();
   try {
     const raw = localStorage.getItem(USER_RECIPES_STORAGE_KEY) || '[]';
     userRecipes = JSON.parse(raw).map(function(r) {
@@ -4128,7 +4188,7 @@ function loadUserRecipes() {
     const canon = JSON.stringify(userRecipes);
     if (raw !== '[]' && canon !== raw) { try { localStorage.setItem(USER_RECIPES_STORAGE_KEY, canon); } catch (e) {} }
     if (userRecipes.length > 0) {
-      nextUserId = Math.max(...userRecipes.map(r => r.id), 999) + 1;
+      nextUserId = Math.max(...userRecipes.map(r => r.id), USER_ID_MIN - 1) + 1;
     }
   } catch (e) {
     userRecipes = [];
