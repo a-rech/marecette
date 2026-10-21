@@ -184,7 +184,7 @@
     .fam-badge.excl { background: #C0392B; }
     .fam-chev { font-size: 12px; color: var(--text3); transition: transform .2s; display: inline-block; }
     .family-block.open .fam-chev { transform: rotate(90deg); }
-    .live-count { margin-left: 8px; font-size: 12px; font-weight: 500; opacity: .9; white-space: nowrap; }
+    .live-count { margin-left: 4px; font-size: 12px; font-weight: 500; opacity: .9; white-space: nowrap; }
 
     .search-actions { display: flex; gap: 12px; align-items: center; margin-bottom: 28px; flex-wrap: wrap; }
     .btn {
@@ -422,25 +422,33 @@
     .search-bar-clear:hover { color: var(--text); background: var(--surface2); }
 
     /* ---- FAB RECHERCHE ---- */
-    .fab-search {
+    .fab-search-group {
       position: fixed;
       bottom: 24px; right: 24px;
       z-index: 200;
-      padding: 14px 26px;
-      border-radius: 50px;
-      background: var(--accent);
-      color: white;
+      display: flex; align-items: center; gap: 8px;
+      max-width: calc(100vw - 32px);
+      transition: opacity .25s, transform .25s;
+      opacity: 0; pointer-events: none; transform: translateY(14px);
+    }
+    .fab-search-group.visible {
+      opacity: 1; pointer-events: auto; transform: translateY(0);
+    }
+    .fab-search, .fab-search-reset {
+      padding: 12px 18px;
+      border-radius: 12px;
       border: none;
       cursor: pointer;
       font-family: 'DM Sans', sans-serif;
       font-size: 15px; font-weight: 500;
-      box-shadow: 0 4px 20px rgba(196,98,45,0.38);
-      display: flex; align-items: center; gap: 8px;
-      transition: opacity .25s, transform .25s, background .2s, box-shadow .2s;
-      opacity: 0; pointer-events: none; transform: translateY(14px);
+      white-space: nowrap;
+      display: flex; align-items: center; gap: 0;
+      transition: background .2s, box-shadow .2s, transform .2s;
     }
-    .fab-search.visible {
-      opacity: 1; pointer-events: auto; transform: translateY(0);
+    .fab-search {
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 4px 20px rgba(196,98,45,0.38);
     }
     .fab-search:disabled {
       background: var(--text3);
@@ -452,8 +460,17 @@
       box-shadow: 0 6px 28px rgba(196,98,45,0.50);
       transform: translateY(-2px);
     }
+    .fab-search-reset {
+      display: none;
+      background: var(--text);
+      color: var(--bg);
+      box-shadow: var(--shadow);
+    }
+    .fab-search-reset.show { display: flex; }
+    .fab-search-reset:hover { background: var(--accent); color: white; transform: translateY(-2px); }
     @media (max-width: 700px) {
-      .fab-search { bottom: 18px; right: 16px; padding: 13px 20px; font-size: 14px; }
+      .fab-search-group { bottom: 18px; right: 16px; }
+      .fab-search, .fab-search-reset { padding: 11px 14px; font-size: 14px; }
     }
 
     /* ---- BOUTON RETOUR EN HAUT ---- */
@@ -1105,10 +1122,11 @@
     .lex-item.open .lex-arrow { transform: rotate(90deg); color: var(--accent); }
     .lex-item-body {
       font-size: 13px; color: var(--text2); line-height: 1.65;
+      white-space: pre-line;
       max-height: 0; overflow: hidden;
       transition: max-height .3s ease, padding .3s ease;
     }
-    .lex-item.open .lex-item-body { max-height: 300px; padding-top: 10px; }
+    .lex-item.open .lex-item-body { max-height: 800px; padding-top: 10px; }
     .lex-empty { text-align: center; color: var(--text3); padding: 32px 0; font-size: 14px; }
     .lex-highlight { background: rgba(196,98,45,.22); border-radius: 3px; padding: 0 2px; }
 
@@ -1348,9 +1366,10 @@
 </nav>
 
 <!-- BOUTON FLOTTANT RECHERCHE (page ingrédients) -->
-<button class="fab-search" id="fab-search" onclick="doSearch()" disabled>
-  🔍 Rechercher<span class="live-count" id="fab-live-count" style="display:none"></span>
-</button>
+<div class="fab-search-group" id="fab-search-group">
+  <button class="fab-search-reset" id="fab-search-reset" onclick="resetFilters()">Réinitialiser</button>
+  <button class="fab-search" id="fab-search" onclick="doSearch()" disabled>Rechercher<span class="live-count" id="fab-live-count" style="display:none"></span></button>
+</div>
 
 <!-- BOUTON RETOUR EN HAUT -->
 <button class="btn-scroll-top" id="btn-scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Retour en haut">↑</button>
@@ -2161,7 +2180,7 @@ function showPage(pageId) {
   const target = document.getElementById(`page-${pageId}`);
   if (!target) return;
   target.classList.add('active');
-  document.getElementById('fab-search').classList.toggle('visible', pageId === 'search');
+  document.getElementById('fab-search-group').classList.toggle('visible', pageId === 'search');
   window.scrollTo(0, 0);
   if (pageId !== 'menu')      stopStoreMode();
   if (pageId === 'home')      updateHomeGreeting();
@@ -2351,7 +2370,7 @@ function loadIngredientFamilies() {
     if (chip) { chip.classList.remove('selected'); chip.classList.add('excluded'); }
   });
   syncExclBtn();
-  applyIngView(_getIngView(), true);   // vue mémorisée (pastilles par défaut)
+  applyIngView(_getIngView(), true);   // vue mémorisée (catégories par défaut)
   updateFamBadges();
 }
 
@@ -2367,7 +2386,7 @@ function _ingNorm(str) {
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 }
 function _getIngView() {
-  try { return localStorage.getItem(ING_VIEW_KEY) === 'cats' ? 'cats' : 'chips'; } catch (e) { return 'chips'; }
+  try { return localStorage.getItem(ING_VIEW_KEY) === 'chips' ? 'chips' : 'cats'; } catch (e) { return 'cats'; }
 }
 function applyIngView(view, silent) {
   const container = document.getElementById('families-container');
@@ -2511,6 +2530,8 @@ function updateSearchButton() {
   const hasSelection = selected.length > 0;
   btn.disabled = !hasSelection;
   fab.disabled = !hasSelection;
+  const fabReset = document.getElementById('fab-search-reset');
+  if (fabReset) fabReset.classList.toggle('show', hasSelection);
   countSpan.textContent = hasSelection
     ? `${selected.length} ingrédient${selected.length > 1 ? 's' : ''} sélectionné${selected.length > 1 ? 's' : ''}`
     : 'Aucun ingrédient sélectionné';
@@ -2549,6 +2570,13 @@ function resetFilters() {
   // Les exclusions sont conservées ; on repasse simplement en mode sélection
   if (chipMode !== 'select') { chipMode = 'select'; syncChipModeUI(); }
   updateSearchButton();
+  // Vue par catégories : on referme toutes les catégories
+  const fam = document.getElementById('families-container');
+  if (fam && fam.classList.contains('cat-view')) {
+    fam.querySelectorAll('.family-block.open').forEach(b => b.classList.remove('open'));
+    if (_catOpenBefore) _catOpenBefore = new Set();   // évite de les rouvrir en effaçant la recherche
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // Recherche de recettes triée par pertinence
@@ -3088,7 +3116,7 @@ const LEXIQUE = {
     { name:'Faire suer', ico:'🧅', body:'Cuire à feu doux sans coloration pour que les légumes (oignon, échalote) perdent leur eau et ramollissent. Différent du rissoler : on cherche la tendreté, pas la dorure.' },
     { name:'Julienne', ico:'🔪', body:'Tailler des légumes en fins bâtonnets réguliers d\'environ 5 cm de long et 2–3 mm d\'épaisseur. Utilisé pour les garnitures, salades et cuissons rapides au wok.' },
     { name:'Mirepoix', ico:'🥕', body:'Taille en dés grossiers (1–2 cm) de légumes aromatiques — typiquement oignon, carotte, céleri — utilisée comme base de cuisson pour les fonds, ragoûts et sauces.' },
-    { name:'Roux', ico:'🧈', body:'Mélange à parts égales de beurre fondu et de farine, cuit à feu doux. Sert d\'épaississant pour les sauces (béchamel, velouté). Blanc = cuit très peu, blond = légèrement doré, brun = très coloré.' },
+    { name:'Roux', ico:'🧈', body:'Mélange à parts égales de beurre fondu et de farine, cuit à feu doux. Sert d\'épaississant pour les sauces (béchamel, velouté).\nBlanc : cuit très peu.\nBlond : légèrement doré.\nBrun : très coloré.' },
     { name:'Monter au beurre', ico:'🧈', body:'Incorporer du beurre froid en petits morceaux hors du feu en fouettant pour lier et enrichir une sauce. Donne de la brillance, du corps et de la rondeur.' },
     { name:'Chemiser', ico:'🍰', body:'Tapisser l\'intérieur d\'un moule de beurre et farine, papier sulfurisé, ou autre aliment (biscuits, tranches de jambon) pour faciliter le démoulage et structurer la préparation.' },
     { name:'Réduire', ico:'🔥', body:'Faire évaporer une partie de l\'eau d\'un liquide (sauce, bouillon) à feu vif pour concentrer les saveurs et épaissir naturellement. On parle de "réduction de moitié" ou "des deux tiers".' },
@@ -3111,7 +3139,7 @@ const LEXIQUE = {
     { name:'Mirin', ico:'🍶', body:'Vin de riz doux japonais (alcool faible, très sucré). S\'utilise en petite quantité pour apporter douceur, brillance et umami aux marinades, sauces teriyaki et bouillons.' },
     { name:'Tahini', ico:'🌰', body:'Purée de sésame toasté. Base incontournable du houmous, de la sauce tahini et des falafels. Riche en graisses insaturées, avec un goût profond de noisette légèrement amer.' },
     { name:'Harissa', ico:'🌶️', body:'Pâte de piment rouge nord-africaine (Tunisie, Maroc) avec ail, huile d\'olive et épices. Puissante et parfumée. S\'utilise comme condiment, marinade ou base de sauce.' },
-    { name:'Miso', ico:'🫙', body:'Pâte de soja fermentée japonaise. Blanc (shiro) : doux et sucré. Rouge (aka) : puissant et salé. Utilisé dans les soupes, marinades et sauces. Riche en umami et en probiotiques.' },
+    { name:'Miso', ico:'🫙', body:'Pâte de soja fermentée japonaise.\nBlanc (shiro) : doux et sucré.\nRouge (aka) : puissant et salé.\nUtilisé dans les soupes, marinades et sauces. Riche en umami et en probiotiques.' },
     { name:'Sumac', ico:'🌺', body:'Épice moyen-orientale aux baies rouge foncé séchées et moulues. Saveur acidulée et fruitée, substitut naturel du citron. S\'utilise sur les salades, viandes grillées et fromages.' },
     { name:'Lait de coco', ico:'🥥', body:'Liquide extrait de la chair de noix de coco râpée. Différent de l\'eau de coco. Donne de l\'onctuosité aux currys, soupes et desserts asiatiques. La crème de coco est la version plus concentrée.' },
     { name:'Pâte miso', ico:'🍜', body:'Voir Miso. La pâte est utilisée directement diluée dans un bouillon chaud (sans ébullition pour préserver les probiotiques) ou comme marinade pour viandes et poissons.' },
@@ -3119,21 +3147,21 @@ const LEXIQUE = {
     { name:'Ricotta', ico:'🧀', body:'Fromage frais italien obtenu par recuisson du lactosérum (petit-lait). Doux, légèrement granuleux. Utilisé dans les lasagnes, cannoli, raviolis et gâteaux. Ne fond pas à la cuisson.' },
     { name:'Mascarpone', ico:'🧀', body:'Fromage frais italien très riche en matières grasses (environ 75%). Texture crémeuse et goût doux légèrement acidulé. Base du tiramisu, aussi utilisé pour alléger les sauces.' },
     { name:'Cinq-épices', ico:'⭐', body:'Mélange traditionnel chinois : anis étoilé, clou de girofle, cannelle, poivre de Sichuan, fenouil. Équilibre les cinq saveurs. Utilisé pour le porc laqué, le canard et les marinades asiatiques.' },
-    { name:'PST (protéines de soja texturées)', ico:'🌱', body:'Protéines de soja déshydratées, vendues sèches en petits éclats (type haché), en morceaux ou en lamelles. Pour les réhydrater : les couvrir de liquide bouillant aromatisé (bouillon de légumes, sauce soja, épices ou herbes — l\'eau seule les laisse fades) et les laisser gonfler à couvert 10 à 30 minutes selon la taille, les morceaux larges étant plus longs. Elles absorbent 2 à 3 fois leur poids. Les égoutter ensuite en les pressant fermement entre les mains ou dans un linge propre : c\'est ce qui donne une texture ferme et limite le goût de soja. Elles sont alors prêtes à être marinées, dorées à la poêle ou mijotées (bolognaise, blanquette, chili). Vérifier l\'emballage : les temps varient selon la marque. Réhydratées, elles se gardent 2 à 3 jours au frais ou se congèlent. Voir Réhydrater.' },
-    { name:'Tofu', ico:'🥡', body:'Fromage de soja pressé. Ferme : à presser 15 à 30 minutes sous un poids pour en retirer l\'eau, puis à couper en dés et dorer à la poêle ou au four, ou à mariner. Soyeux : texture crémeuse, non pressé, pour sauces, soupes miso, mousses et desserts. Fumé : déjà parfumé, se mange tel quel ou en dés.' },
+    { name:'PST (protéines de soja texturées)', ico:'🌱', body:'Protéines de soja déshydratées, vendues sèches en petits éclats (type haché), en morceaux ou en lamelles.\nPour les réhydrater : les couvrir de liquide bouillant aromatisé (bouillon de légumes, sauce soja, épices ou herbes — l\'eau seule les laisse fades) et les laisser gonfler à couvert 10 à 30 minutes selon la taille, les morceaux larges étant plus longs. Elles absorbent 2 à 3 fois leur poids.\nLes égoutter ensuite en les pressant fermement entre les mains ou dans un linge propre : c\'est ce qui donne une texture ferme et limite le goût de soja.\nElles sont alors prêtes à être marinées, dorées à la poêle ou mijotées (bolognaise, blanquette, chili).\nVérifier l\'emballage : les temps varient selon la marque. Réhydratées, elles se gardent 2 à 3 jours au frais ou se congèlent. Voir Réhydrater.' },
+    { name:'Tofu', ico:'🥡', body:'Fromage de soja pressé.\nFerme : à presser 15 à 30 minutes sous un poids pour en retirer l\'eau, puis à couper en dés et dorer à la poêle ou au four, ou à mariner.\nSoyeux : texture crémeuse, non pressé, pour sauces, soupes miso, mousses et desserts.\nFumé : déjà parfumé, se mange tel quel ou en dés.' },
     { name:'Seitan', ico:'🌾', body:'« Viande » végétale à base de gluten de blé, dense et riche en protéines. Se trouve prêt à l\'emploi ou se prépare avec de la farine de gluten. S\'émince, se marine et se dore ; à éviter en cas d\'intolérance au gluten.' },
     { name:'Tempeh', ico:'🫘', body:'Soja entier fermenté et compacté en bloc, d\'origine indonésienne. Goût de noix prononcé, texture ferme. Se coupe en tranches ou en dés, se marine puis se poêle ou se rôtit ; une courte cuisson à la vapeur ou à l\'eau en atténue l\'amertume.' },
-    { name:'Sauce soja', ico:'🍶', body:'Condiment de soja fermenté. La sauce soja salée (type shoyu) est l\'usage courant : très salée, elle remplace le sel. La sauce soja sucrée (type kecap manis) est sirupeuse, pour laquer et mariner. Le tamari, souvent sans blé, est plus rond et convient aux régimes sans gluten (vérifier l\'étiquette).' },
+    { name:'Sauce soja', ico:'🍶', body:'Condiment de soja fermenté.\nSalée (type shoyu) : l\'usage courant, très salée, elle remplace le sel.\nSucrée (type kecap manis) : sirupeuse, pour laquer et mariner.\nTamari : souvent sans blé, plus rond, il convient aux régimes sans gluten (vérifier l\'étiquette).' },
     { name:'Sauce poisson (nuoc-mâm)', ico:'🐟', body:'Condiment d\'Asie du Sud-Est issu de poisson fermenté dans le sel. Très salée et riche en umami : une cuillère à café relève soupes, sautés, marinades et sauces. Son odeur forte s\'adoucit à la cuisson.' },
-    { name:'Citronnelle, galanga, combava', ico:'🌿', body:'Trio aromatique des cuisines thaïe et vietnamienne. Citronnelle : on utilise la base tendre des tiges, écrasée ou émincée finement. Galanga : rhizome voisin du gingembre, plus résineux et piquant. Feuilles de combava (kaffir) : parfum d\'agrume intense, à infuser entières et à retirer avant de manger. Se congèlent bien.' },
-    { name:'Levures (chimique, boulangère, maltée)', ico:'🍞', body:'Levure chimique : poudre en sachet qui fait lever gâteaux et crêpes grâce à la chaleur, sans repos. Levure de boulanger (fraîche ou sèche) : organisme vivant qui fait lever les pâtes à pain après repos, à délayer dans de l\'eau tiède, pas chaude. Levure maltée (ou nutritionnelle) : flocons jaunes désactivés au goût de fromage, à saupoudrer ; elle ne fait pas lever.' },
+    { name:'Citronnelle, galanga, combava', ico:'🌿', body:'Trio aromatique des cuisines thaïe et vietnamienne.\nCitronnelle : on utilise la base tendre des tiges, écrasée ou émincée finement.\nGalanga : rhizome voisin du gingembre, plus résineux et piquant.\nFeuilles de combava (kaffir) : parfum d\'agrume intense, à infuser entières et à retirer avant de manger.\nSe congèlent bien.' },
+    { name:'Levures (chimique, boulangère, maltée)', ico:'🍞', body:'Levure chimique : poudre en sachet qui fait lever gâteaux et crêpes grâce à la chaleur, sans repos.\nLevure de boulanger (fraîche ou sèche) : organisme vivant qui fait lever les pâtes à pain après repos, à délayer dans de l\'eau tiède, pas chaude.\nLevure maltée (ou nutritionnelle) : flocons jaunes désactivés au goût de fromage, à saupoudrer ; elle ne fait pas lever.' },
     { name:'Maïzena (fécule de maïs)', ico:'🌽', body:'Amidon de maïs très fin qui épaissit sauces, crèmes et currys. La délayer dans un peu de liquide froid, la verser dans la préparation chaude et porter à frémissement en remuant 1 à 2 minutes. Environ 1 cuillère à soupe pour 250 ml de liquide donne une sauce nappante.' },
-    { name:'Bouillon, fond, fumet', ico:'🍲', body:'Bouillon : eau parfumée par la cuisson de viande, volaille ou légumes. Fond : bouillon réduit et concentré qui sert de base aux sauces. Fumet : même principe avec des arêtes de poisson, cuit seulement 20 à 30 minutes. Les cubes et poudres sont salés : goûter avant de saler le plat.' },
-    { name:'Pâtes à tarte', ico:'🥧', body:'Brisée : friable, pour quiches et tartes salées ou sucrées. Sablée : plus riche en beurre et en sucre, pour les tartes sucrées. Feuilletée : beurre en couches, elle gonfle en feuillets (chaussons, galettes). Filo : feuilles très fines à badigeonner de beurre ou d\'huile, croustillantes (bricks, bouchées, baklavas).' },
-    { name:'Légumineuses sèches', ico:'🫘', body:'Lentilles vertes, corail et noires : pas de trempage, 15 à 30 minutes de cuisson. Pois chiches et haricots secs : tremper 8 à 12 heures dans beaucoup d\'eau froide, jeter l\'eau, puis cuire 1 h à 1 h 30 (20 à 30 minutes en autocuiseur). Saler en fin de cuisson. Les haricots rouges doivent bouillir à gros bouillons 10 minutes au début : crus, ils sont toxiques.' },
-    { name:'Riz', ico:'🍚', body:'Basmati ou long : grains qui se détachent, à rincer avant cuisson (pilafs, accompagnements). Arborio ou rond (risotto) : riche en amidon, il devient crémeux quand on ajoute le bouillon louche par louche, sans le rincer. Riz rond ou à dessert : riz au lait. Compter environ 1,5 à 2 volumes d\'eau pour 1 volume de riz basmati, à couvert.' },
+    { name:'Bouillon, fond, fumet', ico:'🍲', body:'Bouillon : eau parfumée par la cuisson de viande, volaille ou légumes.\nFond : bouillon réduit et concentré qui sert de base aux sauces.\nFumet : même principe avec des arêtes de poisson, cuit seulement 20 à 30 minutes.\nLes cubes et poudres sont salés : goûter avant de saler le plat.' },
+    { name:'Pâtes à tarte', ico:'🥧', body:'Brisée : friable, pour quiches et tartes salées ou sucrées.\nSablée : plus riche en beurre et en sucre, pour les tartes sucrées.\nFeuilletée : beurre en couches, elle gonfle en feuillets (chaussons, galettes).\nFilo : feuilles très fines à badigeonner de beurre ou d\'huile, croustillantes (bricks, bouchées, baklavas).' },
+    { name:'Légumineuses sèches', ico:'🫘', body:'Lentilles vertes, corail et noires : pas de trempage, 15 à 30 minutes de cuisson.\nPois chiches et haricots secs : tremper 8 à 12 heures dans beaucoup d\'eau froide, jeter l\'eau, puis cuire 1 h à 1 h 30 (20 à 30 minutes en autocuiseur). Saler en fin de cuisson.\nLes haricots rouges doivent bouillir à gros bouillons 10 minutes au début : crus, ils sont toxiques.' },
+    { name:'Riz', ico:'🍚', body:'Basmati ou long : grains qui se détachent, à rincer avant cuisson (pilafs, accompagnements).\nArborio ou rond (risotto) : riche en amidon, il devient crémeux quand on ajoute le bouillon louche par louche, sans le rincer.\nRiz rond ou à dessert : riz au lait.\nCompter environ 1,5 à 2 volumes d\'eau pour 1 volume de riz basmati, à couvert.' },
     { name:'Piment', ico:'🌶️', body:'La chaleur se concentre dans les graines et les membranes blanches : les retirer adoucit le plat. Le piment d\'Espelette est doux et fruité ; les flocons et les piments secs sont plus puissants (les piments secs se réhydratent). Se laver les mains après manipulation et ne pas se toucher les yeux.' },
-    { name:'Vanille', ico:'🍦', body:'Gousse : la plus parfumée, à fendre en deux et gratter pour en récupérer les graines, en infusant aussi la gousse. Extrait : liquide, à ajouter plutôt en fin de préparation. Sucre vanillé : sucre aromatisé, plus discret. La gousse se réutilise, rincée et séchée.' },
+    { name:'Vanille', ico:'🍦', body:'Gousse : la plus parfumée, à fendre en deux et gratter pour en récupérer les graines, en infusant aussi la gousse.\nExtrait : liquide, à ajouter plutôt en fin de préparation.\nSucre vanillé : sucre aromatisé, plus discret.\nLa gousse se réutilise, rincée et séchée.' },
   ],
   materiel: [
     { name:'Mandoline', ico:'🔪', body:'Ustensile de découpe manuel avec une lame réglable permettant de trancher les légumes en lamelles d\'épaisseur précise et régulière. Indispensable pour les gratins. Attention aux doigts — toujours utiliser le protège-main.' },
@@ -3146,9 +3174,9 @@ const LEXIQUE = {
     { name:'Rouleau à pâtisserie', ico:'🫓', body:'Cylindre lisse pour étaler uniformément une pâte. Le modèle à poignées avec roulements est plus précis. Pour une épaisseur régulière, placer deux règles ou tiges de même épaisseur de chaque côté de la pâte.' },
     { name:'Batteur électrique', ico:'⚡', body:'Permet de monter des blancs en neige, fouetter de la crème ou crémer du beurre sans effort. Le batteur sur socle (type KitchenAid) est plus stable pour les longues préparations comme les pâtes levées.' },
     { name:'Cuit-vapeur', ico:'💨', body:'Permet de cuire sans matière grasse en conservant nutriments, couleurs et textures. Peut être un panier en bambou posé sur une casserole d\'eau frémissante, ou électrique avec minuterie.' },
-    { name:'Four', ico:'♨️', body:'Statique : chaleur du haut et du bas, idéal pour la pâtisserie et les gratins. Chaleur tournante : l\'air est brassé, la cuisson plus homogène et rapide, avec plusieurs plaques possibles ; on baisse souvent de 10 à 20 °C. Thermostat : Th. 6 = 180 °C, Th. 7 = 210 °C, Th. 8 = 240 °C. Préchauffer 10 à 15 minutes avant d\'enfourner.' },
-    { name:'Poêle', ico:'🍳', body:'Antiadhésive : pour œufs, crêpes et poissons délicats, sans feu trop vif ni ustensiles métalliques. Inox ou fonte : supportent le feu vif et forment de belles croûtes. Toujours la préchauffer avant d\'ajouter la matière grasse : un aliment colle dans une poêle froide.' },
-    { name:'Moules à gâteau', ico:'🎂', body:'Moule à manqué : rond aux bords évasés, pour les gâteaux classiques. Moule à charnière : fond détachable, pour cheesecakes, tartes et gâteaux fragiles. Moule à cake : rectangulaire. Silicone : souple, pas besoin de beurrer, à laisser tiédir avant de démouler. Le métal foncé cuit plus vite.' },
+    { name:'Four', ico:'♨️', body:'Statique : chaleur du haut et du bas, idéal pour la pâtisserie et les gratins.\nChaleur tournante : l\'air est brassé, la cuisson plus homogène et rapide, avec plusieurs plaques possibles ; on baisse souvent de 10 à 20 °C.\nThermostat : Th. 6 = 180 °C, Th. 7 = 210 °C, Th. 8 = 240 °C.\nPréchauffer 10 à 15 minutes avant d\'enfourner.' },
+    { name:'Poêle', ico:'🍳', body:'Antiadhésive : pour œufs, crêpes et poissons délicats, sans feu trop vif ni ustensiles métalliques.\nInox ou fonte : supportent le feu vif et forment de belles croûtes.\nToujours la préchauffer avant d\'ajouter la matière grasse : un aliment colle dans une poêle froide.' },
+    { name:'Moules à gâteau', ico:'🎂', body:'Moule à manqué : rond aux bords évasés, pour les gâteaux classiques.\nMoule à charnière : fond détachable, pour cheesecakes, tartes et gâteaux fragiles.\nMoule à cake : rectangulaire.\nSilicone : souple, pas besoin de beurrer, à laisser tiédir avant de démouler.\nLe métal foncé cuit plus vite.' },
     { name:'Mixeur plongeant', ico:'🌀', body:'Mixeur à main plongé directement dans la casserole ou le bol : veloutés, soupes, sauces, purées. Plonger l\'appareil avant de le démarrer et laisser un peu refroidir les liquides bouillants pour éviter les éclaboussures.' },
     { name:'Papier sulfurisé', ico:'📄', body:'Papier de cuisson antiadhésif et résistant à la chaleur (vérifier la température sur l\'emballage). Tapisse plaques et moules, sert à cuire en papillote (poisson, légumes) ou à couvrir une viande qui repose. Ne pas le laisser toucher la résistance du four.' },
   ],
