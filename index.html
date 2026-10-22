@@ -1137,6 +1137,18 @@
     .price-1 { background: #E8F3E6; color: #3a7a3a; }
     .price-2 { background: #FFF3DC; color: #8a6000; }
     .price-3 { background: #F5E6E6; color: #8a2020; }
+    .season-badge {
+      font-size: 11px; font-weight: 500; padding: 2px 6px;
+      border-radius: 20px; background: #FFF1DD; color: #a85a1f; flex-shrink: 0;
+    }
+    .diet-pill {
+      display: none; width: fit-content; margin: 0 auto 14px; padding: 5px 13px;
+      border-radius: 999px; border: 1px solid var(--accent2);
+      background: rgba(122,158,111,.14); color: var(--accent2);
+      font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer;
+    }
+    .diet-pill.show { display: block; }
+    .prefs-hint { font-size: 12px; color: var(--text3); line-height: 1.5; margin-top: 8px; }
     .veg-badge {
       font-size: 11px; font-weight: 500; padding: 2px 6px;
       border-radius: 20px; background: #E8F3E6; color: #3a7a3a; flex-shrink: 0;
@@ -1439,6 +1451,7 @@
       <div class="home-greeting-main" id="home-greeting-main"></div>
       <div class="home-greeting-sub" id="home-greeting-sub"></div>
     </div>
+    <button class="diet-pill" id="home-diet-pill" onclick="openPrefs()" title="Modifier dans les paramètres">🥦 Profil végétarien actif</button>
     <div class="season-banner" id="season-banner" style="display:none">
       <span class="season-emoji" id="season-emoji"></span>
       <div class="season-title" id="season-title"></div>
@@ -1488,14 +1501,14 @@
   </div>
   <div class="chip-mode-bar">
     <button class="chip-mode-btn" onclick="toggleChipMode()">✔ Mode sélection</button>
-    <button class="veg-mode-btn" onclick="toggleVegMode()" title="Masquer les viandes, poissons et autres ingrédients non végétariens (œufs et laitages conservés)">🥦 Mode végé</button>
+    <button class="veg-mode-btn" onclick="toggleVegMode()" title="Profil végétarien (réglable aussi dans les Paramètres) : masque viandes et poissons, ne propose que des recettes végétariennes">🥦 Mode végé</button>
     <span class="chip-mode-hint" id="chip-mode-hint">Mode ✔ Sélection actif - Basculer en mode ✕ pour exclure</span>
   </div>
   <div class="families-grid cat-view" id="families-container"></div>
   <div class="ing-empty" id="ing-empty"></div>
   <div class="search-actions-top">
     <button class="chip-mode-btn" onclick="toggleChipMode()">✔ Mode sélection</button>
-    <button class="veg-mode-btn" onclick="toggleVegMode()" title="Masquer les viandes, poissons et autres ingrédients non végétariens (œufs et laitages conservés)">🥦 Mode végé</button>
+    <button class="veg-mode-btn" onclick="toggleVegMode()" title="Profil végétarien (réglable aussi dans les Paramètres) : masque viandes et poissons, ne propose que des recettes végétariennes">🥦 Mode végé</button>
     <button id="btn-reset-excl" onclick="resetExclusions()" style="display:none">✕ Effacer les exclusions</button>
   </div>
   <div class="search-actions">
@@ -1539,6 +1552,8 @@
     <button class="filter-btn" id="fbtn-time" onclick="toggleFilterDrop('time')" title="Temps">⌛</button>
     <!-- Végétarien -->
     <button class="filter-btn" id="fbtn-veg" onclick="toggleFilterDrop('veg')" title="Végétarien">🥦</button>
+    <!-- De saison -->
+    <button class="filter-btn" id="fbtn-season" onclick="toggleFilterDrop('season')" title="De saison">🌿</button>
     <!-- Dropdown unique partagé -->
     <div class="filter-dropdown" id="filter-dropdown">
       <div class="filter-dropdown-title" id="filter-dropdown-title"></div>
@@ -1676,6 +1691,14 @@
       <div class="prefs-row">
         <div class="prefs-label">Nom / Pseudo</div>
         <input type="text" id="prefs-pseudo" class="prefs-input-text" placeholder="Votre prénom ou pseudo…" maxlength="30" oninput="savePseudo(this.value)" autocomplete="off">
+      </div>
+      <div class="prefs-row">
+        <div class="prefs-label">Alimentation</div>
+        <div class="prefs-options">
+          <button class="prefs-option active" data-diet="all" onclick="setDiet(false)">🍽 Tout</button>
+          <button class="prefs-option" data-diet="veg" onclick="setDiet(true)">🥦 Végétarien</button>
+        </div>
+        <div class="prefs-hint">Végétarien : masque viandes et poissons dans la recherche par ingrédients et ne propose que des recettes végétariennes (œufs et produits laitiers conservés).</div>
       </div>
       <div class="prefs-row">
         <div class="prefs-label">Taille de police</div>
@@ -2475,11 +2498,48 @@ function applyVegMode(on, silent) {
     btn.textContent = on ? '🥦 Mode végé ✓' : '🥦 Mode végé ✕';
   });
   if (!silent) { try { localStorage.setItem(VEG_KEY, on ? '1' : '0'); } catch (e) {} }
+  syncDietUI();
   const input = document.getElementById('ing-search');
   filterIngredients(input ? input.value : '');   // recalcule aussi les compteurs
   if (typeof updateSearchButton === 'function') updateSearchButton();
+  if (!silent) onDietChanged();
 }
 function toggleVegMode() { applyVegMode(!_getVegMode()); }
+
+// ── Profil alimentaire global (végétarien seulement) ───────────────────────
+// Un seul réglage, partagé par les Paramètres et le bouton « Mode végé » de la
+// recherche par ingrédients. Quand il est actif : catalogue, recherche, hasard et
+// recette de saison de l'accueil ne proposent que des recettes végétariennes.
+function isVegProfile() { return _getVegMode(); }
+function passesDietProfile(r) { return !isVegProfile() || !!r.vegetarian; }
+function setDiet(on) { applyVegMode(!!on); }
+function syncDietUI() {
+  const on = _getVegMode();
+  document.querySelectorAll('[data-diet]').forEach(function(b) {
+    b.classList.toggle('active', (b.dataset.diet === 'veg') === on);
+  });
+  const pill = document.getElementById('home-diet-pill');
+  if (pill) pill.classList.toggle('show', on);
+  // Le filtre « Végétarien » du catalogue devient inutile quand le profil est actif
+  const fv = document.getElementById('fbtn-veg');
+  if (fv) fv.style.display = on ? 'none' : '';
+  if (on && typeof filterVeg !== 'undefined' && filterVeg !== 'all') {
+    filterVeg = 'all';
+    if (fv) fv.classList.remove('active');
+  }
+}
+// Rafraîchit la page affichée quand le profil change
+function onDietChanged() {
+  const active = function(id) { const el = document.getElementById('page-' + id); return el && el.classList.contains('active'); };
+  if (active('search')) {                       // anciens résultats : plus conformes au profil
+    const res = document.getElementById('search-results');
+    if (res) res.innerHTML = '';
+    _lastFilteredPool = [];
+  }
+  if (active('catalogue')) applyAllFilters();
+  if (active('random'))    pickRandom();
+  if (active('home'))      renderSeasonBanner();
+}
 
 // Filtre instantané : masque les pastilles et catégories sans correspondance (sans reconstruire le DOM,
 // donc sélections et exclusions sont conservées). Tous les mots saisis doivent être présents.
@@ -2672,7 +2732,7 @@ function doSearch() {
   // IMPORTANT : inclure aussi les recettes utilisateur
   const excluded = loadExclusions();
   const scored = RECIPES.concat(userRecipes)
-    .filter(recipe => !isRecipeExcluded(recipe, excluded))
+    .filter(recipe => !isRecipeExcluded(recipe, excluded) && passesDietProfile(recipe))
     .map(recipe => {
       const chips = recipeChipSet(recipe);
       const matchCount = selectedIngredients.filter(ing => chips.has(ing)).length;
@@ -2713,7 +2773,7 @@ function doSearch() {
             <div class="recipe-card-tags">
               <span class="tag diff-${_esc(recipe.diff)}">${_esc(recipe.diff)}</span>
               ${priceHtml(recipe.id)}
-              ${vegHtml(recipe.id)}
+              ${vegHtml(recipe.id)}${seasonHtml(recipe.id)}
               ${recipe.tags.slice(0, 2).map(tag => `<span class="tag">${_esc(tag)}</span>`).join('')}
             </div>
           </div>
@@ -2737,6 +2797,7 @@ let filterDiff  = 'all';
 let filterPrice = 'all';
 let filterTime  = 'all';
 let filterVeg   = 'all'; // 'all' | 'veg'
+let filterSeason = 'all'; // 'all' | 'now'
 
 // Bascule mode Type de plat / Culture
 function setCatMode(mode) {
@@ -2779,6 +2840,13 @@ const FILTER_DEFS = {
       { val: 'gt90',   label: '> 90 min' },
     ]
   },
+  season: {
+    title: 'Saison',
+    opts: [
+      { val: 'all', label: 'Toutes les recettes' },
+      { val: 'now', label: '🌿 De saison' },
+    ]
+  },
   veg: {
     title: 'Régime',
     opts: [
@@ -2801,10 +2869,12 @@ function toggleFilterDrop(key) {
   const def = FILTER_DEFS[key];
   // Titre
   document.getElementById('filter-dropdown-title').textContent = def.title;
+  if (key === 'season') def.opts[1].label = '🌿 De saison (' + SEASON_MONTHS[new Date().getMonth()].name + ')';
   // Options
   const currentVal = key === 'diff' ? filterDiff
     : key === 'price' ? filterPrice
     : key === 'time'  ? filterTime
+    : key === 'season' ? filterSeason
     : filterVeg;
   document.getElementById('filter-dropdown-opts').innerHTML = def.opts.map(o => {
     // Valeur à passer à selectFilterOpt : string → apostrophes, number → sans guillemets
@@ -2832,6 +2902,7 @@ function selectFilterOpt(key, val) {
   if (key === 'price') filterPrice = val;
   if (key === 'time')  filterTime  = val;
   if (key === 'veg')   filterVeg   = val;
+  if (key === 'season') filterSeason = val;
   // Mettre à jour l'état actif du bouton emoji
   const btn = document.getElementById('fbtn-' + key);
   btn.classList.toggle('active', val !== 'all');
@@ -2911,6 +2982,8 @@ function passesAllFilters(r, query = '') {
   if (filterVeg === 'veg') {
     if (!r.vegetarian) return false;
   }
+  if (!passesDietProfile(r)) return false;
+  if (filterSeason === 'now' && !isInSeason(r)) return false;
   return true;
 }
 
@@ -3014,6 +3087,12 @@ function applyAllFilters() {
     pool = pool.filter(r => !!r.vegetarian);
   }
 
+  // 7. Profil alimentaire global + 8. De saison
+  pool = pool.filter(passesDietProfile);
+  if (filterSeason === 'now') {
+    pool = pool.filter(isInSeason);
+  }
+
   // Synchronise le bouton Réinitialiser selon l'état réel des filtres
   syncFabReset('catalogue');
 
@@ -3043,12 +3122,13 @@ function resetAllFilters() {
   filterPrice = 'all';
   filterTime  = 'all';
   filterVeg   = 'all';
+  filterSeason = 'all';
 
   document.getElementById('cat-search-input').value = '';
   document.getElementById('cat-search-clear').style.display = 'none';
 
   // Remettre tous les boutons filtres inactifs
-  ['diff','price','time','veg'].forEach(k => {
+  ['diff','price','time','veg','season'].forEach(k => {
     const btn = document.getElementById('fbtn-' + k);
     if (btn) btn.classList.remove('active');
   });
@@ -3061,7 +3141,7 @@ function resetAllFilters() {
 
   syncFabReset('catalogue'); // Masque le bouton car plus aucun filtre actif
   updateCatalogueTabCounts(); // Remet à jour les compteurs
-  renderCatalogueGrid(shuffle(RECIPES.slice()));
+  renderCatalogueGrid(shuffle(RECIPES.slice().filter(passesDietProfile)));
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -3081,7 +3161,7 @@ function renderCatalogueGrid(recipes) {
             <div class="recipe-card-tags">
               <span class="tag diff-${_esc(recipe.diff)}">${_esc(recipe.diff)}</span>
               ${priceHtml(recipe.id)}
-              ${vegHtml(recipe.id)}
+              ${vegHtml(recipe.id)}${seasonHtml(recipe.id)}
               <span class="tag">${_esc(recipe.origin)}</span>
             </div>
           </div>
@@ -3127,7 +3207,7 @@ function hasCatalogueFilter() {
     ? document.getElementById('cat-search-input').value.trim()
     : '';
   return !!(query || filterDiff !== 'all' || filterPrice !== 'all'
-         || filterTime !== 'all' || filterVeg !== 'all' || catTabValue !== 'all');
+         || filterTime !== 'all' || filterVeg !== 'all' || filterSeason !== 'all' || catTabValue !== 'all');
 }
 
 // ── PAGE RANDOM : salé / sucré ─────────────────────────────────────────
@@ -3145,7 +3225,7 @@ function setRandomMode(mode, btn) {
 function pickRandom() {
   // Créer le pool (catalogue + créations)
   const pool = RECIPES.concat(userRecipes).filter(r =>
-    randomMode === 'sucre' ? CATS_SUCRE.includes(r.cat) : !CATS_SUCRE.includes(r.cat)
+    (randomMode === 'sucre' ? CATS_SUCRE.includes(r.cat) : !CATS_SUCRE.includes(r.cat)) && passesDietProfile(r)
   );
   
   if (!pool.length) return;
@@ -3172,7 +3252,7 @@ function pickRandom() {
         <div class="recipe-card-tags">
           <span class="tag diff-${_esc(recipe.diff)}">${_esc(recipe.diff)}</span>
           ${priceHtml(recipe.id)}
-          ${vegHtml(recipe.id)}
+          ${vegHtml(recipe.id)}${seasonHtml(recipe.id)}
           ${recipe.tags.slice(0, 3).map(t => `<span class="tag">${_esc(t)}</span>`).join('')}
         </div>
       </div>
@@ -3382,7 +3462,7 @@ function showRecipe(recipeId, swipeList, animDir) {
             <span class="tag">${_esc(recipe.origin)}</span>
             <span class="tag">${_esc(recipe.cat)}</span>
             ${priceHtml(recipe.id)}
-            ${vegHtml(recipe.id)}
+            ${vegHtml(recipe.id)}${seasonHtml(recipe.id)}
           </div>
           <button class="btn-fav ${isFav ? 'active' : ''}" id="btn-fav-${recipe.id}" onclick="toggleFavorite(${recipe.id})" title="${isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}">${isFav ? '❤️' : '🤍'}</button>
         </div>
@@ -3657,10 +3737,28 @@ const SEASON_MONTHS = [
 const SEASON_SWIPE_MAX = 40;     // taille max de la liste swipable
 let _seasonList = [];            // ids de recettes de saison (la 1re est la recette affichée)
 
+// Une recette est « de saison » si l'un de ses ingrédients principaux (tags) figure
+// dans la liste du mois en cours (SEASON_MONTHS).
+let _seasonCache = { month: -1, items: null, flags: new Map() };
+function isInSeason(r) {
+  const m = new Date().getMonth();
+  if (_seasonCache.month !== m) _seasonCache = { month: m, items: SEASON_MONTHS[m].items, flags: new Map() };
+  const key = r.id + '|' + (r.tags || []).join(',');
+  if (_seasonCache.flags.has(key)) return _seasonCache.flags.get(key);
+  const chips = recipeChipSet(r);
+  const ok = _seasonCache.items.some(function(i) { return chips.has(i); });
+  _seasonCache.flags.set(key, ok);
+  return ok;
+}
+function seasonHtml(id) {
+  const r = findRecipeAny(id);
+  return (r && isInSeason(r)) ? `<span class="season-badge">🌿 De saison</span>` : '';
+}
+
 function _seasonPool(items) {
   const excluded = loadExclusions();
   return RECIPES.concat(userRecipes)
-    .filter(r => !isRecipeExcluded(r, excluded))
+    .filter(r => !isRecipeExcluded(r, excluded) && passesDietProfile(r))
     .map(r => { const c = recipeChipSet(r); return { id: r.id, n: items.filter(i => c.has(i)).length }; })
     .filter(x => x.n > 0);
 }
@@ -3668,6 +3766,7 @@ function _seasonPool(items) {
 function renderSeasonBanner() {
   const box = document.getElementById('season-banner');
   if (!box) return;
+  syncDietUI();
   try {
     const m = SEASON_MONTHS[new Date().getMonth()];
     const pick = arr => arr[Math.floor(Math.random() * arr.length)];
@@ -3857,6 +3956,7 @@ function openPrefs() {
   const overlay = document.getElementById('prefs-overlay');
   overlay.classList.add('open');
   syncPrefUI(loadPrefs());
+  syncDietUI();
   const pi = document.getElementById('prefs-pseudo');
   if (pi) pi.value = getPseudo();
   // Statistiques
