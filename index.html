@@ -141,7 +141,7 @@
     }
     .season-banner > * { position: relative; }
     .season-emoji { display: block; font-size: 46px; line-height: 1; margin-bottom: 8px; }
-    .season-title { font-family: 'Playfair Display', serif; font-size: clamp(26px, 6vw, 34px); font-weight: 700; line-height: 1.15; }
+    .season-title { font-family: 'Playfair Display', serif; font-size: clamp(23px, 5.5vw, 30px); font-weight: 700; line-height: 1.15; }
     .season-title em { color: var(--accent); font-style: italic; }
     .season-label { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--text3); margin: 18px 0 10px; }
     .season-ings { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
@@ -914,14 +914,13 @@
     .accompagnement-block { display: var(--accomp-display, block); }
 
     /* ---- BOUTON PRÉFÉRENCES INLINE (bas de page home) ---- */
-    .prefs-home-btn {
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-      width: fit-content; max-width: 100%;
-      padding: 10px 14px; margin: 8px auto 0;
-      border-radius: 10px; border: 1px solid var(--border);
-      background: var(--surface); cursor: pointer;
-      font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text2);
-      transition: all .2s;
+    .prefs-home-btn { display: flex; align-items: center; justify-content: center; gap: 8px; 
+      width: fit-content; max-width: 100%; 
+      padding: 10px 14px; margin: 18px auto 0; 
+      border-radius: 10px; border: 1px solid var(--border); 
+      background: var(--surface); cursor: pointer; 
+      font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text2); 
+      transition: all .2s; 
     }
     .prefs-home-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--surface2); }
 
@@ -1141,12 +1140,11 @@
       font-size: 11px; font-weight: 500; padding: 2px 6px;
       border-radius: 20px; background: #FFF1DD; color: #a85a1f; flex-shrink: 0;
     }
-    .diet-pill {
-      display: none; width: fit-content; margin: 0 auto 14px; padding: 5px 13px;
-      border-radius: 999px; border: 1px solid var(--accent2);
-      background: rgba(122,158,111,.14); color: var(--accent2);
-      font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer;
-    }
+    .diet-pill { display: none; width: fit-content; margin: 18px auto; padding: 5px 13px;
+    border-radius: 999px; border: 1px solid var(--accent2); 
+    background: rgba(122,158,111,.14); color: var(--accent2); 
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; 
+}
     .diet-pill.show { display: block; }
     .prefs-hint { font-size: 12px; color: var(--text3); line-height: 1.5; margin-top: 8px; }
     .veg-badge {
@@ -1451,11 +1449,10 @@
       <div class="home-greeting-main" id="home-greeting-main"></div>
       <div class="home-greeting-sub" id="home-greeting-sub"></div>
     </div>
-    <button class="diet-pill" id="home-diet-pill" onclick="openPrefs()" title="Modifier dans les paramètres">🥦 Profil végétarien actif</button>
     <div class="season-banner" id="season-banner" style="display:none">
       <span class="season-emoji" id="season-emoji"></span>
       <div class="season-title" id="season-title"></div>
-      <div class="season-label">À cuisiner en ce moment</div>
+      <div class="season-label"></div>
       <div class="season-ings" id="season-ings"></div>
       <div id="season-recipe-wrap" style="display:none">
         <div class="season-label">Une idée de recette</div>
@@ -1480,6 +1477,7 @@
         <h3>Menu &amp; courses</h3>
       </div>
     </div>
+    <button class="diet-pill" id="home-diet-pill" onclick="openPrefs()" title="Modifier dans les paramètres">🥦 Profil végétarien actif</button>
     <button class="prefs-home-btn" onclick="openPrefs()">⚙️ Paramètres</button>
   </div>
 </div>
@@ -3771,7 +3769,7 @@ function renderSeasonBanner() {
     const m = SEASON_MONTHS[new Date().getMonth()];
     const pick = arr => arr[Math.floor(Math.random() * arr.length)];
     document.getElementById('season-emoji').textContent = pick(m.emojis);
-    document.getElementById('season-title').innerHTML = 'On est en <em>' + m.name + '</em>';
+    document.getElementById('season-title').innerHTML = 'À cuisiner en <em>' + m.name + '</em>';
 
     // 3 ingrédients au hasard parmi la liste du mois
     const ings = shuffle(m.items.slice()).slice(0, 3);
