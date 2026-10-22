@@ -144,11 +144,11 @@
     .season-title { font-family: 'Playfair Display', serif; font-size: clamp(26px, 6vw, 34px); font-weight: 700; line-height: 1.15; }
     .season-title em { color: var(--accent); font-style: italic; }
     .season-label { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--text3); margin: 18px 0 10px; }
-    .season-ings { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .season-ings { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
     .season-ing {
-      padding: 9px 18px; border-radius: 999px;
+      padding: 6px 12px; border-radius: 999px;
       border: 1.5px solid var(--accent); background: transparent; color: var(--accent);
-      font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500;
+      font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
       cursor: pointer; transition: background .2s, color .2s, transform .2s;
     }
     .season-ing:hover { background: var(--accent); color: #fff; transform: translateY(-1px); }
@@ -1477,7 +1477,7 @@
     <button class="back-btn" onclick="goHome()" style="margin:0;">← Accueil</button>
     <button class="btn-lexique" onclick="openLexique()">💡 Lexique</button>
   </div>
-  <div class="section-title">Recherche par ingrédients</div>
+  <div class="section-title">Recherche par ingrédients 🔍</div>
   <p class="section-sub">Sélectionnez les ingrédients que vous avez à la maison</p>
   <div class="ing-search-sticky">
     <div class="lex-search-wrap">
@@ -1487,14 +1487,14 @@
     </div>
   </div>
   <div class="chip-mode-bar">
-    <button class="chip-mode-btn" onclick="toggleChipMode()">✔ Sélection</button>
+    <button class="chip-mode-btn" onclick="toggleChipMode()">✔ Mode sélection</button>
     <button class="veg-mode-btn" onclick="toggleVegMode()" title="Masquer les viandes, poissons et autres ingrédients non végétariens (œufs et laitages conservés)">🥦 Mode végé</button>
     <span class="chip-mode-hint" id="chip-mode-hint">Mode ✔ Sélection actif - Basculer en mode ✕ pour exclure</span>
   </div>
   <div class="families-grid cat-view" id="families-container"></div>
   <div class="ing-empty" id="ing-empty"></div>
   <div class="search-actions-top">
-    <button class="chip-mode-btn" onclick="toggleChipMode()">✔ Sélection</button>
+    <button class="chip-mode-btn" onclick="toggleChipMode()">✔ Mode sélection</button>
     <button class="veg-mode-btn" onclick="toggleVegMode()" title="Masquer les viandes, poissons et autres ingrédients non végétariens (œufs et laitages conservés)">🥦 Mode végé</button>
     <button id="btn-reset-excl" onclick="resetExclusions()" style="display:none">✕ Effacer les exclusions</button>
   </div>
@@ -1513,7 +1513,7 @@
     <button class="btn btn-primary" onclick="openCreateRecipe()" style="padding:8px 12px;font-size:13px;">✨ Créer</button>
   </div>
   <div style="display:flex;gap:12px;align-items:center;">
-    <div class="section-title" style="margin:0;flex:1;">📖 Catalogue</div>
+    <div class="section-title">Catalogue 📖</div>
   </div>
   <p class="section-sub">Toutes les recettes classées par catégorie</p>
 
@@ -1538,7 +1538,7 @@
     <!-- Temps -->
     <button class="filter-btn" id="fbtn-time" onclick="toggleFilterDrop('time')" title="Temps">⌛</button>
     <!-- Végétarien -->
-    <button class="filter-btn" id="fbtn-veg" onclick="toggleFilterDrop('veg')" title="Végétarien">🥗</button>
+    <button class="filter-btn" id="fbtn-veg" onclick="toggleFilterDrop('veg')" title="Végétarien">🥦</button>
     <!-- Dropdown unique partagé -->
     <div class="filter-dropdown" id="filter-dropdown">
       <div class="filter-dropdown-title" id="filter-dropdown-title"></div>
@@ -1849,13 +1849,13 @@
     <button class="back-btn" onclick="goHome()" style="margin:0;">← Accueil</button>
     <button class="btn btn-primary" onclick="openCreateRecipe()" style="padding:8px 12px;font-size:13px;">✨ Créer</button>
   </div>
-  <div class="random-wrap">
-    <div class="section-title">Recette aléatoire</div>
-    <p class="section-sub">Laissez le hasard décider pour ce soir</p>
+   <div class="section-title">Recette aléatoire</div>
+    <p class="section-sub">Laissez le hasard décider 🔥</p>
     <div class="random-mode-bar">
       <button class="random-mode-btn active" id="rand-btn-sale" onclick="setRandomMode('sale', this)">🍽 Plat salé</button>
       <button class="random-mode-btn" id="rand-btn-sucre" onclick="setRandomMode('sucre', this)">🍰 Plat sucré</button>
     </div>
+     <div class="random-wrap">
     <button class="btn btn-primary" id="btn-random" onclick="pickRandom()">🎲 Nouvelle recette</button>
   </div>
   <div id="random-recipe-container"></div>
@@ -1881,7 +1881,7 @@
     <button class="back-btn" onclick="goBack()">← Retour</button>
     <button class="menu-undo" id="menu-undo-btn" onclick="menuUndo()" disabled title="Rien à annuler" aria-label="Rien à annuler">↶ Annuler</button>
   </div>
-  <div class="section-title" style="margin-bottom:4px">🛒 Menu &amp; courses</div>
+  <div class="section-title">Menu &amp; courses 🛒</div>
   <p class="section-sub">Les recettes que vous prévoyez, et la liste de courses qui en découle</p>
   <div class="menu-tabs">
     <button class="menu-tab active" id="menu-tab-menu" onclick="setMenuTab('menu')">📋 Menu</button>
@@ -2472,7 +2472,7 @@ function applyVegMode(on, silent) {
   document.querySelectorAll('.veg-mode-btn').forEach(function(btn) {
     btn.classList.toggle('active', on);
     btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-    btn.textContent = on ? '🥦 Mode végé ✓' : '🥦 Mode végé';
+    btn.textContent = on ? '🥦 Mode végé ✓' : '🥦 Mode végé ✕';
   });
   if (!silent) { try { localStorage.setItem(VEG_KEY, on ? '1' : '0'); } catch (e) {} }
   const input = document.getElementById('ing-search');
@@ -2564,13 +2564,13 @@ function syncExclBtn() {
 function syncChipModeUI() {
   const isExcl = chipMode === 'exclude';
   document.querySelectorAll('.chip-mode-btn').forEach(btn => {
-    btn.textContent = isExcl ? '✕ Exclusion' : '✔ Sélection';
+    btn.textContent = isExcl ? '✕ Mode exclusion' : '✔ Mode sélection';
     btn.classList.toggle('chip-mode-excl', isExcl);
   });
   const hint = document.getElementById('chip-mode-hint');
   if (hint) hint.textContent = isExcl
-    ? 'Mode ✕ Exclusion actif - Cliquer pour exclure un ingrédient'
-    : 'Mode ✔ Sélection actif - Basculer en mode ✕ pour exclure';
+    ? ''
+    : '';
 }
 
 function toggleChipMode() {
@@ -3674,8 +3674,8 @@ function renderSeasonBanner() {
     document.getElementById('season-emoji').textContent = pick(m.emojis);
     document.getElementById('season-title').innerHTML = 'On est en <em>' + m.name + '</em>';
 
-    // 2 ingrédients au hasard parmi la liste du mois
-    const ings = shuffle(m.items.slice()).slice(0, 2);
+    // 3 ingrédients au hasard parmi la liste du mois
+    const ings = shuffle(m.items.slice()).slice(0, 3);
     document.getElementById('season-ings').innerHTML = ings.map(i =>
       `<button class="season-ing" data-item="${_esc(i)}" onclick="pickSeasonIngredient(this.dataset.item)">${_esc(i)}</button>`
     ).join('');
@@ -6045,6 +6045,7 @@ function _menuTabHtml() {
       <p>Ouvrez une recette et touchez « 🛒 Ajouter à la liste » : elle arrive ici, sans jour à choisir, et ses ingrédients rejoignent la liste de courses.</p>
       <div class="share-btns">
         <button class="share-btn primary" onclick="navigateTo('catalogue')">📚 Catalogue</button>
+        <button class="share-btn" onclick="navigateTo('search')">🔍 Ingrédients</button>
         <button class="share-btn" onclick="navigateTo('random')">🎲 Au hasard</button>
       </div>
     </div>`;
