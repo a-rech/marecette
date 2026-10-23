@@ -1375,6 +1375,28 @@
     .menu-switch-knob { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .15s; }
     .menu-switch.on .menu-switch-knob { transform: translateX(14px); }
     .menu-toolbar-hint { font-size: 12px; color: var(--text3); margin-top: 8px; }
+
+    /* ---- Générateur de menu ---- */
+    .menu-toolbar-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .menu-gen-btn {
+      padding: 8px 14px; border-radius: 20px; border: 1px solid var(--accent); background: var(--accent); color: #fff;
+      font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap;
+    }
+    .menu-gen-btn:hover { filter: brightness(1.08); }
+    .gen-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 14px; }
+    .gen-add {
+      width: 100%; padding: 12px; margin: 2px 0 10px; border-radius: var(--radius); cursor: pointer;
+      border: 1.5px dashed var(--border); background: transparent; color: var(--text2);
+      font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; transition: all .15s;
+    }
+    .gen-add:hover { border-color: var(--accent); color: var(--accent); }
+    .share-btn:disabled { opacity: .4; cursor: default; }
+    .gen-block { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; overflow: hidden; }
+    .gen-block-head { display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; }
+    .gen-chevron { margin-left: auto; font-size: 20px; color: var(--text3); transition: transform .15s; flex-shrink: 0; }
+    .gen-block.open .gen-chevron { transform: rotate(90deg); }
+    .gen-block-body { padding: 0 14px 12px; border-top: 1px solid var(--border); }
+    .gen-bulk { display: flex; gap: 8px; margin: 6px 0 4px; }
     .menu-section {
       display: flex; align-items: center; justify-content: space-between; margin: 20px 0 8px;
       font-size: 12px; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; color: var(--text2);
@@ -1909,6 +1931,11 @@
     <button class="menu-tab" id="menu-tab-shop" onclick="setMenuTab('shop')">🧺 Courses</button>
   </div>
   <div id="menu-content"></div>
+</div>
+
+<!-- PAGE GÉNÉRATEUR DE MENU -->
+<div id="page-menugen" class="page">
+  <div id="menugen-content"></div>
 </div>
 
 <div id="page-lexique" class="page">
@@ -2537,6 +2564,7 @@ function onDietChanged() {
   if (active('catalogue')) applyAllFilters();
   if (active('random'))    pickRandom();
   if (active('home'))      renderSeasonBanner();
+  if (active('menugen'))   menuGenOnDiet();
 }
 
 // Filtre instantané : masque les pastilles et catégories sans correspondance (sans reconstruire le DOM,
@@ -6120,12 +6148,392 @@ function _menuItemHtml(it, showDays) {
   </div>`;
 }
 
+// ═══════════════════════════════════════
+// GÉNÉRATEUR DE MENU : propose des dîners de saison variés, puis choix des ingrédients à acheter
+// Les recettes validées arrivent dans le menu sans jour (« À prévoir ») ; les jours se gèrent dans Menu & courses.
+// ═══════════════════════════════════════
+const GEN_CATS = ['Plats principaux', 'Plats mijotés', 'Soupes', 'Tartes', 'Salades'];
+const GEN_COUNT = 5;            // nombre de recettes proposées au départ
+const GEN_MAX_PER_TYPE = 2;     // au plus 2 recettes du même type par tirage
+const GEN_HIST_KEY = 'marecette_menugen_hist_v1';   // ids des recettes validées lors des 2 dernières générations
+const GEN_TYPES = {
+  volaille: { ico: '🍗', label: 'Volaille' },
+  viande:   { ico: '🥩', label: 'Viande' },
+  poisson:  { ico: '🐟', label: 'Poisson' },
+  vege:     { ico: '🌱', label: 'Végétarien' },
+  soupe:    { ico: '🍲', label: 'Soupe' },
+  tarte:    { ico: '🥧', label: 'Tarte' },
+  salade:   { ico: '🥗', label: 'Salade' },
+  autre:    { ico: '🍽️', label: 'Plat' }
+};
+const _GEN_POULTRY = /^(poulet|dinde|canard|coq|magret|pintade|volaille|cuisses? de (poulet|canard|dinde)|blancs? de (poulet|dinde)|aiguillettes?|escalopes? de (poulet|dinde)|filets? de (poulet|dinde)|confit de canard)/;
+// Exclut les fonds de pâte, sauces et tartes sucrées rangés dans les mêmes catégories
+const _GEN_NOT_DINNER = /^(p[âa]te [àa] |pesto|sauce )|\bsucr[ée]e?\b/i;
+const _GEN_SWEET_ING = /^(sucre|cassonade|caramel)/;
+function _genIsDinner(r) {
+  if (_GEN_NOT_DINNER.test(r.title || '')) return false;
+  if (r.cat === 'Tartes' && _genKeys(r).some(function(k) { return _GEN_SWEET_ING.test(k); })) return false;
+  return true;
+}
+let _gen = null;   // { step: 1|2, items: [{ rid, type, portions, excl: Set|null, open }], shown: Set }
+
+// Type de plat : par catégorie pour soupes/tartes/salades, sinon d'après les rayons des ingrédients
+function _genType(r) {
+  if (r.cat === 'Soupes') return 'soupe';
+  if (r.cat === 'Tartes') return 'tarte';
+  if (r.cat === 'Salades') return 'salade';
+  if (r.vegetarian) return 'vege';
+  let fish = false, meat = false, poultry = false;
+  (r.ingredients || []).forEach(function(ing) {
+    const k = _ingKey(ing[0]);
+    const a = _aisleOf(k);
+    if (a === 'poisson') fish = true;
+    else if (a === 'viande') { if (_GEN_POULTRY.test(k)) poultry = true; else meat = true; }
+  });
+  if (fish && !meat && !poultry) return 'poisson';
+  if (poultry && !meat) return 'volaille';
+  if (meat) return 'viande';
+  if (fish) return 'poisson';
+  return 'autre';
+}
+
+function _genHistory() {
+  try { const h = JSON.parse(localStorage.getItem(GEN_HIST_KEY) || '[]'); return Array.isArray(h) ? h : []; }
+  catch (e) { return []; }
+}
+function _genHistIds() {
+  const s = new Set();
+  _genHistory().forEach(function(l) { (Array.isArray(l) ? l : []).forEach(function(id) { s.add(id); }); });
+  return s;
+}
+function _genHistPush(ids) {
+  try { localStorage.setItem(GEN_HIST_KEY, JSON.stringify(_genHistory().concat([ids]).slice(-2))); } catch (e) {}
+}
+
+// Recettes éligibles : catégories « dîner », profil végétarien et exclusions d'ingrédients respectés
+function _genPool() {
+  const excluded = loadExclusions();
+  return RECIPES.concat(userRecipes).filter(function(r) {
+    return GEN_CATS.indexOf(r.cat) !== -1 && r.ingredients && r.ingredients.length &&
+           passesDietProfile(r) && !isRecipeExcluded(r, excluded) && _genIsDinner(r);
+  });
+}
+
+// Candidates, par paliers : ni au menu, ni déjà proposées, ni validées récemment. On ne relâche un critère
+// que si plus aucune recette tirable (respectant le plafond par type) ne reste.
+function _genCandidates(chosen) {
+  _loadMenuData();
+  chosen = chosen || _gen.items;
+  const favs = new Set(getFavorites());
+  const inMenu = new Set(_menu.map(function(m) { return m.rid; }));
+  const used = new Set(_gen.items.map(function(it) { return it.rid; }));
+  const hist = _genHistIds();
+  const base = _genPool().filter(function(r) { return !inMenu.has(r.id) && !used.has(r.id); });
+  const tiers = [
+    base.filter(function(r) { return !_gen.shown.has(r.id) && !hist.has(r.id); }),
+    base.filter(function(r) { return !_gen.shown.has(r.id); }),
+    base
+  ];
+  for (let t = 0; t < tiers.length; t++) {
+    if (tiers[t].some(function(r) { return _genWeight(r, chosen, favs) > 0; })) return tiers[t];
+  }
+  return base;
+}
+
+function _genSeasonScore(r) {
+  const items = SEASON_MONTHS[new Date().getMonth()].items;
+  const chips = recipeChipSet(r);
+  let n = 0;
+  items.forEach(function(i) { if (chips.has(i)) n++; });
+  return n;
+}
+
+// Poids du tirage : saison et favoris privilégiés, types déjà présents découragés (0 au-delà du plafond)
+function _genWeight(r, chosen, favs) {
+  const type = _genType(r);
+  const same = chosen.filter(function(c) { return c.type === type; }).length;
+  if (same >= GEN_MAX_PER_TYPE) return 0;
+  let w = 1 + 2 * Math.min(_genSeasonScore(r), 3);
+  if (favs.has(r.id)) w *= 2.5;
+  if (same === 1) w *= 0.35;
+  if (r.origin && chosen.some(function(c) { const x = findRecipeAny(c.rid); return x && x.origin === r.origin; })) w *= 0.6;
+  return w;
+}
+
+function _genDraw(cands, chosen, favs, wantType) {
+  let list = cands;
+  if (wantType) {
+    const same = list.filter(function(r) { return _genType(r) === wantType; });
+    if (same.length) list = same;
+  }
+  if (!list.length) return null;
+  let ws = list.map(function(r) { return _genWeight(r, chosen, favs); });
+  let total = ws.reduce(function(a, b) { return a + b; }, 0);
+  if (total <= 0) { ws = list.map(function() { return 1; }); total = list.length; }   // contraintes de variété relâchées
+  let x = Math.random() * total;
+  for (let i = 0; i < list.length; i++) { x -= ws[i]; if (x <= 0) return list[i]; }
+  return list[list.length - 1];
+}
+
+function _genMakeItem(r) {
+  _gen.shown.add(r.id);
+  return { rid: r.id, type: _genType(r), portions: Math.min(PORTIONS_MAX, Math.max(PORTIONS_MIN, r.portions || 4)), excl: null, open: false };
+}
+
+// Tirage complet : une recette végétarienne et un poisson d'abord (si possible), puis le reste, puis mélange
+function _genInitial() {
+  const favs = new Set(getFavorites());
+  _gen.items = [];
+  [function(r) { return !!r.vegetarian; }, function(r) { return _genType(r) === 'poisson'; }].forEach(function(test) {
+    const has = _gen.items.some(function(it) { const x = findRecipeAny(it.rid); return x && test(x); });
+    if (has || _gen.items.length >= GEN_COUNT) return;
+    const cands = _genCandidates().filter(test);
+    const r = cands.length ? _genDraw(cands, _gen.items, favs) : null;
+    if (r) _gen.items.push(_genMakeItem(r));
+  });
+  while (_gen.items.length < GEN_COUNT) {
+    const cands = _genCandidates();
+    const r = cands.length ? _genDraw(cands, _gen.items, favs) : null;
+    if (!r) break;
+    _gen.items.push(_genMakeItem(r));
+  }
+  _gen.items.sort(function() { return Math.random() - 0.5; });
+}
+
+function menuGenOpen() {
+  _gen = { step: 1, items: [], shown: new Set() };
+  _genInitial();
+  renderMenuGen();
+  navigateTo('menugen');
+}
+
+function menuGenBack() {
+  if (_gen && _gen.step === 2) { _gen.step = 1; renderMenuGen(); window.scrollTo(0, 0); return; }
+  _gen = null;
+  goBack();
+}
+
+function menuGenRerollAll() {
+  if (!_gen) return;
+  _genInitial();
+  renderMenuGen();
+}
+
+function menuGenReroll(i) {
+  const it = _gen && _gen.items[i];
+  if (!it) return;
+  const others = _gen.items.filter(function(_, j) { return j !== i; });
+  const cands = _genCandidates(others);
+  const r = cands.length ? _genDraw(cands, others, new Set(getFavorites()), it.type) : null;
+  if (!r) { showUpdateToast('Aucune autre recette à proposer'); return; }
+  _gen.items[i] = _genMakeItem(r);
+  renderMenuGen();
+}
+
+function menuGenRemove(i) {
+  if (!_gen || !_gen.items[i]) return;
+  _gen.items.splice(i, 1);
+  renderMenuGen();
+}
+
+function menuGenAdd() {
+  if (!_gen) return;
+  const cands = _genCandidates();
+  const r = cands.length ? _genDraw(cands, _gen.items, new Set(getFavorites())) : null;
+  if (!r) { showUpdateToast('Plus de recette à proposer'); return; }
+  _gen.items.push(_genMakeItem(r));
+  renderMenuGen();
+}
+
+function menuGenOpenRecipe(i) {
+  const it = _gen && _gen.items[i];
+  if (it) showRecipe(it.rid, _gen.items.map(function(x) { return x.rid; }));
+}
+
+// Le mode végé a changé pendant la génération : les recettes non végétariennes sont remplacées
+function menuGenOnDiet() {
+  if (!_gen) return;
+  if (isVegProfile()) {
+    const n = _gen.items.length;
+    _gen.items = _gen.items.filter(function(it) { const r = findRecipeAny(it.rid); return r && r.vegetarian; });
+    const replaced = n - _gen.items.length;
+    const favs = new Set(getFavorites());
+    while (_gen.items.length < n) {
+      const cands = _genCandidates();
+      const r = cands.length ? _genDraw(cands, _gen.items, favs) : null;
+      if (!r) break;
+      _gen.items.push(_genMakeItem(r));
+    }
+    if (replaced) showUpdateToast('🥦 ' + replaced + ' recette' + (replaced > 1 ? 's' : '') + ' remplacée' + (replaced > 1 ? 's' : ''));
+  }
+  renderMenuGen();
+}
+
+// ── Étape 2 : portions et ingrédients à acheter ──────────
+function _genKeys(r) {
+  const seen = new Set();
+  r.ingredients.forEach(function(ing) { seen.add(_ingKey(ing[0])); });
+  return Array.from(seen);
+}
+
+function menuGenToStep2() {
+  if (!_gen || !_gen.items.length) return;
+  _loadMenuData();
+  _gen.items.forEach(function(it, i) {
+    if (it.excl) return;
+    const r = findRecipeAny(it.rid);
+    it.excl = new Set(r ? _genKeys(r).filter(_isPantry) : []);   // basiques du placard décochés d'office
+    it.open = (i === 0);
+  });
+  _gen.step = 2;
+  renderMenuGen();
+  window.scrollTo(0, 0);
+}
+
+function _genRefreshBlock(i) {
+  const el = document.getElementById('gen-block-' + i);
+  if (el) el.outerHTML = _genBlockHtml(i);
+}
+function menuGenToggleOpen(i) { const it = _gen.items[i]; if (!it) return; it.open = !it.open; _genRefreshBlock(i); }
+function menuGenPortions(i, d) {
+  const it = _gen.items[i]; if (!it) return;
+  it.portions = Math.min(PORTIONS_MAX, Math.max(PORTIONS_MIN, it.portions + d));
+  _genRefreshBlock(i);
+}
+function menuGenToggleIng(i, j) {
+  const it = _gen.items[i]; const r = it && findRecipeAny(it.rid);
+  if (!r || !r.ingredients[j]) return;
+  const k = _ingKey(r.ingredients[j][0]);
+  if (it.excl.has(k)) it.excl.delete(k); else it.excl.add(k);
+  _genRefreshBlock(i);
+}
+function menuGenBulk(i, keepAll) {
+  const it = _gen.items[i]; const r = it && findRecipeAny(it.rid);
+  if (!r) return;
+  it.excl = keepAll ? new Set() : new Set(_genKeys(r));
+  _genRefreshBlock(i);
+}
+
+function menuGenValidate() {
+  if (!_gen || !_gen.items.length) return;
+  _loadMenuData();
+  const toAdd = _gen.items.filter(function(it) { return !menuFind(it.rid); });
+  _undoPush('ajout de ' + toAdd.length + ' recette' + (toAdd.length > 1 ? 's' : '') + ' du menu généré');
+  toAdd.forEach(function(it) {
+    _menu.push({ rid: it.rid, portions: it.portions, excl: Array.from(it.excl || []) });
+  });
+  _saveMenuData();
+  _genHistPush(_gen.items.map(function(it) { return it.rid; }));
+  _gen = null;
+  goBack();   // retour à Menu & courses (recettes dans « À prévoir »)
+  showUpdateToast('✨ ' + toAdd.length + ' recette' + (toAdd.length > 1 ? 's' : '') + ' ajoutée' + (toAdd.length > 1 ? 's' : '') + ' au menu');
+}
+
+// ── Affichage ────────────────────────────────────────────
+function renderMenuGen() {
+  const box = document.getElementById('menugen-content');
+  if (!box) return;
+  box.innerHTML = !_gen ? '' : (_gen.step === 1 ? _genStep1Html() : _genStep2Html());
+}
+
+function _genStep1Html() {
+  const n = _gen.items.length;
+  const veg = _getVegMode();
+  const cards = _gen.items.map(function(it, i) {
+    const r = findRecipeAny(it.rid);
+    if (!r) return '';
+    const t = GEN_TYPES[it.type] || GEN_TYPES.autre;
+    return `<div class="menu-item">
+      <div class="menu-item-main" onclick="menuGenOpenRecipe(${i})">
+        <span class="menu-item-emoji">${_esc(r.emoji || '🍽️')}</span>
+        <div>
+          <div class="menu-item-title">${_esc(r.title)}</div>
+          <div class="menu-item-meta">${t.ico} ${t.label} · 🕒 ${(r.prep || 0) + (r.cook || 0)} min ${isInSeason(r) ? '<span class="season-badge">🌿 De saison</span>' : ''}</div>
+        </div>
+      </div>
+      <div class="menu-item-actions">
+        <button type="button" class="menu-icon-btn" onclick="menuGenReroll(${i})" title="Proposer une autre recette" aria-label="Proposer une autre recette">🔄</button>
+        <button type="button" class="menu-icon-btn" onclick="menuGenRemove(${i})" title="Retirer" aria-label="Retirer">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="menu-topline"><button class="back-btn" onclick="menuGenBack()">← Retour</button></div>
+    <div class="section-title">Créer un menu ✨</div>
+    <p class="section-sub">Des dîners de saison, variés. Relancez ou retirez ceux qui ne vous tentent pas.</p>
+    <div class="gen-toolbar">
+      <button type="button" class="veg-mode-btn ${veg ? 'active' : ''}" aria-pressed="${veg}" onclick="toggleVegMode()">${veg ? '🥦 Mode végé ✓' : '🥦 Mode végé ✕'}</button>
+      <button type="button" class="share-btn" style="flex:0 0 auto;padding:6px 14px" onclick="menuGenRerollAll()">🔄 Tout relancer</button>
+    </div>
+    ${n ? cards : `<div class="menu-empty"><div class="menu-empty-ico">🍽️</div><div class="menu-empty-title">Aucune recette</div><p>Relancez le tirage ou ajoutez une proposition.</p></div>`}
+    <button type="button" class="gen-add" onclick="menuGenAdd()">＋ Ajouter une proposition</button>
+    <div class="share-btns" style="margin-top:6px">
+      <button type="button" class="share-btn primary" style="padding:12px" onclick="menuGenToStep2()" ${n ? '' : 'disabled'}>Valider ${n} recette${n > 1 ? 's' : ''} →</button>
+    </div>`;
+}
+
+function _genBlockHtml(i) {
+  const it = _gen.items[i];
+  const r = it && findRecipeAny(it.rid);
+  if (!r) return `<div id="gen-block-${i}"></div>`;
+  const keys = _genKeys(r);
+  const kept = keys.filter(function(k) { return !it.excl.has(k); }).length;
+  let body = '';
+  if (it.open) {
+    const ratio = it.portions / (r.portions || 1);
+    body = `<div class="gen-block-body">
+      <div class="share-label" style="margin-top:10px">Portions</div>
+      <div class="ms-portions"><div class="portions-stepper">
+        <button type="button" class="portions-btn" onclick="menuGenPortions(${i},-1)" ${it.portions <= PORTIONS_MIN ? 'disabled' : ''} aria-label="Moins de portions">−</button>
+        <span class="portions-value">${it.portions}</span>
+        <button type="button" class="portions-btn" onclick="menuGenPortions(${i},1)" ${it.portions >= PORTIONS_MAX ? 'disabled' : ''} aria-label="Plus de portions">+</button>
+      </div></div>
+      <div class="share-label" style="margin-top:12px">Ingrédients à acheter</div>
+      <div class="gen-bulk">
+        <button type="button" class="menu-ing-btn" onclick="menuGenBulk(${i},true)">Tout cocher</button>
+        <button type="button" class="menu-ing-btn" onclick="menuGenBulk(${i},false)">Tout décocher</button>
+      </div>
+      ${r.ingredients.map(function(ing, j) {
+        const off = it.excl.has(_ingKey(ing[0]));
+        return `<div class="ms-ing ${off ? 'off' : ''}" onclick="menuGenToggleIng(${i},${j})" role="checkbox" aria-checked="${!off}">
+          <span class="shop-box">${off ? '' : '✓'}</span>
+          <span class="ms-name">${_esc(ing[0])}</span>
+          <span class="ms-qty">${_esc(_fmtAmount((Number(ing[1]) || 0) * ratio, ing[2]))}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+  return `<div class="gen-block ${it.open ? 'open' : ''}" id="gen-block-${i}">
+    <div class="gen-block-head" onclick="menuGenToggleOpen(${i})">
+      <span class="menu-item-emoji">${_esc(r.emoji || '🍽️')}</span>
+      <div style="min-width:0">
+        <div class="menu-item-title">${_esc(r.title)}</div>
+        <div class="menu-item-meta">${it.portions} portion${it.portions > 1 ? 's' : ''} · ${kept} / ${keys.length} ingrédient${keys.length > 1 ? 's' : ''} à acheter</div>
+      </div>
+      <span class="gen-chevron">›</span>
+    </div>${body}
+  </div>`;
+}
+
+function _genStep2Html() {
+  const n = _gen.items.length;
+  return `<div class="menu-topline"><button class="back-btn" onclick="menuGenBack()">← Propositions</button></div>
+    <div class="section-title">Courses 🧺</div>
+    <p class="section-sub">Ajustez les portions et décochez ce que vous avez déjà. Les basiques du placard (sel, huile…) sont décochés d'office.</p>
+    ${_gen.items.map(function(_, i) { return _genBlockHtml(i); }).join('')}
+    <div class="share-btns" style="margin-top:14px">
+      <button type="button" class="share-btn primary" style="padding:12px" onclick="menuGenValidate()">Ajouter au menu (${n}) ✓</button>
+    </div>`;
+}
+
 function _menuToolbarHtml() {
   const on = _menuOpts.week;
   return `<div class="menu-toolbar">
-    <button type="button" class="menu-switch ${on ? 'on' : ''}" role="switch" aria-checked="${on}" onclick="menuToggleWeek()">
-      <span class="menu-switch-track"><span class="menu-switch-knob"></span></span>📅 Semainier
-    </button>
+    <div class="menu-toolbar-row">
+      <button type="button" class="menu-switch ${on ? 'on' : ''}" role="switch" aria-checked="${on}" onclick="menuToggleWeek()">
+        <span class="menu-switch-track"><span class="menu-switch-knob"></span></span>📅 Semainier
+      </button>
+      <button type="button" class="menu-gen-btn" onclick="menuGenOpen()">✨ Créer un menu</button>
+    </div>
     ${on ? '<div class="menu-toolbar-hint">Facultatif : touchez une lettre (L M M J V S D) pour affecter une recette à un jour.</div>' : ''}
   </div>`;
 }
