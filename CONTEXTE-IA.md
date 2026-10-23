@@ -7,7 +7,7 @@
 - **MaRecette** : application web (PWA) de recettes de cuisine du quotidien, **en français**, installable sur mobile, qui fonctionne hors ligne. Toutes les données restent sur l'appareil (`localStorage`).
 - Hébergée sur GitHub Pages (`https://a-rech.github.io/marecette/`, dépôt `a-rech/marecette`) et **utilisée aussi en local** (`python3 -m http.server 8000`).
 - Le catalogue compte environ 460 recettes dans `recipes.js`. Les recettes créées dans l'appli sont stockées à part, mais ont **exactement le même format** que celles du catalogue.
-- Projet frère : **Foyer** (gestion du foyer, `a-rech.github.io/foyer`). La liste de courses de MaRecette reste bien distincte de celle de Foyer ; un envoi vers Foyer pourra venir plus tard.
+- Projet frère : **Foyer** (gestion du foyer, `a-rech.github.io/foyer`). Une recette peut déjà lui être envoyée depuis la fenêtre de partage (**🏠 Envoyer vers Foyer**, `sendToFoyer()`, lien `FOYER_BASE_URL#mr=<recette>`), mais ce bouton est **réservé au mode admin**. La liste de courses et le menu de MaRecette restent propres à MaRecette.
 
 ## 2. Fichiers
 
@@ -19,6 +19,7 @@
 | `lib/` | `qrcode.min.js` (génération) et `jsqr.min.js` (lecture) des QR codes |
 | `manifest.json`, `icon-*.png` | Configuration PWA |
 | `README.md` | Présentation pour les utilisateurs |
+| `prompt-import-recette-marecette.md` | Consignes à donner à une IA pour transcrire une recette (photo, lien, texte) en lien d'import |
 
 Format d'une recette : `id, title, emoji, cat, origin, diff, prep, cook, portions, price (1-3), vegetarian, creator, ingredients [[nom, quantité, unité]], tags (ingrédients principaux), steps, acc (accompagnements), userCreated`. Catalogue : ids 1 à 9999. Créations de l'appli : ids à partir de 10000.
 
@@ -44,6 +45,8 @@ Pas de fichier supplémentaire « pour expliquer » les modifications (ce fichie
 
 **Langue.** Français partout : interface, commentaires du code, échanges.
 
+**Secrets.** Le code d'accès du mode admin ne s'écrit jamais en clair : ni dans un fichier, ni dans un commit, ni dans la mémoire d'une IA. Seule son empreinte (`ADMIN_HASH`) figure dans `index.html`, et le dépôt est public.
+
 ## 4. Ce qu'Alex attend
 
 - **Simplicité et liberté.** Rien d'obligatoire : le semainier est facultatif, car un planning imposé a été jugé contraignant. Les nouveautés doivent rester discrètes tant qu'on ne les utilise pas.
@@ -66,6 +69,8 @@ Pas de fichier supplémentaire « pour expliquer » les modifications (ce fichie
 - **Fiche recette** : `showRecipe(recipeId, swipeList, animDir, portionsMap)`. `portionsMap` (`{ idRecette: portions }`) impose les portions du menu à l'ouverture depuis Menu & courses ou le bandeau « Prévu aujourd'hui ». Il reste actif tant qu'on est sur la fiche (balayage, rafraîchissement) et s'efface dès qu'une recette est ouverte depuis ailleurs. Le sélecteur caché `#portions-selector` est lu par le mode Agrandir et par « Ajouter à la liste ».
 - **Générateur de menu** : fonctions `menuGen*`, état `_gen`. Constantes `GEN_CATS` (catégories « dîner »), `GEN_COUNT` (5) et `GEN_MAX_PER_TYPE` (2). Le type de plat est déduit des rayons des ingrédients (`_genType`) car les `tags` du catalogue sont irréguliers. `_genIsDinner` écarte les fonds de pâte, sauces et tartes sucrées rangés dans les mêmes catégories.
 - **Bandeau « Prévu aujourd'hui »** : `renderTodayBanner()`, appelé par `showPage('home')`. Visible seulement si le semainier est activé et qu'au moins une recette a le jour courant (lundi = 0).
+- **Partage et import** : une recette voyage en JSON compact à clés courtes (`v, t, e, c, o, d, p, k, n, i, s, pr, vg, cr, a`), encodé en base64url : lien `SHARE_BASE_URL#r=…` ou code `mr1:…` (`buildSharePayload`, `normalizeImportedRecipe`). À l'import, `id`, `tags` (via `deriveTags`) et `userCreated` sont calculés par l'appli. **Le fichier `prompt-import-recette-marecette.md` doit rester synchronisé avec ce code** : 11 catégories (`f-cat`) et 36 origines (`f-culture`) du formulaire, difficultés en minuscules, limites de longueur (titre 100, ingrédient 80, unité 20, 60 étapes de 600 caractères, 80 ingrédients, 3 accompagnements de 40), adresse de l'appli. Si l'un change, mets l'autre à jour. Vérifié au 23/10/2026 : ils sont d'accord (seule l'origine « Salvadorienne », présente dans le catalogue mais absente du formulaire, n'est pas dans le prompt, ce qui est sans conséquence).
+- **Mode admin** : champ « Accès avancé » en bas de Paramètres → À propos (`renderAdminBox`, `adminUnlock`, `adminLock`). `isAdmin()` compare `localStorage['marecette_admin_v1']` à `ADMIN_HASH` (SHA-256 de `'marecette-admin-v1:' + code`, calculé par `_sha256Hex`, sans Web Crypto pour fonctionner aussi hors https). `featureOn('nom')` renvoie vrai pour tous si `nom` n'est pas dans `ADMIN_FEATURES`, et seulement en admin s'il y figure. Aujourd'hui : `foyer` (bouton Envoyer vers Foyer) et `catalogue-copy` (bouton Copier pour le catalogue). **Tester une nouveauté** : ajouter son nom à `ADMIN_FEATURES` et l'envelopper dans `featureOn('nom')` ; **l'ouvrir à tous** : retirer le nom de la liste. **Changer de code** : `python3 -c "import hashlib;print(hashlib.sha256(('marecette-admin-v1:'+input('code: ')).encode()).hexdigest())"`, puis remplacer `ADMIN_HASH` (les accès admin déjà activés sont alors désactivés). Ce n'est pas une vraie sécurité : cela masque des boutons, rien de plus. Le drapeau n'est pas inclus dans la sauvegarde.
 - **Message de bienvenue** : `#welcome-overlay` ; il est réaffichable depuis Paramètres → À propos.
 
 ## 6. Décisions de conception à ne pas défaire sans l'accord d'Alex
@@ -76,6 +81,7 @@ Pas de fichier supplémentaire « pour expliquer » les modifications (ce fichie
 - Partage d'une recette : texte lisible pour toutes les recettes ; QR code et lien réservés aux créations.
 - Mises à jour : c'est l'utilisateur qui clique sur « Mettre à jour », rien n'est appliqué sans son accord.
 - Profil alimentaire : végétarien uniquement (pas d'autres régimes).
+- Mode admin : activé par un code saisi dans Paramètres → À propos (champ discret) ; il masque aux utilisateurs lambda « Envoyer vers Foyer » et « Copier pour le catalogue », et sert à tester des nouveautés avant de les ouvrir à tous. Le README public n'en parle pas.
 
 ## 7. Tester
 
@@ -90,7 +96,7 @@ Les modifications d'`index.html` (fichier volumineux) se font par remplacements 
 
 ## 8. Pistes non engagées
 
-- Envoi de la liste de courses vers Foyer.
+- Envoi du menu ou de la liste de courses vers Foyer (aujourd'hui, seules les recettes peuvent lui être envoyées).
 - Réintégrer ou régénérer le dossier `tests/` dans le dépôt.
 - Autres critères pour le générateur de menu (temps maximum, budget) : écartés pour l'instant.
 
@@ -104,6 +110,7 @@ Les modifications d'`index.html` (fichier volumineux) se font par remplacements 
 6. Séparation des données (`recipes.js`) et des bibliothèques QR (`lib/`), harmonisation catalogue / créations (ids 10000+).
 7. Accueil restylé, bandeau de saison, badge et filtre « De saison », profil végétarien global.
 8. Générateur de menu (« ✨ Créer un menu »), bandeau « Prévu aujourd'hui », reprise des portions du menu sur la fiche.
+9. Prompt d'import par IA documenté, mode admin (outils réservés et fonctions en test).
 
 ## Entretien de ce fichier
 

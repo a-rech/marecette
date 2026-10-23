@@ -19,7 +19,7 @@
 | 📅 **Créer un menu** | Le bouton **✨ Créer un menu**, à côté du semainier, propose 5 dîners variés et de saison. Vous relancez ou retirez les recettes qui ne vous plaisent pas, vous en ajoutez si besoin, puis vous choisissez pour chacune les ingrédients à acheter (voir [Créer un menu](#créer-un-menu)) |
 | 🗓️ **Prévu aujourd'hui** | Si le semainier est activé et qu'une recette est prévue pour le jour même, un bandeau en haut de l'accueil la liste (cliquable). Plusieurs recettes s'empilent |
 | ✨ **Créations & adaptations** | Créez vos recettes, ou adaptez une recette du catalogue. Retrouvez-les dans *Mes créations* (badge ✨ Création) |
-| 📤 **Partage & import** | Partagez une recette en **texte lisible**, ou en **QR code / lien** pour vos créations. Importez celles de vos proches par scan (caméra ou image), lien ou code |
+| 📤 **Partage & import** | Partagez une recette en **texte lisible**, ou en **QR code / lien** pour vos créations. Importez celles de vos proches par scan (caméra ou image), lien ou code, ou faites transcrire une recette (photo, lien, texte) par une IA grâce au [prompt d'import](#transcrire-une-recette-avec-une-ia) |
 | ❤️ **Favoris** | Sauvegardés localement, affichés en tête du catalogue |
 | 📝 **Notes personnelles** | Ajoutez vos astuces sur chaque fiche recette |
 | 👥 **Portions ajustables** | Boutons − / + sur la fiche : les quantités sont recalculées. Une recette ouverte depuis le menu ou depuis « Prévu aujourd'hui » s'affiche directement avec les portions choisies dans le menu |
@@ -75,6 +75,10 @@ Pour **importer** une recette : *Catalogue* → **✨ Créer** → **Importer un
 
 Une recette très longue peut être trop dense pour un QR code : utilisez alors le lien ou le texte.
 
+### Transcrire une recette avec une IA
+
+Le fichier `prompt-import-recette-marecette.md` contient les consignes à donner à une IA (capable d'exécuter du code) avec une **photo**, un **lien** ou un **texte** de recette. L'IA remplit la fiche selon les règles de l'application et renvoie un **lien** et un **code `mr1:`** à ouvrir ou à coller dans *Importer une recette* : aperçu, puis ajout dans *Mes créations*. Sans exécution de code, elle fournit seulement le JSON de la recette.
+
 ### Format des liens et des codes
 
 Une recette est un objet JSON compact encodé en base64url :
@@ -129,6 +133,7 @@ Côté développement, il suffit de changer `CACHE_VERSION` dans `sw.js` pour d�
 ├── tests/           Tests automatiques (développement uniquement, voir ci-dessous)
 ├── manifest.json    Configuration PWA
 ├── CONTEXTE-IA.md   Présentation du projet et des attentes, pour Claude ou une autre IA
+├── prompt-import-recette-marecette.md  Consignes pour faire transcrire une recette par une IA (lien d'import)
 ├── sw.js            Service Worker — cache hors ligne et mises à jour
 ├── icon-192.png     Icône 192 x 192 px
 └── icon-512.png     Icône 512 x 512 px

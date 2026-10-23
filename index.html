@@ -332,7 +332,7 @@
     #page-recipe { max-width: 800px; }
     .recipe-header { margin-bottom: 28px; }
     .recipe-hero-img {
-      height: 120px; border-radius: var(--radius);
+      height: 220px; border-radius: var(--radius);
       background: var(--surface2); display: flex; align-items: center; justify-content: center;
       font-size: 80px; margin-bottom: 24px;
     }
@@ -664,7 +664,7 @@
     /* ---- SALUTATION ACCUEIL ---- */
     .home-greeting { display: none; margin: 0 0 18px; }
     .home-greeting-main { font-size: 18px; font-weight: 500; color: var(--accent); }
-    .home-greeting-sub { font-size: 13px; color: var(--text3); margin-top: 4px; }
+    .home-greeting-sub { font-size: 13px; color: var(--text3); margin-top: 3px; }
 
     /* ---- CHAMP TEXTE (Préférences / Bienvenue) ---- */
     .prefs-input-text {
@@ -1019,6 +1019,22 @@
     .prefs-about-line:last-child { border-bottom: none; }
     .prefs-about-line span:first-child { color: var(--text3); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
     .prefs-about-val { color: var(--text); font-weight: 500; }
+
+    /* ── ACCÈS AVANCÉ (mode admin) ── */
+    .admin-box { margin-top: 26px; padding-top: 14px; border-top: 1px dashed var(--border); }
+    .admin-label { font-size: 12px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+    .admin-row, .admin-on { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; color: var(--text2); }
+    .admin-input {
+      flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+      background: var(--surface); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px;
+    }
+    .admin-btn {
+      padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2);
+      color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer; flex-shrink: 0;
+    }
+    .admin-btn:disabled { opacity: .5; cursor: default; }
+    .admin-msg { font-size: 12px; margin-top: 8px; min-height: 16px; color: var(--text3); }
+    .admin-msg.err { color: var(--hard); }
 
     /* ── ONGLET DONNÉES ── */
     .data-action-btn {
@@ -1621,7 +1637,7 @@
         <div class="welcome-feature-icon">📖</div>
         <div class="welcome-feature-text">
           <div class="welcome-feature-title">Catalogue</div>
-          <div class="welcome-feature-desc">Parcourez toutes les recettes par <strong>catégorie</strong> ou par <strong>culture</strong>, et filtrez par difficulté, prix, temps ou régime végétarien.</div>
+          <div class="welcome-feature-desc">Parcourez toutes les recettes par <strong>catégorie</strong> ou par <strong>culture</strong>, et filtrez par difficulté, prix, temps, régime végétarien ou <strong>de saison</strong>.</div>
         </div>
       </div>
       <div class="welcome-feature">
@@ -1639,10 +1655,38 @@
         </div>
       </div>
       <div class="welcome-feature">
+        <div class="welcome-feature-icon">🌿</div>
+        <div class="welcome-feature-text">
+          <div class="welcome-feature-title">De saison</div>
+          <div class="welcome-feature-desc">Chaque mois, l'accueil propose des <strong>ingrédients de saison</strong> et une idée de recette. Repérez le badge <strong>🌿 De saison</strong>, ou filtrez le catalogue sur les recettes du moment.</div>
+        </div>
+      </div>
+      <div class="welcome-feature">
+        <div class="welcome-feature-icon">🥦</div>
+        <div class="welcome-feature-text">
+          <div class="welcome-feature-title">Alimentation</div>
+          <div class="welcome-feature-desc">Dans les Paramètres, activez le <strong>profil végétarien</strong> : catalogue, recherche, recette au hasard et menus ne proposent plus que des recettes végétariennes.</div>
+        </div>
+      </div>
+      <div class="welcome-feature">
         <div class="welcome-feature-icon">🛒</div>
         <div class="welcome-feature-text">
           <div class="welcome-feature-title">Menu &amp; courses</div>
-          <div class="welcome-feature-desc">Touchez <strong>« Ajouter à la liste »</strong> sur une recette : les ingrédients sont <strong>fusionnés</strong> et rangés par rayon, les basiques (sel, huile…) vont au <strong>placard</strong>. Semainier facultatif, partage de la liste en texte, et bouton <strong>Annuler</strong> en cas d'erreur.</div>
+          <div class="welcome-feature-desc">Touchez <strong>« Ajouter à la liste »</strong> sur une recette : les ingrédients sont <strong>fusionnés</strong> et rangés par rayon, les basiques (sel, huile…) vont au <strong>placard</strong>. Semainier facultatif, <strong>mode magasin</strong>, partage de la liste en texte, et bouton <strong>Annuler</strong> en cas d'erreur.</div>
+        </div>
+      </div>
+      <div class="welcome-feature">
+        <div class="welcome-feature-icon">📅</div>
+        <div class="welcome-feature-text">
+          <div class="welcome-feature-title">Menu de la semaine</div>
+          <div class="welcome-feature-desc">Le bouton <strong>« Créer un menu »</strong> propose 5 dîners <strong>variés et de saison</strong> : relancez ou retirez ceux qui ne vous tentent pas, puis choisissez les ingrédients à acheter. Les recettes prévues pour le jour apparaissent sur l'accueil dans <strong>« Prévu aujourd'hui »</strong>.</div>
+        </div>
+      </div>
+      <div class="welcome-feature">
+        <div class="welcome-feature-icon">🔥</div>
+        <div class="welcome-feature-text">
+          <div class="welcome-feature-title">En cuisine</div>
+          <div class="welcome-feature-desc">Le mode <strong>Agrandir</strong> affiche ingrédients et étapes en grand, écran allumé, avec des <strong>minuteurs</strong> détectés dans les étapes. Ajustez les <strong>portions</strong> (− / +) et cochez les ingrédients au fil de la recette.</div>
         </div>
       </div>
       <div class="welcome-feature">
@@ -1889,6 +1933,7 @@
           <div class="btn-desc">Réaffiche la présentation des fonctionnalités</div>
         </div>
       </button>
+      <div class="admin-box" id="admin-box"></div>
     </div>
   </div>
 </div>
@@ -4007,6 +4052,7 @@ function openPrefs() {
   overlay.classList.add('open');
   syncPrefUI(loadPrefs());
   syncDietUI();
+  renderAdminBox();
   const pi = document.getElementById('prefs-pseudo');
   if (pi) pi.value = getPseudo();
   // Statistiques
@@ -5100,6 +5146,7 @@ function catalogueLine(recipe) {
   return JSON.stringify(canonRecipe(Object.assign({}, recipe, { id: nextCatalogueId() }), false)) + ',';
 }
 function copyCatalogueLine(id) {
+  if (!featureOn('catalogue-copy')) return;
   const recipe = getUserRecipe(id);
   if (!recipe) return;
   const line = catalogueLine(recipe);
@@ -5157,7 +5204,111 @@ function getRecipeActions(id) {
   return html;
 }
 
+// ═══════════════════════════════════════
+// MODE ADMIN : masque certains outils aux utilisateurs lambda (et sert à tester des nouveautés)
+// Le code est saisi dans Paramètres → À propos. Seule son empreinte SHA-256 salée figure ici.
+// Ce n'est pas une sécurité (le fichier est public) : cela cache simplement des boutons.
+// Pour tester une nouveauté : l'ajouter à ADMIN_FEATURES et l'envelopper dans featureOn('nom') ;
+// pour l'ouvrir à tous : la retirer de la liste.
+// Changer de code : sha256('marecette-admin-v1:' + code), voir CONTEXTE-IA.md (désactive les anciens accès).
+// ═══════════════════════════════════════
+const ADMIN_KEY = 'marecette_admin_v1';
+const ADMIN_SALT = 'marecette-admin-v1:';
+const ADMIN_HASH = 'abf0bf9466f2884ef39a3c0f0363b9ad1b298bf3acfc9f59096e061e57638ed6';
+const ADMIN_FEATURES = ['foyer', 'catalogue-copy'];   // réservées au mode admin
+
+function isAdmin() {
+  try { return localStorage.getItem(ADMIN_KEY) === ADMIN_HASH; } catch (e) { return false; }
+}
+function featureOn(name) { return ADMIN_FEATURES.indexOf(name) === -1 || isAdmin(); }
+
+// SHA-256 en JavaScript pur : fonctionne aussi hors https/localhost (réseau local, file://)
+function _sha256Hex(msg) {
+  const K = new Uint32Array([
+    0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2]);
+  const H = new Uint32Array([0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19]);
+  const bytes = new TextEncoder().encode(msg);
+  const len = bytes.length;
+  const total = ((len + 9 + 63) >> 6) << 6;
+  const buf = new Uint8Array(total);
+  buf.set(bytes);
+  buf[len] = 0x80;
+  const dv = new DataView(buf.buffer);
+  dv.setUint32(total - 8, Math.floor(len * 8 / 4294967296));
+  dv.setUint32(total - 4, (len * 8) >>> 0);
+  const w = new Uint32Array(64);
+  const rotr = function(x, n) { return (x >>> n) | (x << (32 - n)); };
+  for (let off = 0; off < total; off += 64) {
+    for (let i = 0; i < 16; i++) w[i] = dv.getUint32(off + i * 4);
+    for (let i = 16; i < 64; i++) {
+      const s0 = rotr(w[i - 15], 7) ^ rotr(w[i - 15], 18) ^ (w[i - 15] >>> 3);
+      const s1 = rotr(w[i - 2], 17) ^ rotr(w[i - 2], 19) ^ (w[i - 2] >>> 10);
+      w[i] = w[i - 16] + s0 + w[i - 7] + s1;
+    }
+    let a = H[0], b = H[1], c = H[2], d = H[3], e = H[4], f = H[5], g = H[6], h = H[7];
+    for (let i = 0; i < 64; i++) {
+      const t1 = (h + (rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25)) + ((e & f) ^ (~e & g)) + K[i] + w[i]) >>> 0;
+      const t2 = ((rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) >>> 0;
+      h = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+    }
+    H[0] += a; H[1] += b; H[2] += c; H[3] += d; H[4] += e; H[5] += f; H[6] += g; H[7] += h;
+  }
+  return Array.from(H).map(function(x) { return x.toString(16).padStart(8, '0'); }).join('');
+}
+
+function renderAdminBox() {
+  const box = document.getElementById('admin-box');
+  if (!box) return;
+  if (isAdmin()) {
+    box.innerHTML = `<div class="admin-label">Accès avancé</div>
+      <div class="admin-on"><span>🔧 Mode admin activé</span>
+        <button type="button" class="admin-btn" onclick="adminLock()">Désactiver</button></div>`;
+  } else {
+    box.innerHTML = `<div class="admin-label">Accès avancé</div>
+      <div class="admin-row">
+        <input type="password" class="admin-input" id="admin-code" placeholder="Code d'accès" autocomplete="off" autocapitalize="off" spellcheck="false" onkeydown="if(event.key==='Enter')adminUnlock()">
+        <button type="button" class="admin-btn" id="admin-go" onclick="adminUnlock()">Valider</button>
+      </div>
+      <div class="admin-msg" id="admin-msg"></div>`;
+  }
+}
+
+// Les fiches déjà affichées doivent refléter le changement (outils de création)
+function _adminRefreshViews() {
+  const rp = document.getElementById('page-recipe');
+  if (rp && rp.classList.contains('active') && currentRecipeId) showRecipe(currentRecipeId);
+}
+
+function adminUnlock() {
+  const inp = document.getElementById('admin-code');
+  const msg = document.getElementById('admin-msg');
+  const btn = document.getElementById('admin-go');
+  if (!inp) return;
+  const code = inp.value.trim();
+  if (code && _sha256Hex(ADMIN_SALT + code) === ADMIN_HASH) {
+    try { localStorage.setItem(ADMIN_KEY, ADMIN_HASH); } catch (e) {}
+    renderAdminBox();
+    _adminRefreshViews();
+    showUpdateToast('🔧 Mode admin activé');
+    return;
+  }
+  inp.value = '';
+  if (msg) { msg.textContent = 'Code incorrect'; msg.classList.add('err'); }
+  if (btn) { btn.disabled = true; setTimeout(function() { btn.disabled = false; }, 1000); }   // petit frein
+}
+
+function adminLock() {
+  try { localStorage.removeItem(ADMIN_KEY); } catch (e) {}
+  renderAdminBox();
+  _adminRefreshViews();
+  showUpdateToast('Mode admin désactivé');
+}
+
 // Outils réservés aux créations (Modifier, Supprimer, Copier pour le catalogue) : affichés tout en bas de la fiche
+// « Copier pour le catalogue » n'apparaît qu'en mode admin
 function getUserRecipeTools(id) {
   if (!isUserRecipe(id)) return '';
   return `<div class="user-tools-section">
@@ -5167,9 +5318,9 @@ function getUserRecipeTools(id) {
         <button onclick="editRecipe(${id})" style="flex: 1;">✏️ Modifier</button>
         <button class="delete" onclick="deleteRecipe(${id})" style="flex: 1;">🗑 Supprimer</button>
       </div>
-      <div style="display: flex; gap: 8px;">
+      ${featureOn('catalogue-copy') ? `<div style="display: flex; gap: 8px;">
         <button onclick="copyCatalogueLine(${id})" style="flex: 1;">📋 Copier pour le catalogue</button>
-      </div>
+      </div>` : ''}
     </div>
   </div>`;
 }
@@ -7273,9 +7424,9 @@ function shareRecipe(id) {
             <button class="share-btn" onclick="copyShareField('share-text-field', this, '📋 Copier')">📋 Copier</button>
             <button class="share-btn primary" onclick="shareTextNative()">📤 Partager</button>
           </div>
-          <div class="share-btns">
+          ${featureOn('foyer') ? `<div class="share-btns">
             <button class="share-btn" style="flex:1" onclick="sendToFoyer()">🏠 Envoyer vers Foyer</button>
-          </div>
+          </div>` : ''}
         </div>
       </div>
     </div>`;
@@ -7312,6 +7463,7 @@ function shareRecipe(id) {
 // (même format que les liens de partage) dans le fragment « #mr= », jamais envoyé à un serveur.
 // Valable pour les recettes du catalogue comme pour les créations.
 function sendToFoyer() {
+  if (!featureOn('foyer')) return;
   if (!_shareState || !_shareState.info) return;
   const payload = b64urlEncode(JSON.stringify(buildSharePayload(_shareState.info.recipe)));
   const a = document.createElement('a');
