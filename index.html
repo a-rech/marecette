@@ -3461,7 +3461,11 @@ function toggleLexItem(i) {
 }
 
 // Affichage d'une recette
-function showRecipe(recipeId, swipeList, animDir) {
+// portionsMap (optionnel) : { idRecette: nbPortions } imposé à l'ouverture (portions choisies dans le menu).
+// Conservé tant qu'on reste sur la page recette (swipe, rafraîchissement) ; abandonné dès qu'une recette
+// est ouverte depuis ailleurs sans carte de portions.
+let _recPortions = null;
+function showRecipe(recipeId, swipeList, animDir, portionsMap) {
   // Chercher dans le catalogue ET les recettes utilisateur
   let recipe = RECIPES.find(r => r.id === recipeId);
   if (!recipe) {
@@ -3480,6 +3484,8 @@ function showRecipe(recipeId, swipeList, animDir) {
   
   // Si déjà sur la page recipe, ne pas repousser dans l'historique
   const alreadyOnRecipe = document.getElementById('page-recipe').classList.contains('active');
+  if (portionsMap !== undefined) _recPortions = portionsMap;
+  else if (!alreadyOnRecipe) _recPortions = null;
   if (alreadyOnRecipe) {
     showPage('recipe'); // rafraîchit sans toucher pageStack
   } else {
@@ -3574,6 +3580,10 @@ function showRecipe(recipeId, swipeList, animDir) {
   if (_pin) { const _m = document.getElementById('portions-minus'), _p = document.getElementById('portions-plus');
     if (_m) _m.disabled = parseInt(_pin.value) <= PORTIONS_MIN;
     if (_p) _p.disabled = parseInt(_pin.value) >= PORTIONS_MAX; }
+
+  // Portions choisies dans le menu (semainier ou bandeau « Prévu aujourd'hui »)
+  const _pm = _recPortions && parseInt(_recPortions[recipe.id]);
+  if (_pm >= PORTIONS_MIN) _setPortions(recipe.id, _pm);
 
   // Mettre à jour le compteur de navigation
   const counter = document.getElementById('recipe-nav-counter');
@@ -6142,7 +6152,7 @@ function _menuItemHtml(it, showDays) {
       }).join('')}</div>`
     : '';
   return `<div class="menu-item">
-    <div class="menu-item-main" onclick="showRecipe(${r.id})">
+    <div class="menu-item-main" onclick="menuOpenRecipe(${r.id})">
       <span class="menu-item-emoji">${_esc(r.emoji || '🍽️')}</span>
       <div style="min-width:0">
         <div class="menu-item-title">${_esc(r.title)}</div>
@@ -6564,7 +6574,11 @@ function renderTodayBanner() {
   box.style.display = '';
 }
 function openTodayRecipe(i) {
-  if (_todayList[i] !== undefined) showRecipe(_todayList[i], _todayList);
+  if (_todayList[i] === undefined) return;
+  _loadMenuData();
+  const map = {};   // portions de chaque recette du jour, pour que le balayage les conserve
+  _todayList.forEach(function(rid) { const it = menuFind(rid); if (it && it.portions) map[rid] = it.portions; });
+  showRecipe(_todayList[i], _todayList, undefined, map);
 }
 document.addEventListener('visibilitychange', function() {   // l'app reste ouverte au-delà de minuit
   if (document.visibilityState === 'visible' && document.getElementById('page-home').classList.contains('active')) renderTodayBanner();
@@ -6629,6 +6643,14 @@ function menuToggleWeek() {
   _menuOpts.week = !_menuOpts.week;
   _saveMenuData();
   renderMenuPage();
+}
+
+// Ouvre la fiche avec les portions choisies dans le menu
+function menuOpenRecipe(rid) {
+  const it = menuFind(rid);
+  const map = {};
+  if (it && it.portions) map[rid] = it.portions;
+  showRecipe(rid, undefined, undefined, map);
 }
 
 function menuSetDay(rid, d) {
