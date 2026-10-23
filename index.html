@@ -1172,6 +1172,11 @@
       font-size: 11px; font-weight: 500; padding: 2px 6px;
       border-radius: 20px; background: #FFF1DD; color: #a85a1f; flex-shrink: 0;
     }
+    /* Pastille « ✨ Création » (Menu, génération de menu) : jamais coupée en deux */
+    .crea-badge {
+      font-size: 11px; font-weight: 600; padding: 2px 7px; white-space: nowrap; flex-shrink: 0;
+      border-radius: 20px; background: rgba(196,98,45,.15); color: var(--accent);
+    }
     .diet-pill { display: none; width: fit-content; margin: 18px auto; padding: 5px 13px;
     border-radius: 999px; border: 1px solid var(--accent2); 
     background: rgba(122,158,111,.14); color: var(--accent2); 
@@ -1351,7 +1356,7 @@
       display: inline-flex; align-items: center; justify-content: center;
     }
     .menu-icon-btn:hover { color: var(--hard); }
-    .menu-foot { display: flex; justify-content: center; margin-top: 18px; }
+    .menu-foot { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 18px; }
     .menu-foot .share-btn { flex: 0 1 auto; padding: 10px 18px; }
     .menu-empty { text-align: center; padding: 36px 12px; color: var(--text2); }
     .menu-empty-ico { font-size: 44px; margin-bottom: 10px; }
@@ -3952,7 +3957,7 @@ function openInstallFromWelcome() {
 }
 
 function maybeShowWelcome() {
-  if (/^#r=/.test(location.hash || '')) return; // arrivée via un lien de partage : on affiche d'abord l'import
+  if (/^#[rm]=/.test(location.hash || '')) return; // arrivée via un lien de partage : on affiche d'abord l'import
   let hidden = false;
   try { hidden = localStorage.getItem(WELCOME_HIDE_KEY) === '1'; } catch (e) {}
   if (!hidden) openWelcome();
@@ -3980,7 +3985,7 @@ function maybeShowBackupReminder() {
   const now = Date.now();
   let seen = _lsNum(BACKUP_SEEN_KEY);
   if (!seen || seen > now) { seen = now; _lsSet(BACKUP_SEEN_KEY, now); }   // horloge déréglée : on repart d'aujourd'hui
-  if (/^#r=/.test(location.hash || '')) return;                           // arrivée via un lien de partage
+  if (/^#[rm]=/.test(location.hash || '')) return;                           // arrivée via un lien de partage
   let last = _lsNum(BACKUP_LAST_KEY);
   if (last > now) last = 0;
   if (now - (last || seen) < BACKUP_DELAY_DAYS * DAY_MS) return;          // sauvegarde récente
@@ -6027,7 +6032,8 @@ function buildShoppingList() {
       const cur = e.units.get(u.key) || { u: u, total: 0 };
       cur.total += (Number(ing[1]) || 0) * ratio * u.mult;
       e.units.set(u.key, cur);
-      if (e.recipes.indexOf(r.title) === -1) e.recipes.push(r.title);
+      const srcLabel = (isUserRecipe(r.id) ? '✨ ' : '') + r.title;
+      if (e.recipes.indexOf(srcLabel) === -1) e.recipes.push(srcLabel);
     });
   });
 
@@ -6312,7 +6318,7 @@ function _menuItemHtml(it, showDays) {
       <span class="menu-item-emoji">${_esc(r.emoji || '🍽️')}</span>
       <div style="min-width:0">
         <div class="menu-item-title">${_esc(r.title)}</div>
-        <div class="menu-item-meta">${kept === total ? total + ' ingrédients' : kept + ' / ' + total + ' ingrédients'}</div>
+        <div class="gen-meta"><span>${kept === total ? total + ' ingrédients' : kept + ' / ' + total + ' ingrédients'}</span>${isUserRecipe(r.id) ? '<span class="crea-badge">✨ Création</span>' : ''}</div>
       </div>
     </div>
     <div class="menu-item-actions">
@@ -6628,7 +6634,7 @@ function _genStep1Html() {
         <span class="menu-item-emoji">${_esc(r.emoji || '🍽️')}</span>
         <div>
           <div class="menu-item-title">${_esc(r.title)}</div>
-          <div class="gen-meta"><span>${t.ico} ${t.label}</span><span>🕒 ${(r.prep || 0) + (r.cook || 0)} min</span>${isInSeason(r) ? '<span class="season-badge">🌿 De saison</span>' : ''}</div>
+          <div class="gen-meta"><span>${t.ico} ${t.label}</span><span>🕒 ${(r.prep || 0) + (r.cook || 0)} min</span>${isInSeason(r) ? '<span class="season-badge">🌿 De saison</span>' : ''}${isUserRecipe(r.id) ? '<span class="crea-badge">✨ Création</span>' : ''}</div>
         </div>
       </div>
       <div class="menu-item-actions">
@@ -6773,7 +6779,7 @@ function _menuTabHtml() {
   }
   if (!_menuOpts.week) {
     return tb + _menu.map(function(it) { return _menuItemHtml(it, false); }).join('') +
-      `<div class="menu-foot"><button class="share-btn" onclick="menuClear()">🗑 Vider le menu</button></div>`;
+      `<div class="menu-foot"><button class="share-btn" onclick="openMenuShare()">📤 Partager le menu</button><button class="share-btn" onclick="menuClear()">🗑 Vider le menu</button></div>`;
   }
   // Semainier : « À prévoir » = recettes sans jour, puis les 7 jours
   const dayOf = function(it) { return findRecipeAny(it.rid) ? it.day : undefined; };
@@ -6789,6 +6795,7 @@ function _menuTabHtml() {
   });
   const planned = _menu.some(function(it) { return dayOf(it) !== undefined; });
   return html + `<div class="menu-foot">
+    <button class="share-btn" onclick="openMenuShare()">📤 Partager le menu</button>
     ${planned ? '<button class="share-btn" onclick="menuClearWeek()">↺ Vider le semainier</button>' : ''}
     <button class="share-btn" onclick="menuClear()">🗑 Vider le menu</button>
   </div>`;
@@ -7681,15 +7688,19 @@ function _uniqueUserTitle(title) {
   return title + ' (' + n + ')';
 }
 
-function _sameRecipeAlreadyStored(recipe) {
+function _findSameStored(recipe) {
   // Comparaison sur les formes normalisées : une création enregistrée avant la normalisation
   // est quand même reconnue si on réimporte la même recette
   const sig = function(r) {
     return JSON.stringify([normalizeIngredients(r.ingredients), (r.steps || []).map(_tidyApos)]);
   };
   const mine = sig(recipe);
-  return userRecipes.some(r => _tidyApos(r.title).toLowerCase() === _tidyApos(recipe.title).toLowerCase()
-    && sig(r) === mine);
+  return userRecipes.find(r => _tidyApos(r.title).toLowerCase() === _tidyApos(recipe.title).toLowerCase()
+    && sig(r) === mine) || null;
+}
+
+function _sameRecipeAlreadyStored(recipe) {
+  return !!_findSameStored(recipe);
 }
 
 // ── Aperçu + confirmation avant ajout ────────────────────
@@ -7756,6 +7767,244 @@ function commitImport(recipe) {
   showRecipe(id);
 }
 
+// ════════════════════════════════════════════════════════════
+// PARTAGE & IMPORT D'UN MENU (recettes prévues + jours)
+// ════════════════════════════════════════════════════════════
+// Format : JSON compact encodé en base64url, comme pour une recette.
+//   Lien : https://a-rech.github.io/marecette/#m=<données>     Code : mm1:<données>
+//   { v:1, m:[{ r:id, n:portions, d:jour 0-6 (facultatif), t:titre (recettes du catalogue) }], x:[créations complètes + id d'origine] }
+// Les recettes du catalogue voyagent par identifiant (+ titre pour vérifier) ; les créations sont embarquées en entier,
+// car leurs identifiants diffèrent d'un appareil à l'autre. Les ingrédients décochés ne sont pas transmis.
+const MENU_SHARE_PREFIX = 'mm1:';
+let _menuShare = null;   // menu reçu, en attente de confirmation
+
+function buildMenuSharePayload() {
+  _loadMenuData();
+  const list = [], cre = [];
+  _menu.forEach(function(it) {
+    const r = findRecipeAny(it.rid);
+    if (!r) return;
+    const e = { r: r.id, n: it.portions || r.portions || 1 };
+    if (Number.isInteger(it.day) && it.day >= 0 && it.day <= 6) e.d = it.day;
+    if (isUserRecipe(r.id)) {
+      const p = buildSharePayload(r);
+      delete p.v;
+      p.id = r.id;
+      cre.push(p);
+    } else {
+      e.t = r.title;
+    }
+    list.push(e);
+  });
+  if (!list.length) return null;
+  const d = { v: 1, m: list };
+  if (cre.length) d.x = cre;
+  return { data: d, count: list.length, creations: cre.length };
+}
+
+function openMenuShare() {
+  const info = buildMenuSharePayload();
+  if (!info) { showUpdateToast('Le menu est vide'); return; }
+  const payload = b64urlEncode(JSON.stringify(info.data));
+  closeMenuSheet();
+  const ov = document.createElement('div');
+  ov.className = 'share-overlay';
+  ov.id = 'menu-sheet';   // même identifiant que les autres fenêtres du menu : le bouton retour la ferme
+  ov.innerHTML = `
+    <div class="share-modal" role="dialog" aria-modal="true">
+      <div class="share-head">
+        <div>
+          <div class="share-title">📤 Partager le menu</div>
+          <div class="share-sub">${info.count} recette${info.count > 1 ? 's' : ''}${info.creations ? ' dont ' + info.creations + ' création' + (info.creations > 1 ? 's' : '') + ' ✨' : ''}</div>
+        </div>
+        <button class="share-close" onclick="closeMenuSheet()" aria-label="Fermer">✕</button>
+      </div>
+      <div class="share-body">
+        <div class="share-section">
+          <div class="share-label">Lien</div>
+          <input class="share-field" id="ms-share-link" type="text" readonly>
+          <div class="share-btns">
+            <button class="share-btn" onclick="copyShareField('ms-share-link', this, '📋 Copier')">📋 Copier</button>
+            <button class="share-btn primary" onclick="menuShareNative()">📤 Partager</button>
+          </div>
+        </div>
+        <div class="share-section">
+          <div class="share-label">Code</div>
+          <input class="share-field" id="ms-share-code" type="text" readonly>
+          <div class="share-btns">
+            <button class="share-btn" onclick="copyShareField('ms-share-code', this, '📋 Copier')">📋 Copier</button>
+          </div>
+          <div class="share-hint">Le destinataire ouvre le lien, ou colle le code dans « Importer une recette ». Les jours et les portions sont repris${info.creations ? ', et les créations sont incluses : elles arrivent dans « Mes créations »' : ''}.</div>
+        </div>
+      </div>
+    </div>`;
+  ov.addEventListener('click', function(e) { if (e.target === ov) closeMenuSheet(); });
+  document.body.appendChild(ov);
+  document.getElementById('ms-share-link').value = SHARE_BASE_URL + '#m=' + payload;
+  document.getElementById('ms-share-code').value = MENU_SHARE_PREFIX + payload;
+}
+
+function menuShareNative() {
+  const f = document.getElementById('ms-share-link');
+  if (!f) return;
+  if (navigator.share) {
+    navigator.share({ title: 'Menu MaRecette', text: 'Mon menu MaRecette', url: f.value }).catch(function() {});
+  } else {
+    copyShareField('ms-share-link', null);
+    showUpdateToast('📋 Lien copié');
+  }
+}
+
+// Transforme le menu reçu en éléments prêts à ajouter (recettes retrouvées ou à créer). null = structure invalide.
+function resolveMenuPayload(d) {
+  if (!d || typeof d !== 'object' || !Array.isArray(d.m) || !d.m.length) return null;
+  const creations = {};   // id d'origine → recette normalisée
+  (Array.isArray(d.x) ? d.x : []).slice(0, 100).forEach(function(raw) {
+    const id = parseInt(raw && raw.id);
+    const rec = normalizeImportedRecipe(raw);
+    if (rec && isFinite(id)) creations[id] = rec;
+  });
+  const items = [];
+  let unknown = 0;
+  d.m.slice(0, 100).forEach(function(e) {
+    if (!e || typeof e !== 'object') return;
+    const rid = parseInt(e.r);
+    if (!isFinite(rid)) return;
+    const portions = Math.min(PORTIONS_MAX, Math.max(PORTIONS_MIN, Math.round(Number(e.n)) || 4));
+    const day = (Number.isInteger(e.d) && e.d >= 0 && e.d <= 6) ? e.d : undefined;
+    if (rid >= USER_ID_MIN) {
+      const rec = creations[rid];
+      if (!rec) { unknown++; return; }
+      const same = _findSameStored(rec);
+      items.push({ recipe: rec, localId: same ? same.id : null, portions: portions, day: day, creation: true });
+    } else {
+      // Catalogue : par identifiant, vérifié avec le titre (sinon recherche par titre ; sinon recette inconnue)
+      const t = String(e.t == null ? '' : e.t);
+      let r = RECIPES.find(function(x) { return x.id === rid; }) || null;
+      if (t && (!r || _normTxt(r.title) !== _normTxt(t))) {
+        r = RECIPES.find(function(x) { return _normTxt(x.title) === _normTxt(t); }) || null;
+      }
+      if (!r) { unknown++; return; }
+      items.push({ recipe: r, localId: r.id, portions: portions, day: day, creation: false });
+    }
+  });
+  if (!items.length && !unknown) return null;
+  return { items: items, unknown: unknown };
+}
+
+// Retourne { ok:true, data } ; { ok:false, matched:false } si ce n'est pas un menu ; { ok:false, matched:true, error } si illisible
+function processMenuInput(input) {
+  const str = String(input || '').trim();
+  const cands = [];
+  [str, str.replace(/\s+/g, '')].forEach(function(src) {
+    [/[#?&]m=([A-Za-z0-9_-]+)/, /mm1:([A-Za-z0-9_-]+)/].forEach(function(r) {
+      const m = src.match(r);
+      if (m && cands.indexOf(m[1]) === -1) cands.push(m[1]);
+    });
+  });
+  if (!cands.length) return { ok: false, matched: false };
+  for (let i = 0; i < cands.length; i++) {
+    try {
+      const res = resolveMenuPayload(JSON.parse(b64urlDecode(cands[i])));
+      if (res) return { ok: true, data: res };
+    } catch (e) { /* candidat suivant */ }
+  }
+  return { ok: false, matched: true, error: 'Code illisible ou incomplet. Vérifiez que le lien a été copié en entier.' };
+}
+
+function previewMenuImport(res) {
+  closeImportPreview();
+  _loadMenuData();
+  _menuShare = res;
+  const inMenu = function(it) { return it.localId !== null && !!menuFind(it.localId); };
+  const already = res.items.filter(inMenu).length;
+  const toAdd = res.items.length - already;
+  const newCrea = res.items.filter(function(it) { return it.creation && it.localId === null; }).length;
+  const hasDays = res.items.some(function(it) { return it.day !== undefined && !inMenu(it); });
+  const rows = res.items.map(function(it) {
+    return '<li>' + (it.creation ? '✨ ' : '') + _esc(it.recipe.title)
+      + ' · ' + it.portions + ' p.' + (it.day !== undefined ? ' · ' + MENU_DAYS[it.day] : '')
+      + (inMenu(it) ? ' <em>(déjà dans votre menu)</em>' : '') + '</li>';
+  }).join('');
+  const notes = [];
+  if (newCrea) notes.push(newCrea + ' création' + (newCrea > 1 ? 's seront ajoutées' : ' sera ajoutée') + ' à <strong>Mes créations</strong>.');
+  if (hasDays && !_menuOpts.week) notes.push('Le semainier sera activé pour afficher les jours.');
+  if (res.unknown) notes.push(res.unknown + ' recette' + (res.unknown > 1 ? 's inconnues ignorées' : ' inconnue ignorée') + ' (mettez l\u2019application à jour si besoin).');
+
+  const ov = document.createElement('div');
+  ov.className = 'share-overlay';
+  ov.id = 'import-preview';
+  ov.style.zIndex = '545';
+  ov.innerHTML = `
+    <div class="share-modal" role="dialog" aria-modal="true">
+      <div class="share-head">
+        <div>
+          <div class="share-title">🍽️ Menu reçu</div>
+          <div class="share-sub">${res.items.length} recette${res.items.length > 1 ? 's' : ''}</div>
+        </div>
+        <button class="share-close" onclick="closeMenuImportPreview()" aria-label="Fermer">✕</button>
+      </div>
+      <div class="share-body">
+        <ul class="import-preview-list">${rows || '<li>Aucune recette utilisable</li>'}</ul>
+        <div class="import-preview-note">${notes.join('<br>') || 'Elles seront ajoutées à votre menu.'}</div>
+        <div class="share-btns">
+          <button class="share-btn" onclick="closeMenuImportPreview()">${toAdd ? 'Annuler' : 'Fermer'}</button>
+          ${toAdd ? '<button class="share-btn primary" id="import-confirm-btn">✓ Ajouter à mon menu</button>' : ''}
+        </div>
+      </div>
+    </div>`;
+  ov.addEventListener('click', function(e) { if (e.target === ov) closeMenuImportPreview(); });
+  document.body.appendChild(ov);
+  const btn = document.getElementById('import-confirm-btn');
+  if (btn) btn.addEventListener('click', commitMenuImport);
+}
+
+function closeMenuImportPreview() {
+  _menuShare = null;
+  closeImportPreview();
+}
+
+// Ajoute le menu reçu à l'existant : recettes déjà au menu inchangées, créations absentes ajoutées à « Mes créations »
+function commitMenuImport() {
+  const res = _menuShare;
+  if (!res) return;
+  _menuShare = null;
+  _loadMenuData();
+  _undoPush('menu reçu');
+  let added = 0, created = 0, daysUsed = false;
+  const touched = [];
+  res.items.forEach(function(it) {
+    let id = it.localId;
+    if (id === null) {
+      const same = _findSameStored(it.recipe);   // même création deux fois dans le lot
+      if (same) id = same.id;
+      else {
+        id = nextUserId++;
+        userRecipes.push(canonRecipe(Object.assign({}, it.recipe, {
+          id: id,
+          title: _uniqueUserTitle(it.recipe.title),
+          tags: deriveTags(it.recipe.ingredients)
+        }), true));
+        created++;
+      }
+    }
+    if (menuFind(id)) return;
+    const e = { rid: id, portions: it.portions, excl: [] };
+    if (it.day !== undefined) { e.day = it.day; daysUsed = true; }
+    _menu.push(e);
+    touched.push(id);
+    added++;
+  });
+  if (created) { saveUserRecipes(); loadCatalogueTabs(); }
+  if (daysUsed) _menuOpts.week = true;
+  _saveMenuData();
+  touched.forEach(refreshMenuButton);
+  closeImportPreview();
+  _menuTab = 'menu';
+  navigateTo('menu');
+  showUpdateToast('✅ ' + added + ' recette' + (added > 1 ? 's ajoutées' : ' ajoutée') + ' au menu');
+}
+
 // ── Page d'import : champ, caméra, image ─────────────────
 function setImportStatus(msg, kind) {
   const el = document.getElementById('recipe-import-status');
@@ -7788,6 +8037,9 @@ function pasteImportInput() {
 function attemptImport() {
   const val = (document.getElementById('import-code-input').value || '').trim();
   if (!val) { setImportStatus('Collez d\'abord un lien ou un code.', 'err'); return; }
+  const mres = processMenuInput(val);   // menu partagé (lien #m= ou code mm1:)
+  if (mres.ok) { setImportStatus(''); previewMenuImport(mres.data); return; }
+  if (mres.matched) { setImportStatus('❌ ' + mres.error, 'err'); return; }
   const res = processImportInput(val);
   if (!res.ok) { setImportStatus('❌ ' + res.error, 'err'); return; }
   setImportStatus('');
@@ -7796,6 +8048,8 @@ function attemptImport() {
 
 // Traite le texte lu dans un QR code. Retourne true si c'était une recette MaRecette.
 function handleScannedText(text) {
+  const mres = processMenuInput(text);
+  if (mres.ok) { closeCameraScanner(); previewMenuImport(mres.data); return true; }
   const res = processImportInput(text);
   if (!res.ok) return false;
   previewImport(res.recipe);
@@ -7900,6 +8154,13 @@ function closeCameraScanner() {
 // ── Lien de partage reçu (ouverture de l'app via #r=…) ────
 function checkIncomingShare() {
   const h = location.hash || '';
+  if (/^#m=/.test(h)) {   // menu partagé
+    const mres = processMenuInput(h);
+    try { history.replaceState(history.state, '', location.pathname + location.search); } catch (e) {}
+    if (mres.ok) previewMenuImport(mres.data);
+    else showUpdateToast('❌ Lien de menu invalide ou incomplet');
+    return true;
+  }
   if (!/^#r=/.test(h)) return false;
   const res = processImportInput(h);
   try { history.replaceState(history.state, '', location.pathname + location.search); } catch (e) {}
@@ -8055,7 +8316,7 @@ function showUpdateToast(msg) {
 
   <div class="import-box">
     <div class="import-box-title">🔗 Coller un lien ou un code</div>
-    <textarea id="import-code-input" placeholder="Collez ici le lien reçu ou le code (commence par mr1:)" autocomplete="off" spellcheck="false"></textarea>
+    <textarea id="import-code-input" placeholder="Collez ici le lien reçu ou le code (commence par mr1: ou mm1:)" autocomplete="off" spellcheck="false"></textarea>
     <div class="import-btn-row">
       <button class="import-btn primary" onclick="attemptImport()">✓ Importer</button>
       <button class="import-btn" onclick="pasteImportInput()">📋 Coller</button>
