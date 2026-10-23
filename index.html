@@ -332,9 +332,9 @@
     #page-recipe { max-width: 800px; }
     .recipe-header { margin-bottom: 28px; }
     .recipe-hero-img {
-      height: 220px; border-radius: var(--radius);
+      height: 110px; border-radius: var(--radius);
       background: var(--surface2); display: flex; align-items: center; justify-content: center;
-      font-size: 80px; margin-bottom: 24px;
+      font-size: 64px; margin-bottom: 24px;
     }
     .recipe-title-row { display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
     .recipe-big-title { font-family: 'Playfair Display', serif; font-size: clamp(22px, 4vw, 36px); font-weight: 700; flex: 1; }
@@ -453,9 +453,14 @@
       .hero { padding: 0 0 24px; }
       #page-home { padding-top: 10px; }
       .families-grid { grid-template-columns: 1fr 1fr; }
-      .recipe-infos { flex-direction: column; }
-      .info-block { border-right: none; border-bottom: 1px solid var(--border); }
-      .info-block:last-child { border-bottom: none; }
+      /* Fiche recette : préparation / cuisson / portions sur une seule ligne */
+      .recipe-infos { flex-wrap: nowrap; }
+      .info-block { min-width: 0; padding: 12px 4px; }
+      .info-label { font-size: 10px; letter-spacing: .03em; white-space: nowrap; }
+      .info-val { font-size: 16px; white-space: nowrap; }
+      .recipe-infos .portions-stepper { gap: 2px; }
+      .recipe-infos .portions-btn { width: 26px; height: 26px; font-size: 16px; }
+      .recipe-infos .portions-value { min-width: 24px; font-size: 16px; }
     }
     /* Sous 480px : libellés masqués, seuls les emojis restent */
     @media (max-width: 480px) {
