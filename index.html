@@ -1327,9 +1327,9 @@
     }
     .menu-tabs { display: flex; gap: 8px; margin: 4px 0 18px; }
     .menu-tab {
-      flex: 1; padding: 10px 6px; border-radius: 12px; border: 1px solid var(--border);
+      flex: 1; padding: 15px 12px; border-radius: 14px; border: 1px solid var(--border);
       background: var(--surface); color: var(--text2); font-family: 'DM Sans', sans-serif;
-      font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s;
+      font-size: 16px; font-weight: 600; cursor: pointer; transition: all .15s;
     }
     .menu-tab:hover { border-color: var(--accent); }
     .menu-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -1359,6 +1359,7 @@
     .menu-foot { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 18px; }
     .menu-foot .share-btn { flex: 0 1 auto; padding: 10px 18px; }
     /* Historique des menus */
+    .hist-back { display: inline-block; margin: 0 0 12px; }
     .hist-intro { font-size: 13px; color: var(--text3); margin: 0 0 12px; }
     .hist-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; padding: 0 14px; }
     .hist-card summary { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 12px 0; cursor: pointer; font-weight: 500; color: var(--text); list-style: none; }
@@ -1374,6 +1375,9 @@
     .menu-empty-title { font-family: 'Playfair Display', serif; font-size: 19px; color: var(--text); margin-bottom: 8px; }
     .menu-empty p { font-size: 14px; line-height: 1.5; max-width: 420px; margin: 0 auto 18px; }
     .menu-empty .share-btns { max-width: 340px; margin: 0 auto; }
+    .menu-empty .share-btns + .share-btns { margin-top: 8px; }
+    .menu-empty .share-btns-center { justify-content: center; }
+    .menu-empty .share-btns-center .share-btn { flex: 0 1 auto; padding: 10px 22px; }
     .shop-actions { display: flex; gap: 8px; margin-bottom: 10px; }
     .shop-actions .share-btn { flex: 1; padding: 9px 10px; }
     .shop-actions .share-btn:disabled { opacity: .4; cursor: default; }
@@ -2009,7 +2013,6 @@
   <div class="menu-tabs">
     <button class="menu-tab active" id="menu-tab-menu" onclick="setMenuTab('menu')">📋 Menu</button>
     <button class="menu-tab" id="menu-tab-shop" onclick="setMenuTab('shop')">🧺 Courses</button>
-    <button class="menu-tab" id="menu-tab-hist" onclick="setMenuTab('hist')">🗓 Historique</button>
   </div>
   <div id="menu-content"></div>
 </div>
@@ -6304,12 +6307,11 @@ function renderMenuPage() {
 
 function _updateMenuTabs(shop) {
   const left = shop.filter(function(x) { return !x.checked && !x.pantry; }).length;
-  const t1 = document.getElementById('menu-tab-menu'), t2 = document.getElementById('menu-tab-shop'), t3 = document.getElementById('menu-tab-hist');
+  const t1 = document.getElementById('menu-tab-menu'), t2 = document.getElementById('menu-tab-shop');
   t1.textContent = '📋 Menu (' + _menu.length + ')';
   t2.textContent = '🧺 Courses (' + left + ')';
   t1.classList.toggle('active', _menuTab === 'menu');
   t2.classList.toggle('active', _menuTab === 'shop');
-  t3.classList.toggle('active', _menuTab === 'hist');
 }
 
 function _menuItemHtml(it, showDays) {
@@ -6792,11 +6794,14 @@ function _menuTabHtml() {
         <button class="share-btn" onclick="navigateTo('search')">🔍 Ingrédients</button>
         <button class="share-btn" onclick="navigateTo('random')">🎲 Au hasard</button>
       </div>
+      <div class="share-btns share-btns-center">
+        <button class="share-btn" onclick="setMenuTab('hist')">📖 Voir l\u2019historique</button>
+      </div>
     </div>`;
   }
   if (!_menuOpts.week) {
     return tb + _menu.map(function(it) { return _menuItemHtml(it, false); }).join('') +
-      `<div class="menu-foot"><button class="share-btn" onclick="openMenuShare()">📤 Partager le menu</button><button class="share-btn" onclick="menuKeep()">🗓 Garder dans l\u2019historique</button><button class="share-btn" onclick="menuClear()">🗑 Vider le menu</button></div>`;
+      `<div class="menu-foot"><button class="share-btn" onclick="openMenuShare()">📤 Partager le menu</button><button class="share-btn" onclick="menuKeep()">🗓 Garder dans l\u2019historique</button><button class="share-btn" onclick="setMenuTab('hist')">📖 Voir l\u2019historique</button><button class="share-btn" onclick="menuClear()">🗑 Vider le menu</button></div>`;
   }
   // Semainier : « À prévoir » = recettes sans jour, puis les 7 jours
   const dayOf = function(it) { return findRecipeAny(it.rid) ? it.day : undefined; };
@@ -6814,6 +6819,7 @@ function _menuTabHtml() {
   return html + `<div class="menu-foot">
     <button class="share-btn" onclick="openMenuShare()">📤 Partager le menu</button>
     <button class="share-btn" onclick="menuKeep()">🗓 Garder dans l\u2019historique</button>
+    <button class="share-btn" onclick="setMenuTab('hist')">📖 Voir l\u2019historique</button>
     ${planned ? '<button class="share-btn" onclick="menuClearWeek()">↺ Vider le semainier</button>' : ''}
     <button class="share-btn" onclick="menuClear()">🗑 Vider le menu</button>
   </div>`;
@@ -7849,14 +7855,15 @@ function _histResolve(it) {
 
 function _histTabHtml() {
   const list = _histLoad();
+  const back = '<button class="share-btn hist-back" onclick="setMenuTab(\'menu\')">← Retour au menu</button>';
   if (!list.length) {
-    return `<div class="menu-empty">
+    return back + `<div class="menu-empty">
       <div class="menu-empty-ico">🗓</div>
       <div class="menu-empty-title">Aucun menu gardé</div>
       <p>Quand vous videz le menu, il est gardé ici automatiquement. Vous pouvez aussi toucher « 🗓 Garder dans l\u2019historique » en bas de l\u2019onglet Menu, sans le vider. Les ${MENU_HIST_MAX} derniers sont conservés.</p>
     </div>`;
   }
-  let html = '<p class="hist-intro">Vos ' + MENU_HIST_MAX + ' derniers menus gardés. Touchez une recette pour l\u2019ouvrir.</p>';
+  let html = back + '<p class="hist-intro">Vos ' + MENU_HIST_MAX + ' derniers menus gardés. Touchez une recette pour l\u2019ouvrir.</p>';
   for (let i = list.length - 1; i >= 0; i--) {
     const e = list[i];
     const date = new Date(e.at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
