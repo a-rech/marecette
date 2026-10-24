@@ -1327,9 +1327,9 @@
     }
     .menu-tabs { display: flex; gap: 8px; margin: 4px 0 18px; }
     .menu-tab {
-      flex: 1; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border);
+      flex: 1; padding: 10px 6px; border-radius: 12px; border: 1px solid var(--border);
       background: var(--surface); color: var(--text2); font-family: 'DM Sans', sans-serif;
-      font-size: 14px; font-weight: 500; cursor: pointer; transition: all .15s;
+      font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s;
     }
     .menu-tab:hover { border-color: var(--accent); }
     .menu-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -1358,6 +1358,17 @@
     .menu-icon-btn:hover { color: var(--hard); }
     .menu-foot { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 18px; }
     .menu-foot .share-btn { flex: 0 1 auto; padding: 10px 18px; }
+    /* Historique des menus */
+    .hist-intro { font-size: 13px; color: var(--text3); margin: 0 0 12px; }
+    .hist-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; padding: 0 14px; }
+    .hist-card summary { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 12px 0; cursor: pointer; font-weight: 500; color: var(--text); list-style: none; }
+    .hist-card summary::-webkit-details-marker { display: none; }
+    .hist-count { font-size: 12px; color: var(--text3); font-weight: 400; white-space: nowrap; }
+    .hist-list { list-style: none; margin: 0 0 12px; padding: 0; }
+    .hist-row { display: flex; gap: 8px; align-items: baseline; padding: 6px 0; font-size: 14px; color: var(--text2); border-top: 1px solid var(--border); cursor: pointer; }
+    .hist-row.gone { opacity: .55; cursor: default; }
+    .hist-day { width: 34px; flex-shrink: 0; font-size: 12px; color: var(--text3); }
+    .hist-card .share-btns { padding-bottom: 12px; }
     .menu-empty { text-align: center; padding: 36px 12px; color: var(--text2); }
     .menu-empty-ico { font-size: 44px; margin-bottom: 10px; }
     .menu-empty-title { font-family: 'Playfair Display', serif; font-size: 19px; color: var(--text); margin-bottom: 8px; }
@@ -1998,6 +2009,7 @@
   <div class="menu-tabs">
     <button class="menu-tab active" id="menu-tab-menu" onclick="setMenuTab('menu')">📋 Menu</button>
     <button class="menu-tab" id="menu-tab-shop" onclick="setMenuTab('shop')">🧺 Courses</button>
+    <button class="menu-tab" id="menu-tab-hist" onclick="setMenuTab('hist')">🗓 Historique</button>
   </div>
   <div id="menu-content"></div>
 </div>
@@ -3957,7 +3969,7 @@ function openInstallFromWelcome() {
 }
 
 function maybeShowWelcome() {
-  if (/^#[rm]=/.test(location.hash || '')) return; // arrivée via un lien de partage : on affiche d'abord l'import
+  if (/^#[rmz]=/.test(location.hash || '')) return; // arrivée via un lien de partage : on affiche d'abord l'import
   let hidden = false;
   try { hidden = localStorage.getItem(WELCOME_HIDE_KEY) === '1'; } catch (e) {}
   if (!hidden) openWelcome();
@@ -3978,14 +3990,14 @@ function _lsSet(key, val) { try { localStorage.setItem(key, String(val)); } catc
 
 function _hasDataToBackup() {
   const d = collectUserData();
-  return d.userRecipes.length > 0 || d.favorites.length > 0 || Object.keys(d.notes).length > 0 || !!d.menu;
+  return d.userRecipes.length > 0 || d.favorites.length > 0 || Object.keys(d.notes).length > 0 || !!d.menu || !!d.menuHist;
 }
 
 function maybeShowBackupReminder() {
   const now = Date.now();
   let seen = _lsNum(BACKUP_SEEN_KEY);
   if (!seen || seen > now) { seen = now; _lsSet(BACKUP_SEEN_KEY, now); }   // horloge déréglée : on repart d'aujourd'hui
-  if (/^#[rm]=/.test(location.hash || '')) return;                           // arrivée via un lien de partage
+  if (/^#[rmz]=/.test(location.hash || '')) return;                           // arrivée via un lien de partage
   let last = _lsNum(BACKUP_LAST_KEY);
   if (last > now) last = 0;
   if (now - (last || seen) < BACKUP_DELAY_DAYS * DAY_MS) return;          // sauvegarde récente
@@ -4251,6 +4263,8 @@ function collectUserData() {
   if (!data.notes || typeof data.notes !== 'object' || Array.isArray(data.notes)) data.notes = {};
   var menuData = collectMenuBackup();   // menu + liste de courses (champ facultatif : les anciens fichiers restent valides)
   if (menuData) data.menu = menuData;
+  var hist = _histLoad();   // historique des menus (champ facultatif)
+  if (hist.length) data.menuHist = hist;
   return data;
 }
 
@@ -4282,7 +4296,7 @@ function exportData(share, done) {
   var favCount  = data.favorites.length;
   var noteCount = Object.keys(data.notes).length;
 
-  if (recCount === 0 && favCount === 0 && noteCount === 0 && !data.menu) {
+  if (recCount === 0 && favCount === 0 && noteCount === 0 && !data.menu && !data.menuHist) {
     showDataStatus('export-status', 'Aucune donnée à exporter (pas de création, de favori, de note ni de menu).', false);
     if (done) done(false);
     return;
@@ -4429,6 +4443,7 @@ function restoreBackup(data) {
 
   // 3 bis. Menu et liste de courses (fusion)
   var menuRes = restoreMenuFromBackup(data.menu, mapId);
+  var histAdded = restoreHistFromBackup(data.menuHist, mapId);
 
   // 4. Rafraîchir l'interface
   if (created > 0) loadCatalogueTabs();
@@ -4446,6 +4461,7 @@ function restoreBackup(data) {
   if (menuRes.items)  parts.push(_plural(menuRes.items, 'recette ajoutée au menu', 'recettes ajoutées au menu'));
   if (menuRes.manual) parts.push(_plural(menuRes.manual, 'article ajouté à la liste de courses', 'articles ajoutés à la liste de courses'));
   if (menuRes.pantry) parts.push(_plural(menuRes.pantry, 'réglage du placard restauré', 'réglages du placard restaurés'));
+  if (histAdded) parts.push(_plural(histAdded, 'menu ajouté à l\'historique', 'menus ajoutés à l\'historique'));
   var msg = parts.length ? '✓ Import réussi : ' + parts.join(', ') + '.' : '✓ Rien de nouveau : tout est déjà présent sur cet appareil.';
   if (already && parts.length) msg += ' (' + _plural(already, 'création déjà présente', 'créations déjà présentes') + '.)';
   if (invalid) msg += ' ' + _plural(invalid, 'recette illisible ignorée', 'recettes illisibles ignorées') + '.';
@@ -6281,18 +6297,19 @@ function renderMenuPage() {
   const shop = buildShoppingList();
   _updateMenuTabs(shop);
   _updateUndoBtn();
-  box.innerHTML = _menuTab === 'menu' ? _menuTabHtml() : _shopTabHtml();
+  box.innerHTML = _menuTab === 'menu' ? _menuTabHtml() : _menuTab === 'hist' ? _histTabHtml() : _shopTabHtml();
   if (_menuTab === 'shop') _renderShopList(shop);
   _applyStoreMode();
 }
 
 function _updateMenuTabs(shop) {
   const left = shop.filter(function(x) { return !x.checked && !x.pantry; }).length;
-  const t1 = document.getElementById('menu-tab-menu'), t2 = document.getElementById('menu-tab-shop');
+  const t1 = document.getElementById('menu-tab-menu'), t2 = document.getElementById('menu-tab-shop'), t3 = document.getElementById('menu-tab-hist');
   t1.textContent = '📋 Menu (' + _menu.length + ')';
   t2.textContent = '🧺 Courses (' + left + ')';
   t1.classList.toggle('active', _menuTab === 'menu');
   t2.classList.toggle('active', _menuTab === 'shop');
+  t3.classList.toggle('active', _menuTab === 'hist');
 }
 
 function _menuItemHtml(it, showDays) {
@@ -6779,7 +6796,7 @@ function _menuTabHtml() {
   }
   if (!_menuOpts.week) {
     return tb + _menu.map(function(it) { return _menuItemHtml(it, false); }).join('') +
-      `<div class="menu-foot"><button class="share-btn" onclick="openMenuShare()">📤 Partager le menu</button><button class="share-btn" onclick="menuClear()">🗑 Vider le menu</button></div>`;
+      `<div class="menu-foot"><button class="share-btn" onclick="openMenuShare()">📤 Partager le menu</button><button class="share-btn" onclick="menuKeep()">🗓 Garder dans l\u2019historique</button><button class="share-btn" onclick="menuClear()">🗑 Vider le menu</button></div>`;
   }
   // Semainier : « À prévoir » = recettes sans jour, puis les 7 jours
   const dayOf = function(it) { return findRecipeAny(it.rid) ? it.day : undefined; };
@@ -6796,6 +6813,7 @@ function _menuTabHtml() {
   const planned = _menu.some(function(it) { return dayOf(it) !== undefined; });
   return html + `<div class="menu-foot">
     <button class="share-btn" onclick="openMenuShare()">📤 Partager le menu</button>
+    <button class="share-btn" onclick="menuKeep()">🗓 Garder dans l\u2019historique</button>
     ${planned ? '<button class="share-btn" onclick="menuClearWeek()">↺ Vider le semainier</button>' : ''}
     <button class="share-btn" onclick="menuClear()">🗑 Vider le menu</button>
   </div>`;
@@ -6847,7 +6865,8 @@ function menuItemPortions(rid, delta) {
 function menuClear() {
   _loadMenuData();
   if (!_menu.length) return;
-  if (!window.confirm('Vider le menu ? Les recettes prévues seront retirées de la liste de courses (vos ajouts manuels sont conservés).')) return;
+  if (!window.confirm('Vider le menu ? Il sera gardé dans l\u2019historique. Les recettes prévues seront retirées de la liste de courses (vos ajouts manuels sont conservés).')) return;
+  const kept = menuArchive();
   const ids = _menu.map(function(x) { return x.rid; });
   _undoPush('menu vidé');
   _menu = [];
@@ -6855,6 +6874,7 @@ function menuClear() {
   _saveMenuData();
   ids.forEach(refreshMenuButton);
   renderMenuPage();
+  if (kept === 'ok') showUpdateToast('🗓 Menu gardé dans l\u2019historique');
 }
 
 // ── Onglet Courses ───────────────────────────────────────
@@ -7768,6 +7788,158 @@ function commitImport(recipe) {
 }
 
 // ════════════════════════════════════════════════════════════
+// HISTORIQUE DES MENUS : se rappeler ce qui a été prévu, et le rejouer
+// ════════════════════════════════════════════════════════════
+// Stockage : marecette_menu_hist [{ at: date de garde (ms), items:[{ rid, n:portions, t:titre, d:jour 0-6 (facultatif), u:1 si création }] }]
+// Les titres sont gardés avec l'identifiant : l'entrée reste lisible même si une création est supprimée ou renommée.
+const MENU_HIST_KEY = 'marecette_menu_hist';
+const MENU_HIST_MAX = 12;
+
+function _histLoad() {
+  try {
+    const l = JSON.parse(localStorage.getItem(MENU_HIST_KEY) || '[]');
+    return Array.isArray(l) ? l.filter(function(e) { return e && typeof e.at === 'number' && Array.isArray(e.items) && e.items.length; }) : [];
+  } catch (e) { return []; }
+}
+function _histSave(list) {
+  try { localStorage.setItem(MENU_HIST_KEY, JSON.stringify(list.slice(-MENU_HIST_MAX))); } catch (e) {}
+}
+function _histSig(items) {
+  return JSON.stringify(items.map(function(x) { return [x.rid, x.n, x.d === undefined ? null : x.d]; }).sort());
+}
+
+// Garde le menu actuel. Retourne 'ok', 'same' (identique au dernier menu gardé) ou 'empty'.
+function menuArchive() {
+  _loadMenuData();
+  const items = [];
+  _menu.forEach(function(it) {
+    const r = findRecipeAny(it.rid);
+    if (!r) return;
+    const e = { rid: it.rid, n: it.portions || r.portions || 1, t: r.title };
+    if (Number.isInteger(it.day) && it.day >= 0 && it.day <= 6) e.d = it.day;
+    if (isUserRecipe(r.id)) e.u = 1;
+    items.push(e);
+  });
+  if (!items.length) return 'empty';
+  const list = _histLoad();
+  if (list.length && _histSig(list[list.length - 1].items) === _histSig(items)) return 'same';
+  // Date unique et croissante : elle identifie l'entrée (Rejouer, Supprimer, fusion des sauvegardes)
+  const at = Math.max(Date.now(), list.length ? list[list.length - 1].at + 1 : 0);
+  list.push({ at: at, items: items });
+  _histSave(list);
+  return 'ok';
+}
+
+function menuKeep() {
+  const r = menuArchive();
+  showUpdateToast(r === 'ok' ? '🗓 Menu gardé dans l\u2019historique' : r === 'same' ? '🗓 Déjà dans l\u2019historique' : 'Le menu est vide');
+}
+
+// Retrouve la recette d'une ligne d'historique (identifiant, puis titre si la création a été supprimée/renumérotée)
+function _histResolve(it) {
+  const t = _normTxt(it.t);
+  let r = Number.isInteger(it.rid) ? findRecipeAny(it.rid) : null;
+  if (r && it.rid >= USER_ID_MIN && _normTxt(r.title) !== t) r = null;
+  if (!r) {
+    r = RECIPES.find(function(x) { return _normTxt(x.title) === t; })
+      || userRecipes.find(function(x) { return _normTxt(x.title) === t; }) || null;
+  }
+  return r;
+}
+
+function _histTabHtml() {
+  const list = _histLoad();
+  if (!list.length) {
+    return `<div class="menu-empty">
+      <div class="menu-empty-ico">🗓</div>
+      <div class="menu-empty-title">Aucun menu gardé</div>
+      <p>Quand vous videz le menu, il est gardé ici automatiquement. Vous pouvez aussi toucher « 🗓 Garder dans l\u2019historique » en bas de l\u2019onglet Menu, sans le vider. Les ${MENU_HIST_MAX} derniers sont conservés.</p>
+    </div>`;
+  }
+  let html = '<p class="hist-intro">Vos ' + MENU_HIST_MAX + ' derniers menus gardés. Touchez une recette pour l\u2019ouvrir.</p>';
+  for (let i = list.length - 1; i >= 0; i--) {
+    const e = list[i];
+    const date = new Date(e.at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+    const items = e.items.slice().sort(function(a, b) { return (a.d === undefined ? 9 : a.d) - (b.d === undefined ? 9 : b.d); });
+    const rows = items.map(function(x) {
+      const r = _histResolve(x);
+      return '<li class="hist-row' + (r ? '' : ' gone') + '"' + (r ? ' onclick="menuOpenRecipe(' + r.id + ')"' : '') + '>'
+        + '<span class="hist-day">' + (x.d !== undefined ? _esc(MENU_DAYS[x.d].slice(0, 3)) + '.' : '·') + '</span>'
+        + '<span>' + _esc(r ? (r.emoji || '') + ' ' + r.title : x.t) + (x.u ? ' ✨' : '') + (r ? '' : ' (indisponible)') + '</span></li>';
+    }).join('');
+    html += `<details class="hist-card">
+      <summary><span>🗓 Gardé le ${_esc(date)}</span><span class="hist-count">${_plural(e.items.length, 'recette', 'recettes')}</span></summary>
+      <ul class="hist-list">${rows}</ul>
+      <div class="share-btns">
+        <button class="share-btn primary" onclick="histReplay(${e.at})">↻ Rejouer ce menu</button>
+        <button class="share-btn" onclick="histDelete(${e.at})">🗑 Supprimer</button>
+      </div>
+    </details>`;
+  }
+  return html;
+}
+
+// Ajoute le menu gardé au menu actuel : recettes déjà prévues inchangées, jours repris (semainier activé)
+function histReplay(at) {
+  const e = _histLoad().find(function(x) { return x.at === at; });
+  if (!e) return;
+  _loadMenuData();
+  const toAdd = [];
+  let gone = 0;
+  e.items.forEach(function(x) {
+    const r = _histResolve(x);
+    if (!r) { gone++; return; }
+    if (menuFind(r.id) || toAdd.some(function(y) { return y.rid === r.id; })) return;
+    const it = { rid: r.id, portions: Math.min(PORTIONS_MAX, Math.max(PORTIONS_MIN, parseInt(x.n) || r.portions || 4)), excl: [] };
+    if (Number.isInteger(x.d) && x.d >= 0 && x.d <= 6) it.day = x.d;
+    toAdd.push(it);
+  });
+  if (!toAdd.length) { showUpdateToast(gone ? 'Ces recettes ne sont plus disponibles' : 'Déjà dans votre menu'); return; }
+  _undoPush('menu rejoué');
+  toAdd.forEach(function(it) { _menu.push(it); });
+  if (toAdd.some(function(it) { return it.day !== undefined; })) _menuOpts.week = true;
+  _saveMenuData();
+  toAdd.forEach(function(it) { refreshMenuButton(it.rid); });
+  setMenuTab('menu');
+  showUpdateToast('✅ ' + _plural(toAdd.length, 'recette ajoutée', 'recettes ajoutées') + ' au menu' + (gone ? ' · ' + gone + ' indisponible' + (gone > 1 ? 's' : '') : ''));
+}
+
+function histDelete(at) {
+  if (!window.confirm('Supprimer ce menu de l\u2019historique ?')) return;
+  _histSave(_histLoad().filter(function(x) { return x.at !== at; }));
+  renderMenuPage();
+}
+
+// Sauvegarde : fusion sans doublon (même date de garde) ; mapId convertit les identifiants du fichier
+function restoreHistFromBackup(h, mapId) {
+  if (!Array.isArray(h)) return 0;
+  const list = _histLoad();
+  const have = new Set(list.map(function(e) { return e.at; }));
+  let added = 0;
+  h.slice(0, 50).forEach(function(raw) {
+    const at = Number(raw && raw.at);
+    if (!isFinite(at) || at <= 0 || have.has(at) || !Array.isArray(raw.items)) return;
+    const items = [];
+    raw.items.slice(0, 100).forEach(function(x) {
+      if (!x || typeof x !== 'object') return;
+      const t = _sanitizeText(x.t, 100);
+      if (!t) return;
+      const rid = mapId(x.rid);
+      const e = { rid: rid === null ? -1 : rid, n: Math.min(PORTIONS_MAX, Math.max(PORTIONS_MIN, parseInt(x.n) || 4)), t: t };
+      if (Number.isInteger(x.d) && x.d >= 0 && x.d <= 6) e.d = x.d;
+      if (x.u) e.u = 1;
+      items.push(e);
+    });
+    if (!items.length) return;
+    list.push({ at: at, items: items });
+    have.add(at);
+    added++;
+  });
+  if (added) { list.sort(function(a, b) { return a.at - b.at; }); _histSave(list); }
+  return added;
+}
+
+// ════════════════════════════════════════════════════════════
 // PARTAGE & IMPORT D'UN MENU (recettes prévues + jours)
 // ════════════════════════════════════════════════════════════
 // Format : JSON compact encodé en base64url, comme pour une recette.
@@ -7802,10 +7974,96 @@ function buildMenuSharePayload() {
   return { data: d, count: list.length, creations: cre.length };
 }
 
-function openMenuShare() {
+// ── Compression des menus volumineux (CompressionStream, intégré au navigateur : rien à charger) ──
+// Au-delà de MENU_ZIP_MIN caractères, le lien devient #z=… et le code mz1:… ; en dessous, le format simple reste utilisé
+// (lisible par toutes les versions de l'appli). Les liens #m= / mm1: restent toujours acceptés.
+const MENU_ZIP_PREFIX = 'mz1:';
+const MENU_ZIP_MIN = 1500;
+const MENU_UNZIP_MAX = 600000;   // garde-fou : taille maximale après décompression (octets)
+const MENU_ZIP_RX = [/[#?&]z=([A-Za-z0-9_-]+)/, /mz1:([A-Za-z0-9_-]+)/];
+let _menuShareBusy = false;
+
+function _canCompress() {
+  return typeof CompressionStream === 'function' && typeof DecompressionStream === 'function';
+}
+function _bytesToB64url(bytes) {
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function _b64urlToBytes(b64) {
+  let t = b64.replace(/-/g, '+').replace(/_/g, '/');
+  while (t.length % 4) t += '=';
+  const bin = atob(t);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+async function _pipeBytes(bytes, stream, limit) {
+  const w = stream.writable.getWriter();
+  w.write(bytes).catch(function() {});
+  w.close().catch(function() {});
+  const reader = stream.readable.getReader();
+  const chunks = [];
+  let total = 0;
+  for (;;) {
+    const r = await reader.read();
+    if (r.done) break;
+    total += r.value.length;
+    if (limit && total > limit) { reader.cancel().catch(function() {}); throw new Error('trop volumineux'); }
+    chunks.push(r.value);
+  }
+  const out = new Uint8Array(total);
+  let o = 0;
+  chunks.forEach(function(c) { out.set(c, o); o += c.length; });
+  return out;
+}
+async function _deflateText(str) {
+  return _bytesToB64url(await _pipeBytes(new TextEncoder().encode(str), new CompressionStream('deflate-raw')));
+}
+async function _inflateText(b64) {
+  return new TextDecoder().decode(await _pipeBytes(_b64urlToBytes(b64), new DecompressionStream('deflate-raw'), MENU_UNZIP_MAX));
+}
+
+// Comme processMenuInput, mais comprend aussi les menus compressés (#z= / mz1:)
+async function processMenuInputAsync(input) {
+  const plain = processMenuInput(input);
+  if (plain.ok) return plain;
+  const str = String(input || '').trim();
+  const cands = [];
+  [str, str.replace(/\s+/g, '')].forEach(function(src) {
+    MENU_ZIP_RX.forEach(function(r) {
+      const m = src.match(r);
+      if (m && cands.indexOf(m[1]) === -1) cands.push(m[1]);
+    });
+  });
+  if (!cands.length) return plain;
+  if (!_canCompress()) return { ok: false, matched: true, error: 'Ce menu est compressé : votre navigateur est trop ancien pour le lire.' };
+  for (let i = 0; i < cands.length; i++) {
+    try {
+      const res = resolveMenuPayload(JSON.parse(await _inflateText(cands[i])));
+      if (res) return { ok: true, data: res };
+    } catch (e) { /* candidat suivant */ }
+  }
+  return { ok: false, matched: true, error: 'Code illisible ou incomplet. Vérifiez que le lien a été copié en entier.' };
+}
+
+async function openMenuShare() {
   const info = buildMenuSharePayload();
   if (!info) { showUpdateToast('Le menu est vide'); return; }
-  const payload = b64urlEncode(JSON.stringify(info.data));
+  if (_menuShareBusy) return;
+  _menuShareBusy = true;
+  let payload, prefix = MENU_SHARE_PREFIX, hashKey = '#m=';
+  try {
+    const json = JSON.stringify(info.data);
+    payload = b64urlEncode(json);
+    if (payload.length > MENU_ZIP_MIN && _canCompress()) {
+      try {
+        const z = await _deflateText(json);
+        if (z.length < payload.length * 0.9) { payload = z; prefix = MENU_ZIP_PREFIX; hashKey = '#z='; }
+      } catch (e) { /* repli : format simple */ }
+    }
+  } finally { _menuShareBusy = false; }
   closeMenuSheet();
   const ov = document.createElement('div');
   ov.className = 'share-overlay';
@@ -7840,8 +8098,8 @@ function openMenuShare() {
     </div>`;
   ov.addEventListener('click', function(e) { if (e.target === ov) closeMenuSheet(); });
   document.body.appendChild(ov);
-  document.getElementById('ms-share-link').value = SHARE_BASE_URL + '#m=' + payload;
-  document.getElementById('ms-share-code').value = MENU_SHARE_PREFIX + payload;
+  document.getElementById('ms-share-link').value = SHARE_BASE_URL + hashKey + payload;
+  document.getElementById('ms-share-code').value = prefix + payload;
 }
 
 function menuShareNative() {
@@ -8034,10 +8292,10 @@ function pasteImportInput() {
   });
 }
 
-function attemptImport() {
+async function attemptImport() {
   const val = (document.getElementById('import-code-input').value || '').trim();
   if (!val) { setImportStatus('Collez d\'abord un lien ou un code.', 'err'); return; }
-  const mres = processMenuInput(val);   // menu partagé (lien #m= ou code mm1:)
+  const mres = await processMenuInputAsync(val);   // menu partagé (lien #m= / #z= ou code mm1: / mz1:)
   if (mres.ok) { setImportStatus(''); previewMenuImport(mres.data); return; }
   if (mres.matched) { setImportStatus('❌ ' + mres.error, 'err'); return; }
   const res = processImportInput(val);
@@ -8048,6 +8306,13 @@ function attemptImport() {
 
 // Traite le texte lu dans un QR code. Retourne true si c'était une recette MaRecette.
 function handleScannedText(text) {
+  if (MENU_ZIP_RX.some(function(r) { return r.test(String(text || '')); })) {   // menu compressé : lecture asynchrone
+    processMenuInputAsync(text).then(function(m) {
+      if (m.ok) { closeCameraScanner(); previewMenuImport(m.data); }
+      else showUpdateToast('❌ ' + (m.error || 'Menu illisible'));
+    });
+    return true;
+  }
   const mres = processMenuInput(text);
   if (mres.ok) { closeCameraScanner(); previewMenuImport(mres.data); return true; }
   const res = processImportInput(text);
@@ -8154,11 +8419,12 @@ function closeCameraScanner() {
 // ── Lien de partage reçu (ouverture de l'app via #r=…) ────
 function checkIncomingShare() {
   const h = location.hash || '';
-  if (/^#m=/.test(h)) {   // menu partagé
-    const mres = processMenuInput(h);
+  if (/^#[mz]=/.test(h)) {   // menu partagé (#m= simple, #z= compressé)
     try { history.replaceState(history.state, '', location.pathname + location.search); } catch (e) {}
-    if (mres.ok) previewMenuImport(mres.data);
-    else showUpdateToast('❌ Lien de menu invalide ou incomplet');
+    processMenuInputAsync(h).then(function(mres) {
+      if (mres.ok) previewMenuImport(mres.data);
+      else showUpdateToast('❌ ' + (mres.error || 'Lien de menu invalide ou incomplet'));
+    });
     return true;
   }
   if (!/^#r=/.test(h)) return false;
@@ -8316,7 +8582,7 @@ function showUpdateToast(msg) {
 
   <div class="import-box">
     <div class="import-box-title">🔗 Coller un lien ou un code</div>
-    <textarea id="import-code-input" placeholder="Collez ici le lien reçu ou le code (commence par mr1: ou mm1:)" autocomplete="off" spellcheck="false"></textarea>
+    <textarea id="import-code-input" placeholder="Collez ici le lien reçu ou le code (commence par mr1:, mm1: ou mz1:)" autocomplete="off" spellcheck="false"></textarea>
     <div class="import-btn-row">
       <button class="import-btn primary" onclick="attemptImport()">✓ Importer</button>
       <button class="import-btn" onclick="pasteImportInput()">📋 Coller</button>
