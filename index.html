@@ -579,6 +579,10 @@
     }
     .btn-fav:hover { border-color: #e08080; background: #fdf5f5; }
     .btn-fav.active { border-color: #e08080; background: #fdf5f5; }
+    /* Bouton « À tester » (📌) : grisé tant que la recette n'est pas épinglée */
+    .btn-totest:not(.active) { filter: grayscale(1); opacity: .55; }
+    .btn-totest:hover { border-color: var(--accent); background: var(--surface2); }
+    .btn-totest.active { border-color: var(--accent); background: var(--surface2); }
 
     .recipe-notes-section { margin-top: 32px; }
     .recipe-notes-section .recipe-section-title { margin-bottom: 10px; }
@@ -624,6 +628,9 @@
     }
     .card-fav-btn:hover { transform: scale(1.15); background: white; }
     .card-fav-btn.liked { background: #fff0f0; }
+    .card-fav-btn.totest { top: 46px; }
+    .card-fav-btn.totest:not(.liked) { filter: grayscale(1); opacity: .6; }
+    .card-fav-btn.totest.liked { background: #fff4e6; }
 
     /* ---- FILTRES CATALOGUE (dropdowns emoji custom) ---- */
     .filters-row {
@@ -2884,7 +2891,7 @@ function doSearch() {
     <div class="results-grid">
       ${scoredRecipes.map(recipe => `
         <div class="recipe-card" onclick="showRecipeFromCatalogue(${recipe.id})">
-          <div class="recipe-card-img">${_esc(recipe.emoji)}${cardCreationBadge(recipe.id)}${cardFavBtn(recipe.id)}</div>
+          <div class="recipe-card-img">${_esc(recipe.emoji)}${cardCreationBadge(recipe.id)}${cardFavBtn(recipe.id)}${cardToTestBtn(recipe.id)}</div>
           <div class="recipe-card-body">
             <div class="recipe-card-title">${_esc(recipe.title)}</div>
             <div class="recipe-card-meta">
@@ -3054,6 +3061,7 @@ function loadCatalogueTabs() {
   const favCount = getFavorites().length;
 
   let html = `<div class="cat-tab" style="border-color:#e08080;color:#c05050" data-val="__favs__">❤️ Favoris (${favCount})</div>`;
+  html += `<div class="cat-tab" data-val="__totest__">📌 À tester (${getToTest().length})</div>`;
   html += `<div class="cat-tab" data-val="__mycreations__">✨ Mes créations (${userRecipes.length})</div>`;
   html += `<div class="cat-tab active" data-val="all">Toutes (${allRecipes.length})</div>`;
   html += uniqueValues.map(val =>
@@ -3130,6 +3138,10 @@ function updateCatalogueTabCounts() {
     return r && passesAllFilters(r, query);
   }).length;
 
+  // Compte "À tester" (catalogue + créations)
+  const toTestIds = getToTest();
+  counts['__totest__'] = allRecipes.filter(r => toTestIds.includes(r.id) && passesAllFilters(r, query)).length;
+
   // Compte "Mes créations"
   counts['__mycreations__'] = userRecipes.filter(r => passesAllFilters(r, query)).length;
 
@@ -3149,6 +3161,7 @@ function updateCatalogueTabCounts() {
     const val = tab.dataset.val;
     const count = counts[val] !== undefined ? counts[val] : 0;
     const label = val === '__favs__' ? '❤️ Favoris' :
+                  val === '__totest__' ? '📌 À tester' :
                   val === '__mycreations__' ? '✨ Mes créations' :
                   val === 'all' ? 'Toutes' : val;
     tab.textContent = `${label} (${count})`;
@@ -3165,6 +3178,9 @@ function applyAllFilters() {
   if (catTabValue === '__favs__') {
     const favIds = getFavorites();
     pool = RECIPES.filter(r => favIds.includes(r.id));
+  } else if (catTabValue === '__totest__') {
+    const ttIds = getToTest();
+    pool = RECIPES.concat(userRecipes).filter(r => ttIds.includes(r.id));
   } else if (catTabValue === '__mycreations__') {
     pool = userRecipes.slice();
   } else if (catTabValue === 'all') {
@@ -3273,7 +3289,7 @@ function renderCatalogueGrid(recipes) {
     : `<div class="results-grid">
       ${recipes.map(recipe => {
         return `<div class="recipe-card" onclick="showRecipeFromCatalogue(${recipe.id})">
-          <div class="recipe-card-img">${_esc(recipe.emoji)}${cardCreationBadge(recipe.id)}${cardFavBtn(recipe.id)}</div>
+          <div class="recipe-card-img">${_esc(recipe.emoji)}${cardCreationBadge(recipe.id)}${cardFavBtn(recipe.id)}${cardToTestBtn(recipe.id)}</div>
           <div class="recipe-card-body">
             <div class="recipe-card-title">${_esc(recipe.title)}</div>
             <div class="recipe-card-meta">
@@ -3363,7 +3379,7 @@ function pickRandom() {
   const container = document.getElementById('random-recipe-container');
   container.innerHTML = `
     <div class="recipe-card" onclick="showRecipeFromCatalogue(${recipe.id})">
-      <div class="recipe-card-img">${_esc(recipe.emoji)}${cardCreationBadge(recipe.id)}${cardFavBtn(recipe.id)}</div>
+      <div class="recipe-card-img">${_esc(recipe.emoji)}${cardCreationBadge(recipe.id)}${cardFavBtn(recipe.id)}${cardToTestBtn(recipe.id)}</div>
       <div class="recipe-card-body">
         <div class="recipe-card-title">${_esc(recipe.title)}</div>
         <div class="recipe-card-meta">
@@ -3593,6 +3609,7 @@ function showRecipe(recipeId, swipeList, animDir, portionsMap) {
             ${vegHtml(recipe.id)}${seasonHtml(recipe.id)}
           </div>
           <button class="btn-fav ${isFav ? 'active' : ''}" id="btn-fav-${recipe.id}" onclick="toggleFavorite(${recipe.id})" title="${isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}">${isFav ? '❤️' : '🤍'}</button>
+          <button class="btn-fav btn-totest ${isToTest(recipe.id) ? 'active' : ''}" id="btn-totest-${recipe.id}" onclick="toggleToTest(${recipe.id})" title="${isToTest(recipe.id) ? 'Retirer de « À tester »' : 'Mettre de côté : à tester'}">📌</button>
         </div>
       </div>
       <div class="recipe-infos">
@@ -3763,6 +3780,35 @@ function toggleFavorite(id) {
     btn.classList.toggle('active', active);
     btn.title = active ? 'Retirer des favoris' : 'Ajouter aux favoris';
   }
+}
+
+// ===================== À TESTER (📌) =====================
+// Recettes mises de côté pour plus tard : même principe que les favoris, clé de stockage séparée.
+
+function getToTest() {
+  try { const a = JSON.parse(localStorage.getItem('marecette_totest') || '[]'); return Array.isArray(a) ? a : []; }
+  catch(e) { return []; }
+}
+function saveToTest(ids) {
+  localStorage.setItem('marecette_totest', JSON.stringify(ids));
+}
+function isToTest(id) { return getToTest().includes(id); }
+
+// Aligne tous les boutons 📌 visibles (fiche + carte) sur l'état réel, et rafraîchit les compteurs d'onglets
+function _syncToTestUi(id) {
+  const on = isToTest(id);
+  const title = on ? 'Retirer de « À tester »' : 'Mettre de côté : à tester';
+  const fiche = document.getElementById('btn-totest-' + id);
+  if (fiche) { fiche.classList.toggle('active', on); fiche.title = title; }
+  document.querySelectorAll('.card-fav-btn.totest[data-rid="' + id + '"]').forEach(function(b) {
+    b.classList.toggle('liked', on); b.title = title;
+  });
+  if (typeof updateCatalogueTabCounts === 'function' && document.getElementById('cat-tabs')) updateCatalogueTabCounts();
+}
+function toggleToTest(id) {
+  const ids = getToTest();
+  saveToTest(ids.includes(id) ? ids.filter(x => x !== id) : ids.concat([id]));
+  _syncToTestUi(id);
 }
 
 // ===================== NOTES =====================
@@ -4005,7 +4051,7 @@ function _lsSet(key, val) { try { localStorage.setItem(key, String(val)); } catc
 
 function _hasDataToBackup() {
   const d = collectUserData();
-  return d.userRecipes.length > 0 || d.favorites.length > 0 || Object.keys(d.notes).length > 0 || !!d.menu || !!d.menuHist;
+  return d.userRecipes.length > 0 || d.favorites.length > 0 || Object.keys(d.notes).length > 0 || !!d.toTest || !!d.menu || !!d.menuHist;
 }
 
 function maybeShowBackupReminder() {
@@ -4032,6 +4078,7 @@ function openBackupReminder(last) {
   const parts = [];
   if (d.userRecipes.length) parts.push(_plural(d.userRecipes.length, 'création', 'créations'));
   if (d.favorites.length) parts.push(_plural(d.favorites.length, 'favori', 'favoris'));
+  if (d.toTest) parts.push(d.toTest.length + ' à tester');
   const nn = Object.keys(d.notes).length;
   if (nn) parts.push(_plural(nn, 'note', 'notes'));
   if (d.menu) parts.push('menu et liste de courses');
@@ -4235,6 +4282,13 @@ function cardFavBtn(id) {
     title="${fav ? 'Retirer des favoris' : 'Ajouter aux favoris'}">${fav ? '❤️' : '🤍'}</button>`;
 }
 
+function cardToTestBtn(id) {
+  const on = isToTest(id);
+  return `<button class="card-fav-btn totest${on ? ' liked' : ''}" data-rid="${id}"
+    onclick="event.stopPropagation(); toggleToTest(${id})"
+    title="${on ? 'Retirer de « À tester »' : 'Mettre de côté : à tester'}">📌</button>`;
+}
+
 // Bascule le favori depuis une carte sans recharger la grille
 function toggleCardFav(id, btn) {
   const favs = getFavorites();
@@ -4276,6 +4330,8 @@ function collectUserData() {
   data.userRecipes = data.userRecipes.map(function(r) { return canonRecipe(r, true); });
   if (!Array.isArray(data.favorites)) data.favorites = [];
   if (!data.notes || typeof data.notes !== 'object' || Array.isArray(data.notes)) data.notes = {};
+  var toTest = getToTest();   // champ facultatif : les anciens fichiers restent valides
+  if (toTest.length) data.toTest = toTest;
   var menuData = collectMenuBackup();   // menu + liste de courses (champ facultatif : les anciens fichiers restent valides)
   if (menuData) data.menu = menuData;
   var hist = _histLoad();   // historique des menus (champ facultatif)
@@ -4311,7 +4367,7 @@ function exportData(share, done) {
   var favCount  = data.favorites.length;
   var noteCount = Object.keys(data.notes).length;
 
-  if (recCount === 0 && favCount === 0 && noteCount === 0 && !data.menu && !data.menuHist) {
+  if (recCount === 0 && favCount === 0 && noteCount === 0 && !data.toTest && !data.menu && !data.menuHist) {
     showDataStatus('export-status', 'Aucune donnée à exporter (pas de création, de favori, de note ni de menu).', false);
     if (done) done(false);
     return;
@@ -4327,7 +4383,7 @@ function exportData(share, done) {
     showDataStatus('export-status',
       '✓ ' + _plural(recCount, 'création', 'créations') + ', ' +
       _plural(favCount, 'favori', 'favoris') + ' et ' +
-      _plural(noteCount, 'note', 'notes') + ' ' + verb + '.' + (data.menu ? ' Menu et liste de courses inclus.' : ''), true);
+      _plural(noteCount, 'note', 'notes') + ' ' + verb + '.' + (data.toTest ? ' ' + data.toTest.length + ' recette' + (data.toTest.length > 1 ? 's' : '') + ' à tester incluse' + (data.toTest.length > 1 ? 's' : '') + '.' : '') + (data.menu ? ' Menu et liste de courses inclus.' : ''), true);
     if (done) done(true);
   };
 
@@ -4442,6 +4498,15 @@ function restoreBackup(data) {
   });
   if (favAdded > 0) saveFavorites(Array.from(favSet));
 
+  // 2 bis. À tester (fusion)
+  var ttSet = new Set(getToTest());
+  var ttAdded = 0;
+  (Array.isArray(data.toTest) ? data.toTest : []).forEach(function(f) {
+    var m = mapId(f);
+    if (m !== null && !ttSet.has(m)) { ttSet.add(m); ttAdded++; }
+  });
+  if (ttAdded > 0) saveToTest(Array.from(ttSet));
+
   // 3. Notes (fusion sans jamais écraser une note existante)
   var notes = getNotes();
   var inNotes = (data.notes && typeof data.notes === 'object' && !Array.isArray(data.notes)) ? data.notes : {};
@@ -4463,7 +4528,7 @@ function restoreBackup(data) {
   // 4. Rafraîchir l'interface
   if (created > 0) loadCatalogueTabs();
   var recipePage = document.getElementById('page-recipe');
-  if ((favAdded + noteAdded + noteMerged + created + menuRes.items) > 0 && recipePage && recipePage.classList.contains('active') && currentRecipeId) {
+  if ((favAdded + ttAdded + noteAdded + noteMerged + created + menuRes.items) > 0 && recipePage && recipePage.classList.contains('active') && currentRecipeId) {
     showRecipe(currentRecipeId);
   }
 
@@ -4471,6 +4536,7 @@ function restoreBackup(data) {
   var parts = [];
   if (created)   parts.push(_plural(created, 'création ajoutée', 'créations ajoutées'));
   if (favAdded)  parts.push(_plural(favAdded, 'favori ajouté', 'favoris ajoutés'));
+  if (ttAdded)   parts.push(ttAdded + ' à tester ajouté' + (ttAdded > 1 ? 's' : ''));
   if (noteAdded) parts.push(_plural(noteAdded, 'note restaurée', 'notes restaurées'));
   if (noteMerged) parts.push(_plural(noteMerged, 'note fusionnée avec l\'existante', 'notes fusionnées avec les existantes'));
   if (menuRes.items)  parts.push(_plural(menuRes.items, 'recette ajoutée au menu', 'recettes ajoutées au menu'));
@@ -4508,7 +4574,7 @@ function importData(input) {
 
 // Efface toutes les données utilisateur (créations, favoris, notes, préférences)
 function resetAllData() {
-  if (!confirm('Supprimer définitivement vos créations, favoris, notes, menu, liste de courses et préférences ?\nCette action est irréversible.')) return;
+  if (!confirm('Supprimer définitivement vos créations, favoris, recettes à tester, notes, menu, liste de courses et préférences ?\nCette action est irréversible.')) return;
   // Lister et supprimer toutes les clés marecette_*
   var keysToDelete = [];
   for (var i = 0; i < localStorage.length; i++) {
@@ -6473,7 +6539,7 @@ function _genPool() {
 function _genCandidates(chosen, slot) {
   _loadMenuData();
   chosen = chosen || _gen.items;
-  const favs = new Set(getFavorites());
+  const favs = _genFavSet();
   const inMenu = new Set(_menu.map(function(m) { return m.rid; }));
   const used = new Set(_gen.items.map(function(it) { return it.rid; }));
   const hist = _genHistIds();
@@ -6495,6 +6561,11 @@ function _genSeasonScore(r) {
   let n = 0;
   items.forEach(function(i) { if (chips.has(i)) n++; });
   return n;
+}
+
+// Favoris + recettes « À tester » : même coup de pouce au tirage (pas de cumul)
+function _genFavSet() {
+  return new Set(getFavorites().concat(getToTest()));
 }
 
 // Poids du tirage : saison et favoris privilégiés, types déjà présents découragés (0 au-delà du plafond)
@@ -6533,7 +6604,7 @@ function _genMakeItem(r, slot) {
 // Tirage complet : une recette végétarienne et un poisson d'abord (si possible), puis le reste, puis mélange
 // Renvoie la liste des types pour lesquels il n'y avait pas assez de recettes (tirage personnalisé seulement)
 function _genInitialPlan() {
-  const favs = new Set(getFavorites());
+  const favs = _genFavSet();
   const missing = [];
   _gen.items = [];
   // « Plat » en dernier : il complète avec ce qu'il reste parmi tous les plats principaux
@@ -6553,7 +6624,7 @@ function _genInitialPlan() {
 
 function _genInitial() {
   if (_gen.plan) return _genInitialPlan();
-  const favs = new Set(getFavorites());
+  const favs = _genFavSet();
   _gen.items = [];
   [function(r) { return !!r.vegetarian; }, function(r) { return _genType(r) === 'poisson'; }].forEach(function(test) {
     const has = _gen.items.some(function(it) { const x = findRecipeAny(it.rid); return x && test(x); });
@@ -6642,7 +6713,7 @@ function menuGenReroll(i) {
   const custom = !!_gen.plan;   // tirage personnalisé : on reste strictement dans le même type
   const slot = custom ? (it.slot || it.type) : null;
   const cands = _genCandidates(others, slot);
-  const r = cands.length ? _genDraw(cands, others, new Set(getFavorites()), custom ? null : it.type) : null;
+  const r = cands.length ? _genDraw(cands, others, _genFavSet(), custom ? null : it.type) : null;
   if (!r) { showUpdateToast(custom ? 'Aucune autre recette de ce type' : 'Aucune autre recette à proposer'); return; }
   _gen.items[i] = _genMakeItem(r, slot);
   renderMenuGen();
@@ -6657,7 +6728,7 @@ function menuGenRemove(i) {
 function menuGenAdd() {
   if (!_gen) return;
   const cands = _genCandidates();
-  const r = cands.length ? _genDraw(cands, _gen.items, new Set(getFavorites())) : null;
+  const r = cands.length ? _genDraw(cands, _gen.items, _genFavSet()) : null;
   if (!r) { showUpdateToast('Plus de recette à proposer'); return; }
   _gen.items.push(_genMakeItem(r));
   renderMenuGen();
@@ -6685,7 +6756,7 @@ function menuGenOnDiet() {
     const n = _gen.items.length;
     _gen.items = _gen.items.filter(function(it) { const r = findRecipeAny(it.rid); return r && r.vegetarian; });
     const replaced = n - _gen.items.length;
-    const favs = new Set(getFavorites());
+    const favs = _genFavSet();
     while (_gen.items.length < n) {
       const slot = _gen.plan ? 'plat' : null;
       const cands = _genCandidates(null, slot);
@@ -6743,6 +6814,15 @@ function menuGenBulk(i, keepAll) {
   _genRefreshBlock(i);
 }
 
+// Recettes « À tester » qui viennent d'être mises au menu : on propose de les retirer de la liste
+function _offerUnpinToTest(ids) {
+  const names = ids.map(function(id) { const r = findRecipeAny(id); return r ? r.title : null; }).filter(Boolean);
+  if (!names.length) return;
+  if (!confirm('Retirer de « 📌 À tester » :\n• ' + names.join('\n• ') + ' ?')) return;
+  saveToTest(getToTest().filter(function(x) { return ids.indexOf(x) === -1; }));
+  ids.forEach(_syncToTestUi);
+}
+
 function menuGenValidate() {
   if (!_gen || !_gen.items.length) return;
   _loadMenuData();
@@ -6753,8 +6833,10 @@ function menuGenValidate() {
   });
   _saveMenuData();
   _genHistPush(_gen.items.map(function(it) { return it.rid; }));
+  const pinned = toAdd.map(function(it) { return it.rid; }).filter(isToTest);
   _gen = null;
   goBack();   // retour à Menu & courses (recettes dans « À prévoir »)
+  if (pinned.length) setTimeout(function() { _offerUnpinToTest(pinned); }, 450);
   showUpdateToast('✨ ' + toAdd.length + ' recette' + (toAdd.length > 1 ? 's' : '') + ' ajoutée' + (toAdd.length > 1 ? 's' : '') + ' au menu');
 }
 
