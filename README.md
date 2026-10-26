@@ -15,16 +15,17 @@
 | 🌿 **De saison** | Un bandeau sur l'accueil change chaque mois : ingrédients de saison cliquables (ils ouvrent la recherche avec cet ingrédient) et une idée de recette à faire défiler. Les recettes du moment portent le badge « 🌿 De saison » et un filtre dédié est dans le catalogue |
 | 🥦 **Profil végétarien** | À activer dans *Paramètres* (ou avec le bouton « Mode végé » de la recherche par ingrédients) : catalogue, recherche, recette aléatoire, recette de saison et menus générés ne proposent plus que des recettes végétariennes (œufs et produits laitiers conservés) |
 | 🎲 **Recette aléatoire** | Un plat salé ou sucré au hasard, avec navigation par swipe dans toute la liste |
-| 🛒 **Menu & courses** | Bouton « Ajouter à la liste » sur chaque fiche : les recettes prévues (sans jour) forment le menu, avec un semainier facultatif (affectation à un jour). La liste de courses fusionne automatiquement les ingrédients (portions ajustables, ingrédients décochables, ajouts manuels), se range par rayon ou de A à Z, met les basiques (sel, huile, farine…) dans un bloc « Placard » à vérifier, et se partage en texte. Un **mode magasin** garde l'écran allumé avec de grosses cases et replie les rayons terminés. Un bouton **↶ Annuler** corrige les erreurs. Le menu et la liste sont inclus dans l'export/import des données |
+| 🛒 **Menu & courses** | Bouton « Ajouter à la liste » sur chaque fiche : les recettes prévues (sans jour) forment le menu, avec un semainier facultatif (affectation à un jour). La liste de courses fusionne automatiquement les ingrédients (portions ajustables, ingrédients décochables, ajouts manuels), se range par rayon ou de A à Z, met les basiques (sel, huile, farine…) dans un bloc « Placard » à vérifier, et se partage en texte. Un **mode magasin** garde l'écran allumé avec de grosses cases et replie les rayons terminés. Un bouton **↶ Annuler** corrige les erreurs. En bas de la page Menu : **Sauvegarder** (garde le menu dans l'historique), **Historique**, **Partager** et **Vider** (un menu vidé est lui aussi gardé dans l'historique). Le menu et la liste sont inclus dans l'export/import des données |
 | 📅 **Créer un menu** | Le bouton **✨ Créer un menu**, à côté du semainier, propose 5 dîners variés et de saison. Vous relancez ou retirez les recettes qui ne vous plaisent pas, vous en ajoutez si besoin, puis vous choisissez pour chacune les ingrédients à acheter (voir [Créer un menu](#créer-un-menu)) |
 | 🗓️ **Prévu aujourd'hui** | Si le semainier est activé et qu'une recette est prévue pour le jour même, un bandeau en haut de l'accueil la liste (cliquable). Plusieurs recettes s'empilent |
 | ✨ **Créations & adaptations** | Créez vos recettes, ou adaptez une recette du catalogue. Retrouvez-les dans *Mes créations* (badge ✨ Création) |
 | 📤 **Partage & import** | Partagez une recette en **texte lisible**, ou en **QR code / lien** pour vos créations. Importez celles de vos proches par scan (caméra ou image), lien ou code, ou faites transcrire une recette (photo, lien, texte) par une IA grâce au [prompt d'import](#transcrire-une-recette-avec-une-ia) |
 | ❤️ **Favoris** | Sauvegardés localement, affichés en tête du catalogue |
+| 📌 **À tester** | Mettez une recette de côté avec le bouton 📌 (fiche et cartes). Onglet « À tester » dans le catalogue ; le générateur de menu les privilégie comme les favoris, et propose de les retirer de la liste une fois le menu validé |
 | 📝 **Notes personnelles** | Ajoutez vos astuces sur chaque fiche recette |
 | 👥 **Portions ajustables** | Boutons − / + sur la fiche : les quantités sont recalculées. Une recette ouverte depuis le menu ou depuis « Prévu aujourd'hui » s'affiche directement avec les portions choisies dans le menu |
 | 🔥 **Mode Agrandir** | Ingrédients et étapes en grand, écran maintenu allumé pendant que vous cuisinez. Les durées citées dans les étapes (« 15 minutes ») deviennent des minuteurs ⏱, et une case à cocher à droite de chaque ingrédient permet de les valider au fur et à mesure |
-| 💾 **Sauvegarde & restauration** | Export / import d'un fichier `.json` : créations, favoris, notes, menu et liste de courses, fusionnés sans rien écraser |
+| 💾 **Sauvegarde & restauration** | Export / import d'un fichier `.json` : créations, favoris, recettes à tester, notes, menu et liste de courses, fusionnés sans rien écraser |
 | 🎨 **Personnalisation** | Pseudo (salutation selon l'heure), thème clair / sombre, taille de police, profil alimentaire |
 | 💡 **Lexique** | Techniques, ingrédients et matériel expliqués (réhydrater des PST, lier une sauce, choisir son riz…), avec recherche. Accessible depuis la recherche par ingrédients et depuis chaque fiche recette |
 | 📱 **PWA** | Installable sur mobile, fonctionne hors ligne, mise à jour en un clic |
@@ -50,13 +51,15 @@ Dans *Menu & courses*, le bouton **✨ Créer un menu** (à côté du bouton Sem
 
 **1. Propositions.** L'application tire 5 dîners parmi les plats principaux, plats mijotés, soupes, tartes et salades :
 
-- la **saison** est privilégiée (tirage pondéré, pas un filtre strict) et les **favoris** ont plus de chances de sortir ;
+- la **saison** est privilégiée (tirage pondéré, pas un filtre strict) et les **favoris** et recettes **📌 À tester** ont plus de chances de sortir. Une exception : de novembre à mars, aucune **salade** n'est proposée, sauf si elle contient un ingrédient de saison ;
 - les **types de plat** sont variés : volaille, viande, poisson, végétarien, soupe, tarte, salade, avec au plus 2 recettes du même type, et si possible une recette végétarienne et un poisson ;
 - les recettes déjà au menu et celles validées lors des 2 dernières générations ne reviennent pas ;
 - le **profil végétarien** est respecté sans exception, et le bouton « 🥦 Mode végé » de la page permet de le changer sans quitter la page ;
 - les exclusions d'ingrédients de la recherche sont respectées.
 
 Sur chaque carte, **🔄** propose une autre recette du même type et **✕** la retire. « **＋ Ajouter une proposition** » en ajoute une, « **🔄 Tout relancer** » refait tout le tirage. On peut valider avec plus ou moins de 5 recettes. Aucun jour n'est choisi à cette étape. Quitter la page sans valider abandonne les propositions.
+
+**Choisir les types (🎛 Types).** Ce bouton ouvre un petit panneau pour décider combien de recettes de chaque type tirer (total de 10 au plus) : *Plat* (n'importe quel plat principal ou mijoté), *Végétarien* (plats végé en plus), volaille, viande, poisson, soupe, tarte, salade. Avec le profil végétarien, *Végétarien*, volaille, viande et poisson sont grisés et *Plat* ne propose que du végétarien. Tout à 0 = tirage automatique. Dans ce mode, le plafond de 2 par type ne s'applique plus, et 🔄 reste dans le même type. Si on demande des salades, le filtre d'hiver est levé. Le choix n'est pas mémorisé.
 
 **2. Courses.** Chaque recette est un bloc dépliable : portions réglables (− / +, par défaut celles de la recette) et liste d'ingrédients à cocher. Les basiques du placard (sel, huile…) sont décochés d'office.
 
@@ -90,7 +93,7 @@ Une recette est un objet JSON compact encodé en base64url :
 
 ## Sauvegarder vos données
 
-*Paramètres → Données* : **Exporter** télécharge un fichier `marecette-sauvegarde-AAAA-MM-JJ.json` (créations, favoris, notes, menu et liste de courses). **Importer** le restaure par **fusion** : rien n'est supprimé, une création déjà présente n'est pas dupliquée, et une note locale différente est conservée à côté de la note importée.
+*Paramètres → Données* : **Exporter** télécharge un fichier `marecette-sauvegarde-AAAA-MM-JJ.json` (créations, favoris, recettes à tester, notes, menu et liste de courses). **Importer** le restaure par **fusion** : rien n'est supprimé, une création déjà présente n'est pas dupliquée, et une note locale différente est conservée à côté de la note importée.
 
 Toutes vos données restent **sur votre appareil** (`localStorage`) : rien n'est envoyé à un serveur.
 
