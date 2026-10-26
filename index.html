@@ -1451,6 +1451,18 @@
     .gen-block.open .gen-chevron { transform: rotate(90deg); }
     .gen-block-body { padding: 0 14px 12px; border-top: 1px solid var(--border); }
     .gen-bulk { display: flex; gap: 8px; margin: 6px 0 4px; }
+    .gen-plan { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin: 0 0 14px; }
+    .gen-plan-title { font-size: 13px; font-weight: 600; color: var(--text); }
+    .gen-plan-hint { font-size: 12px; color: var(--text3); margin: 2px 0 6px; }
+    .gen-plan-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid var(--border); }
+    .gen-plan-row.off { opacity: .4; }
+    .gen-plan-lbl { font-size: 14px; color: var(--text); white-space: nowrap; }
+    .gen-plan-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+    .gen-plan-foot .gen-plan-total { font-size: 12px; color: var(--text3); white-space: nowrap; }
+    .gen-plan-foot .share-btn { flex: 0 0 auto; padding: 8px 14px; }
+    .gen-plan-sum { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 12px; color: var(--text2); margin: -4px 0 12px; }
+    .gen-plan-sum > span { white-space: nowrap; }
+    .gen-plan-sum button { border: 0; background: none; color: var(--accent); font: inherit; font-size: 12px; cursor: pointer; padding: 0; text-decoration: underline; }
     .menu-section {
       display: flex; align-items: center; justify-content: space-between; margin: 20px 0 8px;
       font-size: 12px; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; color: var(--text2);
@@ -6359,7 +6371,12 @@ function _menuItemHtml(it, showDays) {
 // ═══════════════════════════════════════
 const GEN_CATS = ['Plats principaux', 'Plats mijotés', 'Soupes', 'Tartes', 'Salades'];
 const GEN_COUNT = 5;            // nombre de recettes proposées au départ
-const GEN_MAX_PER_TYPE = 2;     // au plus 2 recettes du même type par tirage
+const GEN_MAX_PER_TYPE = 2;     // au plus 2 recettes du même type par tirage (tirage automatique)
+const GEN_SALAD_OFF_MONTHS = [10, 11, 0, 1, 2];   // nov. à mars : pas de salade en tirage automatique, sauf ingrédient de saison
+const GEN_WEAK_SEASON = ['Citron', 'Persil'];   // présents toute l'année : ne suffisent pas à rendre une salade « de saison »
+const GEN_PLAN_MAX = 10;        // tirage personnalisé : nombre total maximal de recettes
+const GEN_PLAT_CATS = ['Plats principaux', 'Plats mijotés'];   // « Plat » : n'importe quel plat principal ou mijoté, végé ou non
+const GEN_NOVEG_SLOTS = ['vege', 'volaille', 'viande', 'poisson'];   // grisés en profil végétarien (« Plat » ne propose alors que du végé)
 const GEN_HIST_KEY = 'marecette_menugen_hist_v1';   // ids des recettes validées lors des 2 dernières générations
 const GEN_TYPES = {
   volaille: { ico: '🍗', label: 'Volaille' },
@@ -6371,6 +6388,22 @@ const GEN_TYPES = {
   salade:   { ico: '🥗', label: 'Salade' },
   autre:    { ico: '🍽️', label: 'Plat' }
 };
+// Lignes du panneau « Types » (le tirage personnalisé raisonne en « slots », pas en types de recette)
+const GEN_SLOTS = {
+  plat:     { ico: '🍽️', label: 'Plat' },
+  vege:     GEN_TYPES.vege,
+  volaille: GEN_TYPES.volaille,
+  viande:   GEN_TYPES.viande,
+  poisson:  GEN_TYPES.poisson,
+  soupe:    GEN_TYPES.soupe,
+  tarte:    GEN_TYPES.tarte,
+  salade:   GEN_TYPES.salade
+};
+function _genInSlot(r, slot) {
+  if (!slot) return true;
+  if (slot === 'plat') return GEN_PLAT_CATS.indexOf(r.cat) !== -1;
+  return _genType(r) === slot;
+}
 const _GEN_POULTRY = /^(poulet|dinde|canard|coq|magret|pintade|volaille|cuisses? de (poulet|canard|dinde)|blancs? de (poulet|dinde)|aiguillettes?|escalopes? de (poulet|dinde)|filets? de (poulet|dinde)|confit de canard)/;
 // Exclut les fonds de pâte, sauces et tartes sucrées rangés dans les mêmes catégories
 const _GEN_NOT_DINNER = /^(p[âa]te [àa] |pesto|sauce )|\bsucr[ée]e?\b/i;
@@ -6380,7 +6413,18 @@ function _genIsDinner(r) {
   if (r.cat === 'Tartes' && _genKeys(r).some(function(k) { return _GEN_SWEET_ING.test(k); })) return false;
   return true;
 }
-let _gen = null;   // { step: 1|2, items: [{ rid, type, portions, excl: Set|null, open }], shown: Set }
+let _gen = null;   // { step: 1|2, items: [{ rid, type, portions, excl: Set|null, open }], shown: Set,
+                   //   plan: null (tirage automatique) | { type: nombre } (tirage choisi), draft: { type: nombre } (saisie en cours), planOpen }
+
+// Salade hors saison : en tirage automatique, aucune salade de novembre à mars, sauf si un de ses ingrédients
+// principaux est de saison. Si l'utilisateur a demandé des salades (tirage personnalisé), on ne filtre pas.
+function _genSaladOutOfSeason(r) {
+  const m = new Date().getMonth();
+  if (r.cat !== 'Salades' || GEN_SALAD_OFF_MONTHS.indexOf(m) === -1) return false;
+  if (_gen && _gen.plan && _gen.plan.salade > 0) return false;
+  const chips = recipeChipSet(r);
+  return !SEASON_MONTHS[m].items.some(function(i) { return GEN_WEAK_SEASON.indexOf(i) === -1 && chips.has(i); });
+}
 
 // Type de plat : par catégorie pour soupes/tartes/salades, sinon d'après les rayons des ingrédients
 function _genType(r) {
@@ -6420,20 +6464,20 @@ function _genPool() {
   const excluded = loadExclusions();
   return RECIPES.concat(userRecipes).filter(function(r) {
     return GEN_CATS.indexOf(r.cat) !== -1 && r.ingredients && r.ingredients.length &&
-           passesDietProfile(r) && !isRecipeExcluded(r, excluded) && _genIsDinner(r);
+           passesDietProfile(r) && !isRecipeExcluded(r, excluded) && _genIsDinner(r) && !_genSaladOutOfSeason(r);
   });
 }
 
 // Candidates, par paliers : ni au menu, ni déjà proposées, ni validées récemment. On ne relâche un critère
 // que si plus aucune recette tirable (respectant le plafond par type) ne reste.
-function _genCandidates(chosen) {
+function _genCandidates(chosen, slot) {
   _loadMenuData();
   chosen = chosen || _gen.items;
   const favs = new Set(getFavorites());
   const inMenu = new Set(_menu.map(function(m) { return m.rid; }));
   const used = new Set(_gen.items.map(function(it) { return it.rid; }));
   const hist = _genHistIds();
-  const base = _genPool().filter(function(r) { return !inMenu.has(r.id) && !used.has(r.id); });
+  const base = _genPool().filter(function(r) { return !inMenu.has(r.id) && !used.has(r.id) && _genInSlot(r, slot); });
   const tiers = [
     base.filter(function(r) { return !_gen.shown.has(r.id) && !hist.has(r.id); }),
     base.filter(function(r) { return !_gen.shown.has(r.id); }),
@@ -6456,11 +6500,12 @@ function _genSeasonScore(r) {
 // Poids du tirage : saison et favoris privilégiés, types déjà présents découragés (0 au-delà du plafond)
 function _genWeight(r, chosen, favs) {
   const type = _genType(r);
+  const custom = !!(_gen && _gen.plan);   // tirage personnalisé : l'utilisateur décide du nombre par type, pas de plafond
   const same = chosen.filter(function(c) { return c.type === type; }).length;
-  if (same >= GEN_MAX_PER_TYPE) return 0;
+  if (!custom && same >= GEN_MAX_PER_TYPE) return 0;
   let w = 1 + 2 * Math.min(_genSeasonScore(r), 3);
   if (favs.has(r.id)) w *= 2.5;
-  if (same === 1) w *= 0.35;
+  if (!custom && same === 1) w *= 0.35;
   if (r.origin && chosen.some(function(c) { const x = findRecipeAny(c.rid); return x && x.origin === r.origin; })) w *= 0.6;
   return w;
 }
@@ -6480,13 +6525,34 @@ function _genDraw(cands, chosen, favs, wantType) {
   return list[list.length - 1];
 }
 
-function _genMakeItem(r) {
+function _genMakeItem(r, slot) {
   _gen.shown.add(r.id);
-  return { rid: r.id, type: _genType(r), portions: Math.min(PORTIONS_MAX, Math.max(PORTIONS_MIN, r.portions || 4)), excl: null, open: false };
+  return { rid: r.id, slot: slot || null, type: _genType(r), portions: Math.min(PORTIONS_MAX, Math.max(PORTIONS_MIN, r.portions || 4)), excl: null, open: false };
 }
 
 // Tirage complet : une recette végétarienne et un poisson d'abord (si possible), puis le reste, puis mélange
+// Renvoie la liste des types pour lesquels il n'y avait pas assez de recettes (tirage personnalisé seulement)
+function _genInitialPlan() {
+  const favs = new Set(getFavorites());
+  const missing = [];
+  _gen.items = [];
+  // « Plat » en dernier : il complète avec ce qu'il reste parmi tous les plats principaux
+  Object.keys(_gen.plan).sort(function(a, b) { return (a === 'plat') - (b === 'plat'); }).forEach(function(slot) {
+    let short = false;
+    for (let n = 0; n < _gen.plan[slot]; n++) {
+      const cands = _genCandidates(null, slot);
+      const r = cands.length ? _genDraw(cands, _gen.items, favs) : null;
+      if (!r) { short = true; break; }
+      _gen.items.push(_genMakeItem(r, slot));
+    }
+    if (short) missing.push((GEN_SLOTS[slot] || GEN_TYPES.autre).label.toLowerCase());
+  });
+  _gen.items.sort(function() { return Math.random() - 0.5; });
+  return missing;
+}
+
 function _genInitial() {
+  if (_gen.plan) return _genInitialPlan();
   const favs = new Set(getFavorites());
   _gen.items = [];
   [function(r) { return !!r.vegetarian; }, function(r) { return _genType(r) === 'poisson'; }].forEach(function(test) {
@@ -6503,10 +6569,11 @@ function _genInitial() {
     _gen.items.push(_genMakeItem(r));
   }
   _gen.items.sort(function() { return Math.random() - 0.5; });
+  return [];
 }
 
 function menuGenOpen() {
-  _gen = { step: 1, items: [], shown: new Set() };
+  _gen = { step: 1, items: [], shown: new Set(), plan: null, draft: {}, planOpen: false };
   _genInitial();
   renderMenuGen();
   navigateTo('menugen');
@@ -6518,8 +6585,52 @@ function menuGenBack() {
   goBack();
 }
 
+function _genToastMissing(missing) {
+  if (missing && missing.length) showUpdateToast('Pas assez de recettes : ' + missing.join(', '));
+}
+
 function menuGenRerollAll() {
   if (!_gen) return;
+  const missing = _genInitial();
+  renderMenuGen();
+  _genToastMissing(missing);
+}
+
+// ── Tirage personnalisé : combien de recettes de chaque type ──
+function _genDraftTotal() {
+  return Object.keys(_gen.draft).reduce(function(a, k) { return a + (_gen.draft[k] || 0); }, 0);
+}
+function menuGenPlanToggle() {
+  if (!_gen) return;
+  if (!_gen.planOpen) _gen.draft = Object.assign({}, _gen.plan || {});   // repart du tirage en cours
+  _gen.planOpen = !_gen.planOpen;
+  renderMenuGen();
+}
+function menuGenPlanStep(type, d) {
+  if (!_gen || !GEN_SLOTS[type]) return;
+  if (isVegProfile() && GEN_NOVEG_SLOTS.indexOf(type) !== -1) return;
+  const next = (_gen.draft[type] || 0) + d;
+  if (next < 0 || (d > 0 && _genDraftTotal() >= GEN_PLAN_MAX)) return;
+  _gen.draft[type] = next;
+  const el = document.getElementById('gen-plan');
+  if (el) el.outerHTML = _genPlanHtml();
+}
+function menuGenPlanApply() {
+  if (!_gen) return;
+  const plan = {};
+  Object.keys(_gen.draft).forEach(function(k) { if (_gen.draft[k] > 0) plan[k] = _gen.draft[k]; });
+  if (!Object.keys(plan).length) { menuGenPlanAuto(); return; }
+  _gen.plan = plan;
+  _gen.planOpen = false;
+  const missing = _genInitial();
+  renderMenuGen();
+  _genToastMissing(missing);
+}
+function menuGenPlanAuto() {
+  if (!_gen) return;
+  _gen.plan = null;
+  _gen.draft = {};
+  _gen.planOpen = false;
   _genInitial();
   renderMenuGen();
 }
@@ -6528,10 +6639,12 @@ function menuGenReroll(i) {
   const it = _gen && _gen.items[i];
   if (!it) return;
   const others = _gen.items.filter(function(_, j) { return j !== i; });
-  const cands = _genCandidates(others);
-  const r = cands.length ? _genDraw(cands, others, new Set(getFavorites()), it.type) : null;
-  if (!r) { showUpdateToast('Aucune autre recette à proposer'); return; }
-  _gen.items[i] = _genMakeItem(r);
+  const custom = !!_gen.plan;   // tirage personnalisé : on reste strictement dans le même type
+  const slot = custom ? (it.slot || it.type) : null;
+  const cands = _genCandidates(others, slot);
+  const r = cands.length ? _genDraw(cands, others, new Set(getFavorites()), custom ? null : it.type) : null;
+  if (!r) { showUpdateToast(custom ? 'Aucune autre recette de ce type' : 'Aucune autre recette à proposer'); return; }
+  _gen.items[i] = _genMakeItem(r, slot);
   renderMenuGen();
 }
 
@@ -6559,15 +6672,26 @@ function menuGenOpenRecipe(i) {
 function menuGenOnDiet() {
   if (!_gen) return;
   if (isVegProfile()) {
+    // Végétarien, viandes et poissons demandés au tirage personnalisé : reportés sur « Plat » (qui ne propose plus que du végé)
+    let moved = 0, planMoved = 0;
+    GEN_NOVEG_SLOTS.forEach(function(t) {
+      moved += _gen.draft[t] || 0;
+      _gen.draft[t] = 0;
+      if (_gen.plan && _gen.plan[t]) { planMoved += _gen.plan[t]; delete _gen.plan[t]; }
+    });
+    if (moved) _gen.draft.plat = (_gen.draft.plat || 0) + moved;
+    if (_gen.plan && planMoved) _gen.plan.plat = (_gen.plan.plat || 0) + planMoved;
+    if (_gen.plan && !Object.keys(_gen.plan).length) _gen.plan = null;
     const n = _gen.items.length;
     _gen.items = _gen.items.filter(function(it) { const r = findRecipeAny(it.rid); return r && r.vegetarian; });
     const replaced = n - _gen.items.length;
     const favs = new Set(getFavorites());
     while (_gen.items.length < n) {
-      const cands = _genCandidates();
+      const slot = _gen.plan ? 'plat' : null;
+      const cands = _genCandidates(null, slot);
       const r = cands.length ? _genDraw(cands, _gen.items, favs) : null;
       if (!r) break;
-      _gen.items.push(_genMakeItem(r));
+      _gen.items.push(_genMakeItem(r, slot));
     }
     if (replaced) showUpdateToast('🥦 ' + replaced + ' recette' + (replaced > 1 ? 's' : '') + ' remplacée' + (replaced > 1 ? 's' : ''));
   }
@@ -6641,6 +6765,44 @@ function renderMenuGen() {
   box.innerHTML = !_gen ? '' : (_gen.step === 1 ? _genStep1Html() : _genStep2Html());
 }
 
+// Panneau « combien de recettes de chaque type » (stepper − / + par type, total plafonné à GEN_PLAN_MAX)
+function _genPlanHtml() {
+  const veg = isVegProfile();
+  const total = _genDraftTotal();
+  const rows = Object.keys(GEN_SLOTS).map(function(t) {
+    const off = veg && GEN_NOVEG_SLOTS.indexOf(t) !== -1;
+    const c = off ? 0 : (_gen.draft[t] || 0);
+    return `<div class="gen-plan-row ${off ? 'off' : ''}">
+      <span class="gen-plan-lbl">${GEN_SLOTS[t].ico} ${GEN_SLOTS[t].label}</span>
+      <div class="portions-stepper">
+        <button type="button" class="portions-btn" onclick="menuGenPlanStep('${t}',-1)" ${off || c <= 0 ? 'disabled' : ''} aria-label="Moins de ${GEN_SLOTS[t].label}">−</button>
+        <span class="portions-value">${c}</span>
+        <button type="button" class="portions-btn" onclick="menuGenPlanStep('${t}',1)" ${off || total >= GEN_PLAN_MAX ? 'disabled' : ''} aria-label="Plus de ${GEN_SLOTS[t].label}">+</button>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="gen-plan" id="gen-plan">
+    <div class="gen-plan-title">Combien de recettes de chaque type ?</div>
+    <div class="gen-plan-hint">${veg ? 'Mode végé actif : « Plat » ne propose que du végétarien. ' : '« Plat » = tout plat principal ; « Végétarien » = plats végé en plus. '}Tout à 0 = tirage automatique.</div>
+    ${rows}
+    <div class="gen-plan-foot">
+      <span class="gen-plan-total">Total : ${total} / ${GEN_PLAN_MAX}</span>
+      <span style="display:flex;gap:8px">
+        <button type="button" class="share-btn" onclick="menuGenPlanAuto()">Automatique</button>
+        <button type="button" class="share-btn primary" onclick="menuGenPlanApply()">🎲 Tirer</button>
+      </span>
+    </div>
+  </div>`;
+}
+
+function _genPlanSummaryHtml() {
+  if (!_gen.plan || _gen.planOpen) return '';
+  const parts = Object.keys(GEN_SLOTS).filter(function(t) { return _gen.plan[t] > 0; }).map(function(t) {
+    return `<span>${_gen.plan[t]} × ${GEN_SLOTS[t].ico} ${GEN_SLOTS[t].label}</span>`;
+  }).join('');
+  return `<div class="gen-plan-sum">${parts}<button type="button" onclick="menuGenPlanAuto()">↩ Automatique</button></div>`;
+}
+
 function _genStep1Html() {
   const n = _gen.items.length;
   const veg = _getVegMode();
@@ -6667,8 +6829,10 @@ function _genStep1Html() {
     <p class="section-sub">Des dîners de saison, variés. Relancez ou retirez ceux qui ne vous tentent pas.</p>
     <div class="gen-toolbar">
       <button type="button" class="veg-mode-btn ${veg ? 'active' : ''}" aria-pressed="${veg}" onclick="toggleVegMode()">${veg ? '🥦 Mode végé ✓' : '🥦 Mode végé ✕'}</button>
+      <button type="button" class="share-btn" style="flex:0 0 auto;padding:6px 14px" onclick="menuGenPlanToggle()" aria-expanded="${_gen.planOpen}">🎛 Types</button>
       <button type="button" class="share-btn" style="flex:0 0 auto;padding:6px 14px" onclick="menuGenRerollAll()">🔄 Tout relancer</button>
     </div>
+    ${_gen.planOpen ? _genPlanHtml() : _genPlanSummaryHtml()}
     ${n ? cards : `<div class="menu-empty"><div class="menu-empty-ico">🍽️</div><div class="menu-empty-title">Aucune recette</div><p>Relancez le tirage ou ajoutez une proposition.</p></div>`}
     <button type="button" class="gen-add" onclick="menuGenAdd()">＋ Ajouter une proposition</button>
     <div class="share-btns" style="margin-top:6px">
